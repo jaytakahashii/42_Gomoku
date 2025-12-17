@@ -5,17 +5,27 @@
     "source.organizeImports": "explicit" // organize imports on save
   },
 
-  // --- Python Specific Settings ---
-  "[python]": {
-    "editor.defaultFormatter": "ms-python.autopep8",
-    "editor.tabSize": 4,
-    "editor.rulers": [120]
-  },
-
   // --- Prettier Settings for Other Files ---
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
+
+  // --- C/C++ Settings (CRITICAL for this project) ---
+  "[cpp]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools"
+  },
+  "[c]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools"
+  },
+  "C_Cpp.clang_format_style": "file",
+  "C_Cpp.clang_format_fallbackStyle": "Google",
+
+  // --- Shell Script Settings ---
+  // "foxundermoon.shell-format" などの拡張機能を入れている場合に有効化します
+  "[shellscript]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  },
 
   // --- Spell Check (Allowing ML-specific Terms) ---
   "cSpell.words": [
