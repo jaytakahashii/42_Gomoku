@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.autopep8",
+    "esbenp.prettier-vscode",
+    "streetsidesoftware.code-spell-checker",
+    "ms-python.mypy-type-checker",
+    "Gruntfuggly.todo-tree"
+  ]
+}

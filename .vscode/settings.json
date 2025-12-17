@@ -1,0 +1,78 @@
+{
+  // --- Basic Editor Settings ---
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit" // organize imports on save
+  },
+
+  // --- Python Specific Settings ---
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.autopep8",
+    "editor.tabSize": 4,
+    "editor.rulers": [120]
+  },
+
+  // --- Prettier Settings for Other Files ---
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+
+  // --- Spell Check (Allowing ML-specific Terms) ---
+  "cSpell.words": [
+    "Abstra",
+    "autopep",
+    "celerybeat",
+    "codz",
+    "Connor",
+    "crossvalidation",
+    "cursorignore",
+    "cursorindexingignore",
+    "Cython",
+    "dataframe",
+    "dataset",
+    "dmypy",
+    "envrc",
+    "featureengineering",
+    "htmlcov",
+    "hyperparameter",
+    "ipynb",
+    "ipython",
+    "jupyter",
+    "librt",
+    "logits",
+    "loss",
+    "Marimo",
+    "matplotlib",
+    "mccabe",
+    "mkdocs",
+    "mypy",
+    "ndarray",
+    "nosetests",
+    "numpy",
+    "optimizer",
+    "pandas",
+    "pathspec",
+    "pipenv",
+    "Pipfile",
+    "pixi",
+    "pybuilder",
+    "pycodestyle",
+    "pyflakes",
+    "pyflow",
+    "pypa",
+    "pypackages",
+    "pypirc",
+    "pytorch",
+    "pytype",
+    "regularization",
+    "relu",
+    "ropeproject",
+    "scrapy",
+    "sdist",
+    "sklearn",
+    "Spyder",
+    "spyderproject",
+    "spyproject",
+    "webassets"
+  ]
+}

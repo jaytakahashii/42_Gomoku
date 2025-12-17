@@ -1,0 +1,27 @@
+[tool.mypy]
+# Basic settings
+python_version = "3.11"
+show_error_context = true # show context for errors
+show_column_numbers = true # show column numbers in error messages
+pretty = true            # pretty-print error messages
+
+# Import settings
+ignore_missing_imports = true # ignore missing imports
+
+# Strictness settings
+check_untyped_defs = true      # Check contents of functions without type annotations
+no_implicit_optional = true    # Enforce strictness on None allowance for arguments
+disallow_incomplete_defs = true # Prohibit incomplete type definitions (prevents missing arguments)
+
+# Additional recommendations for Any handling and cleanup
+warn_return_any = true         # Prevent Any type from leaking as return values
+warn_unused_ignores = true     # Warn about unnecessary # type: ignore
+warn_redundant_casts = true    # Warn about unnecessary casts
+
+# Exclusion settings
+exclude = [
+    "^\\.venv/",
+    "^\\.git/",
+    "^__pycache__/",
+    "^tests/"
+]
