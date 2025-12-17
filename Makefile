@@ -1,6 +1,7 @@
 NAME = Gomoku
 CXX  = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++17
+#CXXFLAGS = -Wall -Wextra -Werror -std=c++17
+CXXFLAGS = -std=c++17
 
 ROOT := $(shell pwd)
 
@@ -53,8 +54,11 @@ ifneq ($(filter $(UNAME_S),Darwin Linux),$(UNAME_S))
     $(error This Makefile only supports macOS (Darwin) and Ubuntu (Linux). Detected: $(UNAME_S))
 endif
 
-SRCS = sample.cpp
-OBJS = $(SRCS:.cpp=.o)
+SRC_DIR            = src/
+OBJ_DIR            = .obj/
+SRC_FILES          = main.cpp
+SRCS               = $(addprefix $(SRC_DIR), $(SRC_FILES))
+OBJS               = $(addprefix $(OBJ_DIR), $(SRC_FILES:.cpp=.o))
 
 all: $(SFML_LIB) $(NAME)
 
@@ -63,15 +67,18 @@ $(SFML_LIB):
 	rm -rf $(SFML_SRC_PATH) $(SFML_BUILD_PATH) $(SFML_LOCAL_PATH)
 	git clone --depth 1 -b 3.0.0 https://github.com/SFML/SFML.git $(SFML_SRC_PATH)
 	cmake -S $(SFML_SRC_PATH) -B $(SFML_BUILD_PATH) \
-	  -DCMAKE_INSTALL_PREFIX=$(SFML_LOCAL_PATH) \
-	  $(CMAKE_OPTS)
+	-DCMAKE_INSTALL_PREFIX=$(SFML_LOCAL_PATH) \
+	$(CMAKE_OPTS)
 	cmake --build $(SFML_BUILD_PATH) --target install -j$(shell nproc 2>/dev/null || sysctl -n hw.ncpu)
 	rm -rf $(SFML_SRC_PATH) $(SFML_BUILD_PATH)
 
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $@ $(LDFLAGS) $(RPATH)
 
-%.o: %.cpp
+$(OBJ_DIR):
+	@mkdir -p $(OBJ_DIR)
+
+$(OBJ_DIR)%.o: $(SRC_DIR)%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) $(IFLAGS) -c $< -o $@
 
 clean:
@@ -84,4 +91,3 @@ fclean: clean
 re: fclean all
 
 .PHONY: all clean fclean re
-

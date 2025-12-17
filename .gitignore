@@ -45,3 +45,6 @@ Gomoku
 
 # sfml
 sfml*
+
+# swap
+*.swp
