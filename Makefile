@@ -7,10 +7,6 @@ ROOT := $(shell pwd)
 SFML_SRC_PATH   = $(ROOT)/sfml_src
 SFML_BUILD_PATH = $(ROOT)/sfml_build
 SFML_LOCAL_PATH = $(ROOT)/sfml_install
-CMAKE_OPTS = \
-  -DBUILD_SHARED_LIBS=ON \
-  -DSFML_BUILD_AUDIO=OFF \
-  -DSFML_BUILD_EXAMPLES=OFF
 
 UNAME_S := $(shell uname -s)
 
@@ -23,6 +19,11 @@ ifeq ($(UNAME_S),Linux)
 	          -lsfml-graphics -lsfml-window -lsfml-system
 
 	RPATH   = -Wl,-rpath,$(SFML_LOCAL_PATH)/lib
+
+	CMAKE_OPTS = \
+	  -DBUILD_SHARED_LIBS=ON \
+	  -DSFML_BUILD_AUDIO=OFF \
+	  -DSFML_BUILD_EXAMPLES=OFF
 
 endif
 
@@ -39,8 +40,17 @@ ifeq ($(UNAME_S),Darwin)
 	          -framework CoreFoundation \
 	          -framework CoreVideo
 
-	RPATH   =
+	RPATH   = -Wl,-rpath,$(SFML_LOCAL_PATH)/lib
 
+	CMAKE_OPTS = \
+	  -DBUILD_SHARED_LIBS=ON \
+	  -DSFML_BUILD_AUDIO=OFF \
+	  -DSFML_BUILD_EXAMPLES=OFF
+
+endif
+
+ifneq ($(filter $(UNAME_S),Darwin Linux),$(UNAME_S))
+    $(error This Makefile only supports macOS (Darwin) and Ubuntu (Linux). Detected: $(UNAME_S))
 endif
 
 SRCS = sample.cpp
