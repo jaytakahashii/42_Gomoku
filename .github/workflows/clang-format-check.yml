@@ -10,4 +10,4 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Clang-Format Check
-        uses: jaytakahashii/clang-format-check@v4.0.0
+        uses: jaytakahashii/clang-format-check@v4.1.0
