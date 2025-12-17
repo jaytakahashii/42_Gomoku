@@ -1,11 +1,7 @@
 {
   "recommendations": [
-    "ms-python.python",
-    "ms-python.autopep8",
+    "ms-vscode.cpptools",
     "esbenp.prettier-vscode",
-    "streetsidesoftware.code-spell-checker",
-    "ms-python.mypy-type-checker",
-    "Gruntfuggly.todo-tree",
-    "ms-python.isort"
+    "foxundermoon.shell-format"
   ]
 }

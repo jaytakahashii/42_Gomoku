@@ -1,0 +1,13 @@
+name: Clang-Format Check
+
+on: [pull_request]
+
+jobs:
+  formatting-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Clang-Format Check
+        uses: jaytakahashii/clang-format-check@v4.0.0
