@@ -5,6 +5,7 @@
     "esbenp.prettier-vscode",
     "streetsidesoftware.code-spell-checker",
     "ms-python.mypy-type-checker",
-    "Gruntfuggly.todo-tree"
+    "Gruntfuggly.todo-tree",
+    "ms-python.isort"
   ]
 }
