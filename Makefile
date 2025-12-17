@@ -1,30 +1,65 @@
-NAME        = Gomoku
-CXX         = c++
-CXXFLAGS    = -Wall -Wextra -Werror -std=c++17
+NAME = Gomoku
+CXX  = c++
+CXXFLAGS = -Wall -Wextra -Werror -std=c++17
 
-LOCAL_PATH  = $(shell pwd)/sfml_install
-IFLAGS      = -I$(LOCAL_PATH)/include
-LDFLAGS     = -L$(LOCAL_PATH)/lib -lsfml-graphics -lsfml-window -lsfml-system
+ROOT := $(shell pwd)
 
-RPATH = -Wl,-rpath,$(shell pwd)/sfml_install/lib
+SFML_SRC_PATH   = $(ROOT)/sfml_src
+SFML_BUILD_PATH = $(ROOT)/sfml_build
+SFML_LOCAL_PATH = $(ROOT)/sfml_install
+CMAKE_OPTS = \
+  -DBUILD_SHARED_LIBS=ON \
+  -DSFML_BUILD_AUDIO=OFF \
+  -DSFML_BUILD_EXAMPLES=OFF
 
-SRCS        = ./sample.cpp
-OBJS        = $(SRCS:.cpp=.o)
+UNAME_S := $(shell uname -s)
 
-all: $(LOCAL_PATH) $(NAME)
+ifeq ($(UNAME_S),Linux)
 
-$(LOCAL_PATH):
-	@echo "SFML not found. Downloading and building locally..."
-	git clone --depth 1 -b 3.0.0 https://github.com/SFML/SFML.git sfml_src
-	cmake -S sfml_src -B sfml_build \
-	      -DCMAKE_INSTALL_PREFIX=$(LOCAL_PATH) \
-	      -DBUILD_SHARED_LIBS=ON \
-	      -DSFML_BUILD_EXAMPLES=OFF
-	cmake --build sfml_build --target install -j$(shell nproc 2>/dev/null || sysctl -n hw.ncpu)
-	rm -rf sfml_src sfml_build
+	SFML_LIB = $(SFML_LOCAL_PATH)/lib/libsfml-graphics.so
+
+	IFLAGS  = -I$(SFML_LOCAL_PATH)/include
+	LDFLAGS = -L$(SFML_LOCAL_PATH)/lib \
+	          -lsfml-graphics -lsfml-window -lsfml-system
+
+	RPATH   = -Wl,-rpath,$(SFML_LOCAL_PATH)/lib
+
+endif
+
+ifeq ($(UNAME_S),Darwin)
+
+	SFML_LIB = $(SFML_LOCAL_PATH)/lib/libsfml-graphics.dylib
+
+	IFLAGS  = -I$(SFML_LOCAL_PATH)/include
+	LDFLAGS = -L$(SFML_LOCAL_PATH)/lib \
+	          -lsfml-graphics -lsfml-window -lsfml-system \
+	          -framework OpenGL \
+	          -framework Cocoa \
+	          -framework IOKit \
+	          -framework CoreFoundation \
+	          -framework CoreVideo
+
+	RPATH   =
+
+endif
+
+SRCS = sample.cpp
+OBJS = $(SRCS:.cpp=.o)
+
+all: $(SFML_LIB) $(NAME)
+
+$(SFML_LIB):
+	@echo "Building SFML locally for $(UNAME_S)..."
+	rm -rf $(SFML_SRC_PATH) $(SFML_BUILD_PATH) $(SFML_LOCAL_PATH)
+	git clone --depth 1 -b 3.0.0 https://github.com/SFML/SFML.git $(SFML_SRC_PATH)
+	cmake -S $(SFML_SRC_PATH) -B $(SFML_BUILD_PATH) \
+	  -DCMAKE_INSTALL_PREFIX=$(SFML_LOCAL_PATH) \
+	  $(CMAKE_OPTS)
+	cmake --build $(SFML_BUILD_PATH) --target install -j$(shell nproc 2>/dev/null || sysctl -n hw.ncpu)
+	rm -rf $(SFML_SRC_PATH) $(SFML_BUILD_PATH)
 
 $(NAME): $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME) $(LDFLAGS) $(RPATH)
+	$(CXX) $(CXXFLAGS) $(OBJS) -o $@ $(LDFLAGS) $(RPATH)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(IFLAGS) -c $< -o $@
@@ -34,8 +69,9 @@ clean:
 
 fclean: clean
 	rm -f $(NAME)
-	rm -rf $(LOCAL_PATH)
+	rm -rf $(SFML_SRC_PATH) $(SFML_BUILD_PATH) $(SFML_LOCAL_PATH)
 
 re: fclean all
 
 .PHONY: all clean fclean re
+
