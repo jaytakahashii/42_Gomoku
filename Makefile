@@ -56,7 +56,12 @@ endif
 
 SRC_DIR            = src/
 OBJ_DIR            = .obj/
-SRC_FILES          = main.cpp
+SRC_FILES          = main.cpp \
+                     Gomoku.cpp \
+					 MenuScene.cpp \
+					 GameScene.cpp \
+					 ResultScene.cpp
+IFLAGS            += -Iinclude
 SRCS               = $(addprefix $(SRC_DIR), $(SRC_FILES))
 OBJS               = $(addprefix $(OBJ_DIR), $(SRC_FILES:.cpp=.o))
 
@@ -90,4 +95,7 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all clean fclean re
+run: all
+	./$(NAME)
+
+.PHONY: all clean fclean re run
