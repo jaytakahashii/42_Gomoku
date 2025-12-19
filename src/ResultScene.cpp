@@ -1,4 +1,3 @@
-
 #include <ResultScene.hpp>
 
 ResultScene::ResultScene(sf::Font& font, const sf::Vector2u& initalSize)
