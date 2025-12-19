@@ -8,8 +8,8 @@ Gomoku::Gomoku() : _window(sf::VideoMode({1000, 1000}), "Gomoku"), font() {
   this->_resultScene = std::make_unique<ResultScene>(font, this->_window.getSize());
   this->_currentScene = this->_menuScene.get();
 
-  this->_menuScene->setOnStartGame([this]() { this->_currentScene = this->_gameScene.get(); });
-  this->_gameScene->setOnGameOver([this]() { this->_currentScene = this->_resultScene.get(); });
+  this->_menuScene->setOnStartGame([this]() { changeScene(this->_gameScene.get()); });
+  this->_gameScene->setOnGameOver([this]() { changeScene(this->_resultScene.get()); });
 }
 
 void Gomoku::run() {
@@ -44,4 +44,11 @@ Gomoku::EventList Gomoku::getEventList() {
     }
   }
   return events;
+}
+
+void Gomoku::changeScene(Scene* nextScene) {
+  if (nextScene) {
+    nextScene->onResize(this->_window.getSize());
+    this->_currentScene = nextScene;
+  }
 }

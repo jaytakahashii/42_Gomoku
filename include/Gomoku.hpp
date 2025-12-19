@@ -31,6 +31,7 @@ class Gomoku {
   using EventList = std::vector<std::optional<sf::Event>>;
   void initFont(const std::string font);
   EventList getEventList();
+  void changeScene(Scene* nextScene);
 };
 
 #endif
