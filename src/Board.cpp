@@ -51,7 +51,7 @@ bool Board::_hasFiveInARow(const std::bitset<MAX_CELLS>& stones, int shift_amoun
   return temp.any();
 }
 
-bool Board::checkWin(int x, int y) {
+bool Board::checkWin() {
   const auto& stones = (_currentTurn == Player::WHITE) ? _blackStones : _whiteStones;
 
   if (_hasFiveInARow(stones, SHIFT_H))

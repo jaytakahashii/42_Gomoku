@@ -17,7 +17,7 @@ class Board {
   bool makeMove(int x, int y);
   Player getStoneAt(int x, int y) const;
   Player getCurrentTurn() const;
-  bool checkWin(int x, int y);
+  bool checkWin();
 
  private:
   std::bitset<MAX_CELLS> _blackStones;
