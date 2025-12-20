@@ -1,10 +1,10 @@
 #ifndef GAMESCENE_HPP
 #define GAMESCENE_HPP
 
+#include <Board.hpp>
 #include <Scene.hpp>
 #include <functional>
 
-const unsigned int BOARD_SIZE = 19;
 const unsigned int CELL_SIZE = 40;
 const float OFFSET = 20.0f;
 const unsigned int WINDOW_WIDTH = BOARD_SIZE * CELL_SIZE;
@@ -26,12 +26,9 @@ class GameScene : public Scene {
   const unsigned int _cellSize = CELL_SIZE;
   sf::Vector2f _boardOffset;
 
-  std::bitset<BOARD_SIZE*(BOARD_SIZE + 1)> _blackStones;
-  std::bitset<BOARD_SIZE*(BOARD_SIZE + 1)> _whiteStones;
+  Board _board;
   void handleClick(int x, int y);
   std::function<void()> _onGameOver;
-
-  bool _isBlackTurn = false;  // 仮
 };
 
 #endif

@@ -1,9 +1,6 @@
 #include <GameScene.hpp>
 
 GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize) : _font(font) {
-  this->_blackStones = 0;
-  this->_whiteStones = 0;
-
   onResize(initalSize);
 }
 
@@ -25,16 +22,15 @@ void GameScene::handleClick(int x, int y) {
 
   if (col >= 0 && col < static_cast<int>(_boardSize) && row >= 0 &&
       row < static_cast<int>(_boardSize)) {
-    unsigned int index = row * (_boardSize + 1) + col;
+    // makeMoveが成功（ルール上OK）なら、内部状態が更新される
+    if (_board.makeMove(col, row)) {
+      // TODO: SEを鳴らすなどの処理があればここに書く
 
-    if (!_blackStones.test(index) && !_whiteStones.test(index)) {
-      if (this->_isBlackTurn) {
-        _blackStones.set(index);
-      } else {
-        _whiteStones.set(index);
+      // 勝利判定
+      /* if (_board.checkWin(col, row)) {
+          if (_onGameOver) _onGameOver();
       }
-
-      _isBlackTurn = !_isBlackTurn;
+      */
     }
   }
 }
@@ -61,21 +57,16 @@ void GameScene::render(sf::RenderWindow& window) {
   sf::CircleShape stone(15.f);
   stone.setOrigin(sf::Vector2f(15.0f, 15.f));
 
-  const unsigned int rowStride = _boardSize + 1;
-
   for (unsigned int y = 0; y < _boardSize; ++y) {
     for (unsigned int x = 0; x < _boardSize; ++x) {
-      unsigned int index = y * rowStride + x;
+      Player p = _board.getStoneAt(x, y);
 
-      bool isBlack = _blackStones.test(index);
-      bool isWhite = _whiteStones.test(index);
-
-      if (isBlack || isWhite) {
+      if (p != Player::NONE) {
         float posX = _boardOffset.x + static_cast<float>(x * _cellSize);
         float posY = _boardOffset.y + static_cast<float>(y * _cellSize);
         stone.setPosition(sf::Vector2f(posX, posY));
 
-        stone.setFillColor(isBlack ? sf::Color::Black : sf::Color::White);
+        stone.setFillColor(p == Player::BLACK ? sf::Color::Black : sf::Color::White);
         window.draw(stone);
       }
     }
