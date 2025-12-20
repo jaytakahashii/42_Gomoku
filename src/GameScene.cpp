@@ -30,6 +30,8 @@ void GameScene::handleClick(int x, int y) {
         if (_onGameOver)
           _onGameOver();
       }
+
+      _board.changeTurn();
     }
   }
 }

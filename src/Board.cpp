@@ -5,6 +5,10 @@ Board::Board() : _currentTurn(Player::BLACK) {
   _whiteStones.reset();
 }
 
+void Board::changeTurn() {
+  _currentTurn = (_currentTurn == Player::BLACK) ? Player::WHITE : Player::BLACK;
+}
+
 bool Board::makeMove(int x, int y) {
   if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE)
     return false;
@@ -21,8 +25,6 @@ bool Board::makeMove(int x, int y) {
     _whiteStones.set(index);
   }
 
-  // Change turn
-  _currentTurn = (_currentTurn == Player::BLACK) ? Player::WHITE : Player::BLACK;
   return true;
 }
 
@@ -52,7 +54,7 @@ bool Board::_hasFiveInARow(const std::bitset<MAX_CELLS>& stones, int shift_amoun
 }
 
 bool Board::checkWin() {
-  const auto& stones = (_currentTurn == Player::WHITE) ? _blackStones : _whiteStones;
+  const auto& stones = (_currentTurn == Player::WHITE) ? _whiteStones : _blackStones;
 
   if (_hasFiveInARow(stones, SHIFT_H))
     return true;  // 横
