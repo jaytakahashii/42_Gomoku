@@ -27,6 +27,8 @@ void GameScene::handleClick(int x, int y) {
       // TODO: SEを鳴らすなどの処理があればここに書く
 
       if (_board.checkWin()) {
+        // TODO: debug用
+        printf("Player %s wins!\n", _board.getCurrentTurn() == Player::BLACK ? "Black" : "White");
         if (_onGameOver)
           _onGameOver();
       }
