@@ -9,19 +9,21 @@ bool Board::makeMove(int x, int y) {
   if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE)
     return false;
 
-  int index = getIndex(x, y);
+  int index = _getIndex(x, y);
 
-  // Check if the cell is already occupied
   if (_blackStones.test(index) || _whiteStones.test(index)) {
     return false;
   }
 
-  // Place the stone
   if (_currentTurn == Player::BLACK) {
     _blackStones.set(index);
-    // TODO: Implement checkWin(x, y) and forbidden move checks
   } else {
     _whiteStones.set(index);
+  }
+
+  if (checkWin(x, y)) {
+    // TODO: implement a proper win handling mechanism
+    printf("Player %s wins!\n", (_currentTurn == Player::BLACK) ? "Black" : "White");
   }
 
   // Change turn
@@ -30,7 +32,7 @@ bool Board::makeMove(int x, int y) {
 }
 
 Player Board::getStoneAt(int x, int y) const {
-  int index = getIndex(x, y);
+  int index = _getIndex(x, y);
   if (_blackStones.test(index))
     return Player::BLACK;
   if (_whiteStones.test(index))
@@ -42,11 +44,33 @@ Player Board::getCurrentTurn() const {
   return _currentTurn;
 }
 
+bool Board::_hasFiveInARow(const std::bitset<MAX_CELLS>& stones, int shift_amount) const {
+  std::bitset<MAX_CELLS> temp = stones;
+
+  // 1回ずらしてANDをとる = 「2個並んでいる場所」が1になる
+  temp &= (temp >> shift_amount);
+  temp &= (temp >> shift_amount);  // 3連
+  temp &= (temp >> shift_amount);  // 4連
+  temp &= (temp >> shift_amount);  // 5連
+
+  return temp.any();
+}
+
 bool Board::checkWin(int x, int y) {
-  // TODO: Implement fast win check using bit shifting
+  const auto& stones = (_currentTurn == Player::WHITE) ? _whiteStones : _blackStones;
+
+  if (_hasFiveInARow(stones, SHIFT_H))
+    return true;  // 横
+  if (_hasFiveInARow(stones, SHIFT_V))
+    return true;  // 縦
+  if (_hasFiveInARow(stones, SHIFT_D1))
+    return true;  // 右下
+  if (_hasFiveInARow(stones, SHIFT_D2))
+    return true;  // 左下
+
   return false;
 }
 
-int Board::getIndex(int x, int y) const {
+int Board::_getIndex(int x, int y) const {
   return y * BOARD_WIDTH + x;
 }
