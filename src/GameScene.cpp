@@ -26,11 +26,10 @@ void GameScene::handleClick(int x, int y) {
     if (_board.makeMove(col, row)) {
       // TODO: SEを鳴らすなどの処理があればここに書く
 
-      // 勝利判定
-      /* if (_board.checkWin(col, row)) {
-          if (_onGameOver) _onGameOver();
+      if (_board.checkWin(col, row)) {
+        if (_onGameOver)
+          _onGameOver();
       }
-      */
     }
   }
 }

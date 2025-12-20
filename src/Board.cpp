@@ -21,11 +21,6 @@ bool Board::makeMove(int x, int y) {
     _whiteStones.set(index);
   }
 
-  if (checkWin(x, y)) {
-    // TODO: implement a proper win handling mechanism
-    printf("Player %s wins!\n", (_currentTurn == Player::BLACK) ? "Black" : "White");
-  }
-
   // Change turn
   _currentTurn = (_currentTurn == Player::BLACK) ? Player::WHITE : Player::BLACK;
   return true;
@@ -57,7 +52,7 @@ bool Board::_hasFiveInARow(const std::bitset<MAX_CELLS>& stones, int shift_amoun
 }
 
 bool Board::checkWin(int x, int y) {
-  const auto& stones = (_currentTurn == Player::WHITE) ? _whiteStones : _blackStones;
+  const auto& stones = (_currentTurn == Player::WHITE) ? _blackStones : _whiteStones;
 
   if (_hasFiveInARow(stones, SHIFT_H))
     return true;  // 横
