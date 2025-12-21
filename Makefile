@@ -58,9 +58,10 @@ SRC_DIR            = src/
 OBJ_DIR            = .obj/
 SRC_FILES          = main.cpp \
                      Gomoku.cpp \
-					 MenuScene.cpp \
-					 GameScene.cpp \
-					 ResultScene.cpp
+										 MenuScene.cpp \
+										 GameScene.cpp \
+										 ResultScene.cpp \
+										 Board.cpp
 IFLAGS            += -Iinclude
 SRCS               = $(addprefix $(SRC_DIR), $(SRC_FILES))
 OBJS               = $(addprefix $(OBJ_DIR), $(SRC_FILES:.cpp=.o))
