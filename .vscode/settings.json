@@ -4,6 +4,7 @@
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit" // organize imports on save
   },
+  "editor.tabSize": 4,
 
   // --- Prettier Settings for Other Files ---
   "editor.defaultFormatter": "esbenp.prettier-vscode",
