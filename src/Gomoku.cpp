@@ -1,7 +1,8 @@
 #include <Gomoku.hpp>
 
-Gomoku::Gomoku() : _window(sf::VideoMode({1000, 1000}), "Gomoku"), font() {
+Gomoku::Gomoku() : _window(sf::VideoMode({1080, 1000}), "Gomoku"), font() {
   initFont("arial.ttf");
+  this->_window.setMinimumSize(sf::Vector2u(1080, 1000));
 
   this->_menuScene = std::make_unique<MenuScene>(font, this->_window.getSize());
   this->_gameScene = std::make_unique<GameScene>(font, this->_window.getSize());
@@ -16,6 +17,7 @@ void Gomoku::run() {
   while (this->_window.isOpen()) {
     EventList events = getEventList();
     this->_currentScene->handleEvents(events);
+    this->_currentScene->update(0.f);
     this->_window.clear();
     this->_currentScene->render(this->_window);
     this->_window.display();
