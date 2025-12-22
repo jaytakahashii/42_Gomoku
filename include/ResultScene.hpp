@@ -11,9 +11,13 @@ class ResultScene : public Scene {
   void render(sf::RenderWindow& window);
   void onResize(const sf::Vector2u& windowSize);
 
+  void setBackground(const sf::Window& window);
+
  private:
   sf::Font& _font;
   sf::Text _titleText;
+  sf::Texture _backgroundTexture;
+  std::unique_ptr<sf::Sprite> _backgroundSprite;
 };
 
 #endif

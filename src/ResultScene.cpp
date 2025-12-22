@@ -20,8 +20,10 @@ void ResultScene::update(float dt) {
 }
 
 void ResultScene::render(sf::RenderWindow& window) {
-  window.clear(sf::Color(50, 50, 50));
-  window.draw(this->_titleText);
+  if (_backgroundSprite) {
+    window.draw(*_backgroundSprite);
+  }
+  window.draw(_titleText);
 }
 
 void ResultScene::onResize(const sf::Vector2u& windowSize) {
@@ -29,4 +31,12 @@ void ResultScene::onResize(const sf::Vector2u& windowSize) {
   float h = static_cast<float>(windowSize.y);
 
   this->_titleText.setPosition({w / 2.f, h * 0.3f});
+}
+
+void ResultScene::setBackground(const sf::Window& window) {
+  _backgroundTexture.update(window);
+
+  _backgroundSprite = std::make_unique<sf::Sprite>(_backgroundTexture);
+
+  _backgroundSprite->setColor(sf::Color(100, 100, 100));
 }
