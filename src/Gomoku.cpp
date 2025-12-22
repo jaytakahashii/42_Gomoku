@@ -10,7 +10,10 @@ Gomoku::Gomoku() : _window(sf::VideoMode({1080, 1000}), "Gomoku"), font() {
   this->_currentScene = this->_menuScene.get();
 
   this->_menuScene->setOnStartGame([this]() { changeScene(this->_gameScene.get()); });
-  this->_gameScene->setOnGameOver([this]() { changeScene(this->_resultScene.get()); });
+  this->_gameScene->setOnGameOver([this]() {
+    this->_resultScene.get()->setBackground(this->_window);
+    changeScene(this->_resultScene.get());
+  });
 }
 
 void Gomoku::run() {
