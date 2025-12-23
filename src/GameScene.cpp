@@ -97,3 +97,11 @@ void GameScene::onResize(const sf::Vector2u& windowSize) {
 void GameScene::setOnGameOver(std::function<void(const std::string& winner)> callback) {
   this->_onGameOver = callback;
 }
+
+void GameScene::setAILevel(AILevel& level) {
+  this->_aiLevel = level;
+}
+
+void GameScene::setTurnOrder(TurnOrder turnOrder) {
+  this->_turnOrder = turnOrder;
+}
