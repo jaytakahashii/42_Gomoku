@@ -40,7 +40,7 @@ void GameScene::handleClick(int x, int y) {
 }
 
 void GameScene::render(sf::RenderWindow& window) {
-  window.clear(sf::Color(200, 160, 100));
+  window.clear(Theme::Color::Board);
 
   const float boardLength = static_cast<float>((_boardSize - 1) * _cellSize);
 

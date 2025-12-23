@@ -2,13 +2,13 @@
 
 ResultScene::ResultScene(sf::Font& font, const sf::Vector2u& initalSize)
     : _font(font), _titleText(font, "Result"), _winnerText(font, "") {
-  this->_titleText.setCharacterSize(80);
-  this->_titleText.setFillColor(sf::Color::Black);
+  this->_titleText.setCharacterSize(Theme::FontSize::Title);
+  this->_titleText.setFillColor(Theme::Color::Text);
   this->_titleText.setStyle(sf::Text::Bold);
   sf::FloatRect titleBounds = this->_titleText.getLocalBounds();
   this->_titleText.setOrigin(titleBounds.getCenter());
 
-  this->_winnerText.setCharacterSize(45);
+  this->_winnerText.setCharacterSize(Theme::FontSize::Header);
   this->_winnerText.setFillColor(sf::Color::Black);
   this->_winnerText.setStyle(sf::Text::Bold);
   this->_winnerText.setOrigin(_winnerText.getLocalBounds().getCenter());
@@ -25,7 +25,7 @@ void ResultScene::update(float dt) {
 }
 
 void ResultScene::render(sf::RenderWindow& window) {
-  window.clear(sf::Color(200 * 100 / 255, 160 * 100 / 255, 100 * 100 / 255));
+  window.clear(Theme::Color::BoardDarkened);
 
   if (_backgroundSprite) {
     window.draw(*_backgroundSprite);

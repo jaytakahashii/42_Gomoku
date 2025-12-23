@@ -10,68 +10,68 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
       _easyText(font, "Easy"),
       _mediumText(font, "Medium"),
       _hardText(font, "Hard"),
-      _levelText(font, "You can select the level.") {
-  this->_titleText.setCharacterSize(80);
-  this->_titleText.setFillColor(sf::Color::Black);
+      _levelText(font, "You can select the AI level.") {
+  this->_titleText.setCharacterSize(Theme::FontSize::Title);
+  this->_titleText.setFillColor(Theme::Color::Text);
   this->_titleText.setStyle(sf::Text::Bold);
   sf::FloatRect titleBounds = this->_titleText.getLocalBounds();
   this->_titleText.setOrigin(titleBounds.getCenter());
 
-  this->_startButton.setSize({250.f, 60.f});
-  this->_startButton.setFillColor(sf::Color(100, 100, 100));
+  this->_startButton.setSize(Theme::Size::Button);
+  this->_startButton.setFillColor(Theme::Color::ButtonIdle);
   this->_startButton.setOrigin(this->_startButton.getSize() / 2.f);
 
-  this->_orderText.setCharacterSize(25);
+  this->_orderText.setCharacterSize(Theme::FontSize::Button);
   this->_orderText.setFillColor(sf::Color::Black);
   this->_orderText.setStyle(sf::Text::Bold);
   this->_orderText.setOrigin(_orderText.getLocalBounds().getCenter());
 
-  this->_firstText.setCharacterSize(25);
+  this->_firstText.setCharacterSize(Theme::FontSize::Button);
   this->_firstText.setFillColor(sf::Color::Black);
   this->_firstText.setStyle(sf::Text::Bold);
   this->_firstText.setOrigin(_firstText.getLocalBounds().getCenter());
 
-  this->_secondText.setCharacterSize(25);
+  this->_secondText.setCharacterSize(Theme::FontSize::Button);
   this->_secondText.setFillColor(sf::Color::Black);
   this->_secondText.setStyle(sf::Text::Bold);
   this->_secondText.setOrigin(_secondText.getLocalBounds().getCenter());
 
-  this->_firstButton.setSize({250.f, 60.f});
-  this->_firstButton.setFillColor(sf::Color(100, 100, 100));
+  this->_firstButton.setSize(Theme::Size::Button);
+  this->_firstButton.setFillColor(Theme::Color::ButtonIdle);
   this->_firstButton.setOrigin(this->_firstButton.getSize() / 2.f);
 
-  this->_secondButton.setSize({250.f, 60.f});
-  this->_secondButton.setFillColor(sf::Color(100, 100, 100));
+  this->_secondButton.setSize(Theme::Size::Button);
+  this->_secondButton.setFillColor(Theme::Color::ButtonIdle);
   this->_secondButton.setOrigin(this->_secondButton.getSize() / 2.f);
 
-  this->_levelText.setCharacterSize(25);
+  this->_levelText.setCharacterSize(Theme::FontSize::Button);
   this->_levelText.setFillColor(sf::Color::Black);
   this->_levelText.setStyle(sf::Text::Bold);
   this->_levelText.setOrigin(_levelText.getLocalBounds().getCenter());
 
-  this->_easyButton.setSize({250.f, 60.f});
-  this->_easyButton.setFillColor(sf::Color(100, 100, 100));
+  this->_easyButton.setSize(Theme::Size::Button);
+  this->_easyButton.setFillColor(Theme::Color::ButtonIdle);
   this->_easyButton.setOrigin(this->_easyButton.getSize() / 2.f);
 
-  this->_easyText.setCharacterSize(25);
+  this->_easyText.setCharacterSize(Theme::FontSize::Button);
   this->_easyText.setFillColor(sf::Color::Black);
   this->_easyText.setStyle(sf::Text::Bold);
   this->_easyText.setOrigin(_easyText.getLocalBounds().getCenter());
 
-  this->_mediumButton.setSize({250.f, 60.f});
-  this->_mediumButton.setFillColor(sf::Color(100, 100, 100));
+  this->_mediumButton.setSize(Theme::Size::Button);
+  this->_mediumButton.setFillColor(Theme::Color::ButtonIdle);
   this->_mediumButton.setOrigin(this->_mediumButton.getSize() / 2.f);
 
-  this->_mediumText.setCharacterSize(25);
+  this->_mediumText.setCharacterSize(Theme::FontSize::Button);
   this->_mediumText.setFillColor(sf::Color::Black);
   this->_mediumText.setStyle(sf::Text::Bold);
   this->_mediumText.setOrigin(_mediumText.getLocalBounds().getCenter());
 
-  this->_hardButton.setSize({250.f, 60.f});
-  this->_hardButton.setFillColor(sf::Color(100, 100, 100));
+  this->_hardButton.setSize(Theme::Size::Button);
+  this->_hardButton.setFillColor(Theme::Color::ButtonIdle);
   this->_hardButton.setOrigin(this->_hardButton.getSize() / 2.f);
 
-  this->_hardText.setCharacterSize(25);
+  this->_hardText.setCharacterSize(Theme::FontSize::Button);
   this->_hardText.setFillColor(sf::Color::Black);
   this->_hardText.setStyle(sf::Text::Bold);
   this->_hardText.setOrigin(_hardText.getLocalBounds().getCenter());
@@ -114,29 +114,26 @@ void MenuScene::handleEvents(const EventList& events) {
 }
 
 void MenuScene::update(float dt) {
-  sf::Color selectedColor(180, 180, 180);
-  sf::Color idleColor(100, 100, 100);
-
   if (this->_turnOrder == TurnOrder::PlayerFirst) {
-    this->_firstButton.setFillColor(selectedColor);
-    this->_secondButton.setFillColor(idleColor);
+    this->_firstButton.setFillColor(Theme::Color::ButtonActive);
+    this->_secondButton.setFillColor(Theme::Color::ButtonIdle);
   } else {
-    this->_firstButton.setFillColor(idleColor);
-    this->_secondButton.setFillColor(selectedColor);
+    this->_firstButton.setFillColor(Theme::Color::ButtonIdle);
+    this->_secondButton.setFillColor(Theme::Color::ButtonActive);
   }
 
   if (this->_aiLevel == AILevel::Easy) {
-    this->_easyButton.setFillColor(selectedColor);
-    this->_mediumButton.setFillColor(idleColor);
-    this->_hardButton.setFillColor(idleColor);
+    this->_easyButton.setFillColor(Theme::Color::ButtonActive);
+    this->_mediumButton.setFillColor(Theme::Color::ButtonIdle);
+    this->_hardButton.setFillColor(Theme::Color::ButtonIdle);
   } else if (this->_aiLevel == AILevel::Medium) {
-    this->_easyButton.setFillColor(idleColor);
-    this->_mediumButton.setFillColor(selectedColor);
-    this->_hardButton.setFillColor(idleColor);
+    this->_easyButton.setFillColor(Theme::Color::ButtonIdle);
+    this->_mediumButton.setFillColor(Theme::Color::ButtonActive);
+    this->_hardButton.setFillColor(Theme::Color::ButtonIdle);
   } else if (this->_aiLevel == AILevel::Hard) {
-    this->_easyButton.setFillColor(idleColor);
-    this->_mediumButton.setFillColor(idleColor);
-    this->_hardButton.setFillColor(selectedColor);
+    this->_easyButton.setFillColor(Theme::Color::ButtonIdle);
+    this->_mediumButton.setFillColor(Theme::Color::ButtonIdle);
+    this->_hardButton.setFillColor(Theme::Color::ButtonActive);
   }
 }
 

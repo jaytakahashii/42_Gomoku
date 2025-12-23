@@ -4,6 +4,7 @@
 #include <Board.hpp>
 #include <Enums.hpp>
 #include <Scene.hpp>
+#include <Theme.hpp>
 #include <functional>
 
 const unsigned int CELL_SIZE = 40;

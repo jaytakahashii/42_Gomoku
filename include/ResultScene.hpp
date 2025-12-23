@@ -2,6 +2,7 @@
 #define RESULTSCENE_HPP
 
 #include <Scene.hpp>
+#include <Theme.hpp>
 
 class ResultScene : public Scene {
  public:

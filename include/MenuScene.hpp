@@ -3,6 +3,7 @@
 
 #include <Enums.hpp>
 #include <Scene.hpp>
+#include <Theme.hpp>
 #include <functional>
 
 class MenuScene : public Scene {
