@@ -92,21 +92,21 @@ void MenuScene::handleEvents(const EventList& events) {
                               static_cast<float>(mousePtr->position.y));
         if (this->_startButton.getGlobalBounds().contains(mousePos)) {
           if (this->_onStartGame)
-            this->_onStartGame();
+            this->_onStartGame(this->_turnOrder, this->_aiLevel);
         }
 
         if (this->_firstButton.getGlobalBounds().contains(mousePos)) {
-          this->_isFirst = true;
+          this->_turnOrder = TurnOrder::PlayerFirst;
         } else if (this->_secondButton.getGlobalBounds().contains(mousePos)) {
-          this->_isFirst = false;
+          this->_turnOrder = TurnOrder::AIFirst;
         }
 
         if (this->_easyButton.getGlobalBounds().contains(mousePos)) {
-          this->_level = Level::Easy;
+          this->_aiLevel = AILevel::Easy;
         } else if (this->_mediumButton.getGlobalBounds().contains(mousePos)) {
-          this->_level = Level::Medium;
+          this->_aiLevel = AILevel::Medium;
         } else if (this->_hardButton.getGlobalBounds().contains(mousePos)) {
-          this->_level = Level::Hard;
+          this->_aiLevel = AILevel::Hard;
         }
       }
     }
@@ -117,7 +117,7 @@ void MenuScene::update(float dt) {
   sf::Color selectedColor(180, 180, 180);
   sf::Color idleColor(100, 100, 100);
 
-  if (this->_isFirst) {
+  if (this->_turnOrder == TurnOrder::PlayerFirst) {
     this->_firstButton.setFillColor(selectedColor);
     this->_secondButton.setFillColor(idleColor);
   } else {
@@ -125,15 +125,15 @@ void MenuScene::update(float dt) {
     this->_secondButton.setFillColor(selectedColor);
   }
 
-  if (this->_level == Level::Easy) {
+  if (this->_aiLevel == AILevel::Easy) {
     this->_easyButton.setFillColor(selectedColor);
     this->_mediumButton.setFillColor(idleColor);
     this->_hardButton.setFillColor(idleColor);
-  } else if (this->_level == Level::Medium) {
+  } else if (this->_aiLevel == AILevel::Medium) {
     this->_easyButton.setFillColor(idleColor);
     this->_mediumButton.setFillColor(selectedColor);
     this->_hardButton.setFillColor(idleColor);
-  } else if (this->_level == Level::Hard) {
+  } else if (this->_aiLevel == AILevel::Hard) {
     this->_easyButton.setFillColor(idleColor);
     this->_mediumButton.setFillColor(idleColor);
     this->_hardButton.setFillColor(selectedColor);
@@ -183,6 +183,6 @@ void MenuScene::onResize(const sf::Vector2u& windowSize) {
   this->_hardText.setPosition(_hardButton.getPosition());
 }
 
-void MenuScene::setOnStartGame(std::function<void()> callback) {
+void MenuScene::setOnStartGame(std::function<void(TurnOrder turnOrder, AILevel& level)> callback) {
   this->_onStartGame = callback;
 }

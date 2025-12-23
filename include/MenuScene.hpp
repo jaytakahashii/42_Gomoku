@@ -1,6 +1,7 @@
 #ifndef MENUSCENE_HPP
 #define MENUSCENE_HPP
 
+#include <Enums.hpp>
 #include <Scene.hpp>
 #include <functional>
 
@@ -13,10 +14,9 @@ class MenuScene : public Scene {
   void render(sf::RenderWindow& window);
   void onResize(const sf::Vector2u& windowSize);
 
-  void setOnStartGame(std::function<void()> callback);
+  void setOnStartGame(std::function<void(TurnOrder turnOrder, AILevel& level)> callback);
 
  private:
-  enum Level { Easy, Medium, Hard };
   sf::Font& _font;
   sf::Text _titleText;
   sf::RectangleShape _startButton;
@@ -33,9 +33,9 @@ class MenuScene : public Scene {
   sf::Text _firstText;
   sf::Text _secondText;
   sf::Text _startButtonText;
-  bool _isFirst = true;
-  Level _level = Level::Medium;
-  std::function<void()> _onStartGame;
+  TurnOrder _turnOrder = TurnOrder::PlayerFirst;
+  AILevel _aiLevel = AILevel::Medium;
+  std::function<void(TurnOrder turnOrder, AILevel& level)> _onStartGame;
 };
 
 #endif
