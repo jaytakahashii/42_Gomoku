@@ -12,12 +12,16 @@ class ResultScene : public Scene {
   void onResize(const sf::Vector2u& windowSize);
 
   void setBackground(const sf::Window& window);
+  void setWinner(const std::string& winner);
+
+  const sf::Color DarkGrey = sf::Color(100, 100, 100);
 
  private:
   sf::Font& _font;
   sf::Text _titleText;
   sf::Texture _backgroundTexture;
   std::unique_ptr<sf::Sprite> _backgroundSprite;
+  sf::Text _winnerText;
 };
 
 #endif
