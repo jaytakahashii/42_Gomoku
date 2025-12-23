@@ -18,7 +18,7 @@ class GameScene : public Scene {
   void render(sf::RenderWindow& window);
   void onResize(const sf::Vector2u& windowSize);
 
-  void setOnGameOver(std::function<void()> callback);
+  void setOnGameOver(std::function<void(const std::string& winner)> callback);
 
  private:
   sf::Font& _font;
@@ -28,7 +28,7 @@ class GameScene : public Scene {
 
   Board _board;
   void handleClick(int x, int y);
-  std::function<void()> _onGameOver;
+  std::function<void(const std::string& winner)> _onGameOver;
 };
 
 #endif
