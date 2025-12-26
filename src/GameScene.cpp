@@ -29,8 +29,9 @@ void GameScene::handleClick(int x, int y) {
       if (_board.checkWin()) {
         // TODO: debug用
         printf("Player %s wins!\n", _board.getCurrentTurn() == Player::BLACK ? "Black" : "White");
+        std::string winner = _board.getCurrentTurn() == Player::BLACK ? "Black" : "White";
         if (_onGameOver)
-          _onGameOver();
+          _onGameOver(winner);
       }
 
       _board.changeTurn();
@@ -39,7 +40,7 @@ void GameScene::handleClick(int x, int y) {
 }
 
 void GameScene::render(sf::RenderWindow& window) {
-  window.clear(sf::Color(200, 160, 100));
+  window.clear(Theme::Color::Board);
 
   const float boardLength = static_cast<float>((_boardSize - 1) * _cellSize);
 
@@ -93,6 +94,14 @@ void GameScene::onResize(const sf::Vector2u& windowSize) {
   _boardOffset.y = (h - boardPixelSize) / 2.f;
 }
 
-void GameScene::setOnGameOver(std::function<void()> callback) {
+void GameScene::setOnGameOver(std::function<void(const std::string& winner)> callback) {
   this->_onGameOver = callback;
+}
+
+void GameScene::setAILevel(AILevel& level) {
+  this->_aiLevel = level;
+}
+
+void GameScene::setTurnOrder(TurnOrder turnOrder) {
+  this->_turnOrder = turnOrder;
 }

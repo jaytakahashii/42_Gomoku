@@ -2,7 +2,9 @@
 #define GAMESCENE_HPP
 
 #include <Board.hpp>
+#include <Enums.hpp>
 #include <Scene.hpp>
+#include <Theme.hpp>
 #include <functional>
 
 const unsigned int CELL_SIZE = 40;
@@ -18,17 +20,21 @@ class GameScene : public Scene {
   void render(sf::RenderWindow& window);
   void onResize(const sf::Vector2u& windowSize);
 
-  void setOnGameOver(std::function<void()> callback);
+  void setOnGameOver(std::function<void(const std::string& winner)> callback);
+  void setAILevel(AILevel& level);
+  void setTurnOrder(TurnOrder turnOrder);
 
  private:
   sf::Font& _font;
   const unsigned int _boardSize = BOARD_SIZE;
   const unsigned int _cellSize = CELL_SIZE;
   sf::Vector2f _boardOffset;
+  AILevel _aiLevel;
+  TurnOrder _turnOrder;
 
   Board _board;
   void handleClick(int x, int y);
-  std::function<void()> _onGameOver;
+  std::function<void(const std::string& winner)> _onGameOver;
 };
 
 #endif
