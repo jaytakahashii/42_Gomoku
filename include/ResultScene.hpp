@@ -14,8 +14,7 @@ class ResultScene : public Scene {
 
   void setBackground(const sf::Window& window);
   void setWinner(const std::string& winner);
-
-  const sf::Color DarkGrey = sf::Color(100, 100, 100);
+  void setOnBack(std::function<void()> func);
 
  private:
   sf::Font& _font;
@@ -23,6 +22,9 @@ class ResultScene : public Scene {
   sf::Texture _backgroundTexture;
   std::unique_ptr<sf::Sprite> _backgroundSprite;
   sf::Text _winnerText;
+  sf::RectangleShape _backButton;
+  sf::Text _backButtonText;
+  std::function<void()> _onBack;
 };
 
 #endif

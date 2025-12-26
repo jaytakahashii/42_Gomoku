@@ -14,13 +14,19 @@ Gomoku::Gomoku() : _window(sf::VideoMode({1080, 1000}), "Gomoku"), font() {
     this->_gameScene.get()->setTurnOrder(turnOrder);
     changeScene(this->_gameScene.get());
   });
-  this->_gameScene->setOnGameOver([this](const std::string& winner) {
-    this->_window.clear();
-    this->_gameScene->render(this->_window);
-    this->_resultScene.get()->setBackground(this->_window);
-    this->_resultScene.get()->setWinner(winner);
-    changeScene(this->_resultScene.get());
+  this->_gameScene->setOnGameOver([this](const std::string& winner) { initOnGameOver(winner); });
+  this->_resultScene->setOnBack([this] {
+    changeScene(this->_menuScene.get());
+    this->_gameScene = std::make_unique<GameScene>(font, this->_window.getSize());
+    this->_gameScene->setOnGameOver([this](const std::string& winner) { initOnGameOver(winner); });
   });
+}
+void Gomoku::initOnGameOver(const std::string& winner) {
+  this->_window.clear();
+  this->_gameScene->render(this->_window);
+  this->_resultScene.get()->setBackground(this->_window);
+  this->_resultScene.get()->setWinner(winner);
+  changeScene(this->_resultScene.get());
 }
 
 void Gomoku::run() {
