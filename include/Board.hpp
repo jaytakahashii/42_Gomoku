@@ -10,6 +10,8 @@ const int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
 
 enum class Player { NONE, BLACK, WHITE };
 
+using BoardType = std::bitset<MAX_CELLS>;
+
 class Board {
  public:
   Board();
@@ -19,18 +21,23 @@ class Board {
   Player getCurrentTurn() const;
   bool checkWin();
   void changeTurn();
+  int getBlackCaptures() const;
+  int getWhiteCaptures() const;
 
  private:
-  std::bitset<MAX_CELLS> _blackStones;
-  std::bitset<MAX_CELLS> _whiteStones;
+  BoardType _blackStones;
+  BoardType _whiteStones;
   Player _currentTurn;
+  int _blackCaptures;
+  int _whiteCaptures;
   static constexpr int SHIFT_H = 1;                 // 横
   static constexpr int SHIFT_V = BOARD_WIDTH;       // 縦 (20)
   static constexpr int SHIFT_D1 = BOARD_WIDTH + 1;  // 右下 (21)
   static constexpr int SHIFT_D2 = BOARD_WIDTH - 1;  // 左下 (19)
 
   int _getIndex(int x, int y) const;
-  bool _hasFiveInARow(const std::bitset<MAX_CELLS>& stones, int shift_amount) const;
+  bool _hasFiveInARow(const BoardType& stones, int shift_amount) const;
+  void _checkAndProcessCapture(int index);
 };
 
 #endif
