@@ -212,68 +212,92 @@ bool Board::_isStoneCapturable(int index, const BoardType& myStones,
 }
 
 bool Board::_isDoubleThree(int x, int y) {
-  // 現在の手番
   const BoardType& myStones = (_currentTurn == Player::BLACK) ? _blackStones : _whiteStones;
   const BoardType& oppStones = (_currentTurn == Player::BLACK) ? _whiteStones : _blackStones;
 
   int freeThreeCount = 0;
 
   // 4方向チェック
-  // 横(1,0), 縦(0,1), 右下(1,1), 左下(-1,1)
-  const int dirs[4][2] = {{1, 0}, {0, 1}, {1, 1}, {-1, 1}};
-
-  for (auto& d : dirs) {
-    if (_checkFreeThree(x, y, d[0], d[1], myStones, oppStones)) {
+  for (auto& dir : CHECK_DIRS) {
+    if (_checkFreeThree(x, y, dir.dx, dir.dy, myStones, oppStones))
       freeThreeCount++;
-    }
+    if (freeThreeCount >= 2)
+      break;
   }
 
   return (freeThreeCount >= 2);
 }
 
-// 核心部分: ある方向についてのFree-Three判定
 bool Board::_checkFreeThree(int x, int y, int dx, int dy, const BoardType& myStones,
                             const BoardType& oppStones) const {
-  // (x,y) を中心に、-4 〜 +4 の範囲の状態を取得
-  // 0:空, 1:自分, 2:敵/壁
-  int line[9];
-  int center = 4;  // line[4] が (x,y)
+  // bit 5 を中心 (x,y) とする
+  uint16_t line_m = 0;  // m = my
+  uint16_t line_o = 0;  // o = opponent
 
-  for (int i = -4; i <= 4; ++i) {
+  // ±5マスを取得 (計11マス)
+  // Free-Threeパターンの最大長は .X.XX. (6マス) なのでこれで十分
+  for (int i = -5; i <= 5; ++i) {
+    if (i == 0) {
+      line_m |= (1 << 5);  // 中心は自分
+      continue;
+    }
+
     int nx = x + i * dx;
     int ny = y + i * dy;
-    int idx = _getIndex(nx, ny);  // 範囲外なら-1などを返す工夫が必要
 
     // 範囲外チェック
     if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) {
-      line[center + i] = 2;  // 壁は敵と同じ扱い
+      line_o |= (1 << (i + 5));  // 壁
     } else {
+      int idx = _getIndex(nx, ny);
       if (myStones.test(idx))
-        line[center + i] = 1;
+        line_m |= (1 << (i + 5));
       else if (oppStones.test(idx))
-        line[center + i] = 2;
-      else
-        line[center + i] = 0;
+        line_o |= (1 << (i + 5));
     }
   }
 
-  // (x,y)にはまだ石がない前提だが、置いたとして判定するので
-  line[center] = 1;
+  // パターン定義 (1:石, 0:空)
+  // bit 0 が左端
+  static const uint16_t patterns[] = {
+      0b001110,  // .XXX.  (連三)
+      0b010110,  // .X.XX. (飛び三 A)
+      0b011010   // .XX.X. (飛び三 B)
+  };
 
-  // パターンマッチング
-  // Free-Threeの定義: 「止めなければ4連になり」かつ「両端が空いている」
-  // つまり、少なくとも5マスの範囲を見る必要があります。
+  // 各パターンを盤面上でスライドさせて照合
+  for (uint16_t p : patterns) {
+    // パターンの長さは6ビット (0b000000 ~ 0b111111)
+    // これを line_m, line_o に対してずらしながらチェック
 
-  // 代表的なFree-Threeパターン:
-  // A: . X X X .  (Open Three)
-  // B: . X . X X . (Split Three)
+    // パターンの位置をスライド (ウィンドウ)
+    // line_m の幅は11ビット (0..10)。パターンは6ビット。
+    // i はパターンの開始位置 (0..5)
+    for (int i = 0; i <= 5; ++i) {
+      uint16_t mask = 0b111111 << i;
+      uint16_t target = p << i;
 
-  // これを検出するロジック
-  // ここは少し泥臭いですが、配列 line[] を走査して
-  // 「自分の石が3つ」かつ「両端が空」かつ「敵に邪魔されていない」を探します。
+      // 1. 自分の石の形が一致するか？
+      // マスク範囲内の石配置がパターンと完全一致すること
+      // (パターン内の0は「石がない」ことを要求)
+      if ((line_m & mask) != target)
+        continue;
 
-  // 実装例: 文字列変換してfindするのも手です
-  // "01110", "010110", "011010" など
+      // 2. 敵の石（壁）がないか？
+      // マスク範囲内は敵がゼロでなければならない（両端の空も含めて）
+      if ((line_o & mask) != 0)
+        continue;
 
-  return false;  // 仮
+      // 3. 中心 (bit 5) がパターンに含まれているか？
+      // 今置いた石が、そのFree-Threeの一部でなければならない
+      // target (シフト済みのパターン) の bit 5 が 1 であるか確認
+      if ((target & (1 << 5)) == 0)
+        continue;
+
+      // すべてクリアならFree-Three
+      return true;
+    }
+  }
+
+  return false;
 }

@@ -11,6 +11,11 @@ constexpr int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
 
 enum class Player { NONE, BLACK, WHITE };
 
+struct Direction {
+  int dx;
+  int dy;
+};
+
 class Board {
  public:
   Board();
@@ -41,6 +46,13 @@ class Board {
   static constexpr int SHIFT_D1 = BOARD_WIDTH + 1;  // 右下 (21)
   static constexpr int SHIFT_D2 = BOARD_WIDTH - 1;  // 左下 (19)
   static constexpr std::array<int, 4> ALL_DIRS = {SHIFT_H, SHIFT_V, SHIFT_D1, SHIFT_D2};
+
+  static constexpr std::array<Direction, 4> CHECK_DIRS = {{
+      {1, 0},  // Horizontal
+      {0, 1},  // Vertical
+      {1, 1},  // Diagonal Down-Right
+      {-1, 1}  // Diagonal Down-Left
+  }};
 
   int _getIndex(int x, int y) const;
   bool _checkAndProcessCapture(int index);
