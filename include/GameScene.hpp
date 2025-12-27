@@ -13,14 +13,6 @@ const float OFFSET = 20.0f;
 const unsigned int WINDOW_WIDTH = BOARD_SIZE * CELL_SIZE;
 const unsigned int WINDOW_HEIGHT = WINDOW_WIDTH + 50;
 
-struct FloatingMessage {
-  sf::Text text;
-  float timer;
-
-  FloatingMessage(const sf::Font& font) : text(font), timer(1.0f) {
-  }
-};
-
 class GameScene : public Scene {
  public:
   GameScene(sf::Font& font, const sf::Vector2u& initialSize);
@@ -34,6 +26,13 @@ class GameScene : public Scene {
   void setTurnOrder(TurnOrder turnOrder);
 
  private:
+  struct FloatingMessage {
+    sf::Text text;
+    float timer;
+
+    FloatingMessage(const sf::Font& font, const std::string& str, sf::Vector2f pos);
+  };
+
   sf::Font& _font;
   std::list<FloatingMessage> _activeMessages;
   const unsigned int _boardSize = BOARD_SIZE;

@@ -17,26 +17,7 @@ void GameScene::handleEvents(const EventList& events) {
 }
 
 void GameScene::displayTimedMessage(const std::string& str, sf::Vector2f pos) {
-  FloatingMessage message(this->_font);
-  message.text.setString(str);
-  message.text.setCharacterSize(Theme::FontSize::Header);
-  message.text.setFillColor(Theme::Color::AlertText);
-  message.text.setOutlineColor(sf::Color::Black);
-  message.text.setOutlineThickness(1.5f);
-  sf::FloatRect textRect = message.text.getLocalBounds();
-  message.text.setOrigin(
-      {textRect.position.x + textRect.size.x / 2.0f, textRect.position.y + textRect.size.y / 2.0f});
-
-  float centerX = _boardOffset.x + ((static_cast<float>(_boardSize) - 1.f) * _cellSize) / 2.f;
-  float centerY = _boardOffset.y + ((static_cast<float>(_boardSize) - 1.f) * _cellSize) / 2.f;
-
-  message.text.setPosition({pos.x, pos.y - 20.f});
-
-  sf::Color color = message.text.getFillColor();
-  color.a = 255;
-  message.text.setFillColor(color);
-
-  this->_activeMessages.push_back(std::move(message));
+  this->_activeMessages.emplace_back(this->_font, str, pos);
 }
 
 void GameScene::handleClick(int x, int y) {
@@ -49,7 +30,9 @@ void GameScene::handleClick(int x, int y) {
     if (_board.makeMove(col, row)) {
       float posX = _boardOffset.x + static_cast<float>(col * _cellSize);
       float posY = _boardOffset.y + static_cast<float>(row * _cellSize);
-      displayTimedMessage("Hello", {posX, posY});
+      // static bool fg = false;
+      // fg = !fg;
+      // displayTimedMessage(fg ? "Hello" : "World", {posX, posY});
 
       // TODO: SEを鳴らすなどの処理があればここに書く
 
@@ -156,4 +139,23 @@ void GameScene::setAILevel(AILevel& level) {
 
 void GameScene::setTurnOrder(TurnOrder turnOrder) {
   this->_turnOrder = turnOrder;
+}
+
+GameScene::FloatingMessage::FloatingMessage(const sf::Font& font, const std::string& str,
+                                            sf::Vector2f pos)
+    : text(font), timer(1.0f) {
+  text.setString(str);
+  text.setCharacterSize(Theme::FontSize::Header);
+  text.setFillColor(Theme::Color::AlertText);
+  text.setOutlineColor(sf::Color::Black);
+  text.setOutlineThickness(1.5f);
+  sf::FloatRect textRect = text.getLocalBounds();
+  text.setOrigin(
+      {textRect.position.x + textRect.size.x / 2.0f, textRect.position.y + textRect.size.y / 2.0f});
+
+  text.setPosition({pos.x, pos.y - 20.f});
+
+  sf::Color color = text.getFillColor();
+  color.a = 255;
+  text.setFillColor(color);
 }
