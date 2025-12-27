@@ -32,6 +32,7 @@ class Gomoku {
   void initFont(const std::string font);
   EventList getEventList();
   void changeScene(Scene* nextScene);
+  void initOnGameOver(const std::string& winner);
 };
 
 #endif
