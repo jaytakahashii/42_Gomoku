@@ -6,6 +6,7 @@
 #include <Scene.hpp>
 #include <Theme.hpp>
 #include <functional>
+#include <list>
 
 const unsigned int CELL_SIZE = 40;
 const float OFFSET = 20.0f;
@@ -25,7 +26,15 @@ class GameScene : public Scene {
   void setTurnOrder(TurnOrder turnOrder);
 
  private:
+  struct FloatingMessage {
+    sf::Text text;
+    float timer;
+
+    FloatingMessage(const sf::Font& font, const std::string& str, sf::Vector2f pos);
+  };
+
   sf::Font& _font;
+  std::list<FloatingMessage> _activeMessages;
   const unsigned int _boardSize = BOARD_SIZE;
   const unsigned int _cellSize = CELL_SIZE;
   sf::Vector2f _boardOffset;
@@ -34,6 +43,7 @@ class GameScene : public Scene {
 
   Board _board;
   void handleClick(int x, int y);
+  void displayTimedMessage(const std::string& message, sf::Vector2f pos);
   std::function<void(const std::string& winner)> _onGameOver;
 };
 

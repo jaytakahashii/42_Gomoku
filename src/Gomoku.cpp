@@ -30,10 +30,13 @@ void Gomoku::initOnGameOver(const std::string& winner) {
 }
 
 void Gomoku::run() {
+  sf::Clock clock;
   while (this->_window.isOpen()) {
+    sf::Time dt = clock.restart();
+    float deltaTime = dt.asSeconds();
     EventList events = getEventList();
     this->_currentScene->handleEvents(events);
-    this->_currentScene->update(0.f);
+    this->_currentScene->update(deltaTime);
     this->_window.clear();
     this->_currentScene->render(this->_window);
     this->_window.display();
