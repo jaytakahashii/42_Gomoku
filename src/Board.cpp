@@ -19,13 +19,16 @@ bool Board::makeMove(int x, int y) {
   if (_blackStones.test(index) || _whiteStones.test(index))
     return false;
 
+  if (!_checkAndProcessCapture(index)) {
+    if (_isDoubleThree(x, y))
+      return false;
+  }
+
   if (_currentTurn == Player::BLACK) {
     _blackStones.set(index);
   } else {
     _whiteStones.set(index);
   }
-
-  _checkAndProcessCapture(index);
 
   return true;
 }
@@ -108,10 +111,11 @@ int Board::_getIndex(int x, int y) const {
   return y * BOARD_WIDTH + x;
 }
 
-void Board::_checkAndProcessCapture(int index) {
+bool Board::_checkAndProcessCapture(int index) {
   BoardType& myStones = (_currentTurn == Player::BLACK) ? _blackStones : _whiteStones;
   BoardType& oppStones = (_currentTurn == Player::BLACK) ? _whiteStones : _blackStones;
   int& myScore = (_currentTurn == Player::BLACK) ? _blackCaptures : _whiteCaptures;
+  bool captured = false;
 
   for (int d : ALL_DIRS) {
     const int directions[] = {d, -d};
@@ -137,6 +141,8 @@ void Board::_checkAndProcessCapture(int index) {
         // スコア加算
         myScore += 2;
 
+        captured = true;
+
         // TODO: Debug output
         std::cout << "Capture! Player " << ((_currentTurn == Player::BLACK) ? "BLACK" : "WHITE")
                   << "\n"
@@ -145,6 +151,7 @@ void Board::_checkAndProcessCapture(int index) {
       }
     }
   }
+  return captured;
 }
 
 Board::BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) const {
@@ -202,4 +209,71 @@ bool Board::_isStoneCapturable(int index, const BoardType& myStones,
     }
   }
   return false;
+}
+
+bool Board::_isDoubleThree(int x, int y) {
+  // 現在の手番
+  const BoardType& myStones = (_currentTurn == Player::BLACK) ? _blackStones : _whiteStones;
+  const BoardType& oppStones = (_currentTurn == Player::BLACK) ? _whiteStones : _blackStones;
+
+  int freeThreeCount = 0;
+
+  // 4方向チェック
+  // 横(1,0), 縦(0,1), 右下(1,1), 左下(-1,1)
+  const int dirs[4][2] = {{1, 0}, {0, 1}, {1, 1}, {-1, 1}};
+
+  for (auto& d : dirs) {
+    if (_checkFreeThree(x, y, d[0], d[1], myStones, oppStones)) {
+      freeThreeCount++;
+    }
+  }
+
+  return (freeThreeCount >= 2);
+}
+
+// 核心部分: ある方向についてのFree-Three判定
+bool Board::_checkFreeThree(int x, int y, int dx, int dy, const BoardType& myStones,
+                            const BoardType& oppStones) const {
+  // (x,y) を中心に、-4 〜 +4 の範囲の状態を取得
+  // 0:空, 1:自分, 2:敵/壁
+  int line[9];
+  int center = 4;  // line[4] が (x,y)
+
+  for (int i = -4; i <= 4; ++i) {
+    int nx = x + i * dx;
+    int ny = y + i * dy;
+    int idx = _getIndex(nx, ny);  // 範囲外なら-1などを返す工夫が必要
+
+    // 範囲外チェック
+    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) {
+      line[center + i] = 2;  // 壁は敵と同じ扱い
+    } else {
+      if (myStones.test(idx))
+        line[center + i] = 1;
+      else if (oppStones.test(idx))
+        line[center + i] = 2;
+      else
+        line[center + i] = 0;
+    }
+  }
+
+  // (x,y)にはまだ石がない前提だが、置いたとして判定するので
+  line[center] = 1;
+
+  // パターンマッチング
+  // Free-Threeの定義: 「止めなければ4連になり」かつ「両端が空いている」
+  // つまり、少なくとも5マスの範囲を見る必要があります。
+
+  // 代表的なFree-Threeパターン:
+  // A: . X X X .  (Open Three)
+  // B: . X . X X . (Split Three)
+
+  // これを検出するロジック
+  // ここは少し泥臭いですが、配列 line[] を走査して
+  // 「自分の石が3つ」かつ「両端が空」かつ「敵に邪魔されていない」を探します。
+
+  // 実装例: 文字列変換してfindするのも手です
+  // "01110", "010110", "011010" など
+
+  return false;  // 仮
 }

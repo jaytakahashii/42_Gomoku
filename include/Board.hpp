@@ -43,9 +43,12 @@ class Board {
   static constexpr std::array<int, 4> ALL_DIRS = {SHIFT_H, SHIFT_V, SHIFT_D1, SHIFT_D2};
 
   int _getIndex(int x, int y) const;
-  void _checkAndProcessCapture(int index);
+  bool _checkAndProcessCapture(int index);
   BoardType _getFiveInARowBits(const BoardType& stones, int shift_amount) const;
   bool _isStoneCapturable(int index, const BoardType& myStones, const BoardType& oppStones) const;
+  bool _checkFreeThree(int x, int y, int dir_x, int dir_y, const BoardType& myStones,
+                       const BoardType& oppStones) const;
+  bool _isDoubleThree(int x, int y);
 };
 
 #endif
