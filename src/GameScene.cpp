@@ -3,7 +3,6 @@
 GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
     : _font(font), _messageText(font, "") {
   this->_messageText.setCharacterSize(Theme::FontSize::Header);
-  // this->_messageText.setFillColor(sf::Color::Red);
   this->_messageText.setFillColor(Theme::Color::AlertText);
   this->_messageText.setOutlineColor(sf::Color::Black);
   this->_messageText.setOutlineThickness(1.5f);
