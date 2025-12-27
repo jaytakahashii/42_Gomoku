@@ -1,12 +1,6 @@
 #include <GameScene.hpp>
 
-GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
-    : _font(font), _messageText(font, "") {
-  this->_messageText.setCharacterSize(Theme::FontSize::Header);
-  this->_messageText.setFillColor(Theme::Color::AlertText);
-  this->_messageText.setOutlineColor(sf::Color::Black);
-  this->_messageText.setOutlineThickness(1.5f);
-
+GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize) : _font(font) {
   onResize(initalSize);
 }
 
@@ -22,24 +16,27 @@ void GameScene::handleEvents(const EventList& events) {
   }
 }
 
-void GameScene::displayTimedMessage(const std::string& message, sf::Vector2f pos) {
-  _messageText.setString(message);
-
-  sf::FloatRect textRect = _messageText.getLocalBounds();
-  _messageText.setOrigin(
+void GameScene::displayTimedMessage(const std::string& str, sf::Vector2f pos) {
+  FloatingMessage message(this->_font);
+  message.text.setString(str);
+  message.text.setCharacterSize(Theme::FontSize::Header);
+  message.text.setFillColor(Theme::Color::AlertText);
+  message.text.setOutlineColor(sf::Color::Black);
+  message.text.setOutlineThickness(1.5f);
+  sf::FloatRect textRect = message.text.getLocalBounds();
+  message.text.setOrigin(
       {textRect.position.x + textRect.size.x / 2.0f, textRect.position.y + textRect.size.y / 2.0f});
 
   float centerX = _boardOffset.x + ((static_cast<float>(_boardSize) - 1.f) * _cellSize) / 2.f;
   float centerY = _boardOffset.y + ((static_cast<float>(_boardSize) - 1.f) * _cellSize) / 2.f;
 
-  _messageText.setPosition({pos.x, pos.y - 20.f});
+  message.text.setPosition({pos.x, pos.y - 20.f});
 
-  sf::Color color = _messageText.getFillColor();
+  sf::Color color = message.text.getFillColor();
   color.a = 255;
-  _messageText.setFillColor(color);
+  message.text.setFillColor(color);
 
-  _messageTimer = 1.0f;
-  _showMessage = true;
+  this->_activeMessages.push_back(std::move(message));
 }
 
 void GameScene::handleClick(int x, int y) {
@@ -52,7 +49,7 @@ void GameScene::handleClick(int x, int y) {
     if (_board.makeMove(col, row)) {
       float posX = _boardOffset.x + static_cast<float>(col * _cellSize);
       float posY = _boardOffset.y + static_cast<float>(row * _cellSize);
-      // displayTimedMessage("Hello", {posX, posY});
+      displayTimedMessage("Hello", {posX, posY});
 
       // TODO: SEを鳴らすなどの処理があればここに書く
 
@@ -105,26 +102,32 @@ void GameScene::render(sf::RenderWindow& window) {
       }
     }
   }
-
-  if (_showMessage) {
-    window.draw(_messageText);
+  for (const auto& message : this->_activeMessages) {
+    window.draw(message.text);
   }
 }
 
 void GameScene::update(float df) {
-  if (_showMessage) {
-    _messageTimer -= df;
+  auto it = this->_activeMessages.begin();
+  while (it != this->_activeMessages.end()) {
+    it->timer -= df;
 
-    if (_messageTimer <= 0.0f) {
-      _showMessage = false;
+    if (it->timer <= 0.0f) {
+      it = this->_activeMessages.erase(it);
     } else {
-      float alphaProgress = std::min(1.0f, _messageTimer / 0.5f);
-      sf::Color color = _messageText.getFillColor();
+      float alphaProgress = std::min(1.0f, it->timer / 0.5f);
+      std::uint8_t alpha = static_cast<std::uint8_t>(255 * alphaProgress);
 
-      color.a = static_cast<std::uint8_t>(255 * alphaProgress);
-      _messageText.setFillColor(color);
+      sf::Color color = it->text.getFillColor();
+      color.a = alpha;
+      it->text.setFillColor(color);
 
-      _messageText.move({0.f, -50.f * df});
+      sf::Color outColor = it->text.getOutlineColor();
+      outColor.a = alpha;
+      it->text.setOutlineColor(outColor);
+
+      it->text.move({0.f, -40.f * df});
+      ++it;
     }
   }
 }

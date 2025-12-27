@@ -6,11 +6,20 @@
 #include <Scene.hpp>
 #include <Theme.hpp>
 #include <functional>
+#include <list>
 
 const unsigned int CELL_SIZE = 40;
 const float OFFSET = 20.0f;
 const unsigned int WINDOW_WIDTH = BOARD_SIZE * CELL_SIZE;
 const unsigned int WINDOW_HEIGHT = WINDOW_WIDTH + 50;
+
+struct FloatingMessage {
+  sf::Text text;
+  float timer;
+
+  FloatingMessage(const sf::Font& font) : text(font), timer(1.0f) {
+  }
+};
 
 class GameScene : public Scene {
  public:
@@ -26,9 +35,7 @@ class GameScene : public Scene {
 
  private:
   sf::Font& _font;
-  sf::Text _messageText;
-  float _messageTimer;
-  bool _showMessage;
+  std::list<FloatingMessage> _activeMessages;
   const unsigned int _boardSize = BOARD_SIZE;
   const unsigned int _cellSize = CELL_SIZE;
   sf::Vector2f _boardOffset;
