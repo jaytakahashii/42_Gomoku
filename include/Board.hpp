@@ -30,6 +30,8 @@ class Board {
   Player getCurrentTurn() const;
   int getBlackCaptures() const;
   int getWhiteCaptures() const;
+  bool getDoubleThreeStatus() const;
+  void setDoubleThreeStatus(bool status);
 
  private:
   using BoardType = std::bitset<MAX_CELLS>;
@@ -39,6 +41,7 @@ class Board {
   Player _currentTurn;
   int _blackCaptures;
   int _whiteCaptures;
+  bool _doubleThreeStatus;
 
   // 方向定数
   static constexpr int SHIFT_H = 1;                 // 横

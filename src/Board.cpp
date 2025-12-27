@@ -7,7 +7,8 @@ Board::Board()
       _whiteStones(0),
       _currentTurn(Player::BLACK),
       _blackCaptures(0),
-      _whiteCaptures(0) {
+      _whiteCaptures(0),
+      _doubleThreeStatus(false) {
 }
 
 bool Board::makeMove(int x, int y) {
@@ -103,6 +104,14 @@ int Board::getBlackCaptures() const {
 
 int Board::getWhiteCaptures() const {
   return _whiteCaptures;
+}
+
+bool Board::getDoubleThreeStatus() const {
+  return _doubleThreeStatus;
+}
+
+void Board::setDoubleThreeStatus(bool status) {
+  _doubleThreeStatus = status;
 }
 
 // --- Private Helpers ---
@@ -221,8 +230,10 @@ bool Board::_isDoubleThree(int x, int y) {
   for (auto& dir : CHECK_DIRS) {
     if (_checkFreeThree(x, y, dir.dx, dir.dy, myStones, oppStones))
       freeThreeCount++;
-    if (freeThreeCount >= 2)
+    if (freeThreeCount >= 2) {
+      _doubleThreeStatus = true;
       break;
+    }
   }
 
   return (freeThreeCount >= 2);
