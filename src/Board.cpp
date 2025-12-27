@@ -90,33 +90,116 @@ Player Board::getCurrentTurn() const {
   return _currentTurn;
 }
 
-bool Board::_hasFiveInARow(const BoardType& stones, int shift_amount) const {
+Board::BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) const {
   BoardType temp = stones;
 
-  // 1回ずらしてANDをとる = 「2個並んでいる場所」が1になる
+  // 1回ずらしてAND = 2連
   temp &= (temp >> shift_amount);
   temp &= (temp >> shift_amount);  // 3連
   temp &= (temp >> shift_amount);  // 4連
   temp &= (temp >> shift_amount);  // 5連
 
-  return temp.any();
+  return temp;
+}
+
+bool Board::_isStoneCapturable(int index, const BoardType& myStones,
+                               const BoardType& oppStones) const {
+  // 全方向(4軸)をチェック
+  for (int dir : ALL_DIRS) {
+    // ペアのパターンは2通り: (自分, 相方) or (相方, 自分)
+    // 自分が index の位置にいるとして、相方が dir 方向にいるか、-dir 方向にいるか
+
+    // --- ケース1: [index] [相方(index+dir)] ---
+    int p_partner = index + dir;
+    if (p_partner < MAX_CELLS && myStones.test(p_partner)) {
+      // ペア発見。このペアは挟まれているか？
+      // 捕獲成立条件: (敵, ペア, 空) または (空, ペア, 敵)
+      // つまり、両端の一方が敵で、もう一方が空なら、相手は空に打って取れる。
+
+      int p_end1 = index - dir;      // ペアの左側
+      int p_end2 = p_partner + dir;  // ペアの右側
+
+      // 範囲チェック
+      bool end1_valid = (p_end1 >= 0 && p_end1 < MAX_CELLS);
+      bool end2_valid = (p_end2 >= 0 && p_end2 < MAX_CELLS);
+
+      // パターンA: [敵] [自] [自] [空]
+      if (end1_valid && end2_valid && oppStones.test(p_end1) && !myStones.test(p_end2) &&
+          !oppStones.test(p_end2)) {
+        return true;
+      }
+      // パターンB: [空] [自] [自] [敵]
+      if (end1_valid && end2_valid && !myStones.test(p_end1) && !oppStones.test(p_end1) &&
+          oppStones.test(p_end2)) {
+        return true;
+      }
+    }
+
+    // --- ケース2: [相方(index-dir)] [index] ---
+    // これは「ケース1」で dir を反転させてチェックするのと同じ
+    int p_prev = index - dir;
+    if (p_prev >= 0 && myStones.test(p_prev)) {
+      int p_end_left = p_prev - dir;
+      int p_end_right = index + dir;
+
+      bool left_valid = (p_end_left >= 0 && p_end_left < MAX_CELLS);
+      bool right_valid = (p_end_right >= 0 && p_end_right < MAX_CELLS);
+
+      // [敵] [自] [自] [空]
+      if (left_valid && right_valid && oppStones.test(p_end_left) && !myStones.test(p_end_right) &&
+          !oppStones.test(p_end_right)) {
+        return true;
+      }
+      // [空] [自] [自] [敵]
+      if (left_valid && right_valid && !myStones.test(p_end_left) && !oppStones.test(p_end_left) &&
+          oppStones.test(p_end_right)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 bool Board::checkWin() {
-  const BoardType& stones = (_currentTurn == Player::WHITE) ? _whiteStones : _blackStones;
+  const auto& myStones = (_currentTurn == Player::WHITE) ? _whiteStones : _blackStones;
+  const auto& oppStones = (_currentTurn == Player::WHITE) ? _blackStones : _whiteStones;
   int captures = (_currentTurn == Player::WHITE) ? _whiteCaptures : _blackCaptures;
 
+  // 1. 捕獲勝ち
   if (captures >= 10)
     return true;
 
-  if (_hasFiveInARow(stones, SHIFT_H))
-    return true;  // 横
-  if (_hasFiveInARow(stones, SHIFT_V))
-    return true;  // 縦
-  if (_hasFiveInARow(stones, SHIFT_D1))
-    return true;  // 右下
-  if (_hasFiveInARow(stones, SHIFT_D2))
-    return true;  // 左下
+  // 2. 5連チェック (4方向)
+  for (int shift : ALL_DIRS) {
+    // 5連の始点ビット列を取得
+    BoardType lines = _getFiveInARowBits(myStones, shift);
+
+    if (lines.none())
+      continue;
+
+    // 見つかった全ての5連ラインについて検証
+    for (int i = 0; i < MAX_CELLS; ++i) {
+      if (lines.test(i)) {
+        // インデックス i から始まる5連が見つかった
+        bool lineIsSafe = true;
+
+        // 5つの石すべてについて「捕獲される危険性」をチェック
+        for (int k = 0; k < 5; ++k) {
+          int stoneIdx = i + k * shift;
+          if (_isStoneCapturable(stoneIdx, myStones, oppStones)) {
+            // 一つでも捕獲される石があれば、このラインでの勝利は成立しない
+            lineIsSafe = false;
+            break;
+          }
+        }
+
+        // 一つでも「安全な5連」があれば勝利確定
+        if (lineIsSafe) {
+          return true;
+        }
+      }
+    }
+  }
 
   return false;
 }

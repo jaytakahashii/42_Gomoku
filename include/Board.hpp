@@ -34,10 +34,12 @@ class Board {
   static constexpr int SHIFT_V = BOARD_WIDTH;       // 縦 (20)
   static constexpr int SHIFT_D1 = BOARD_WIDTH + 1;  // 右下 (21)
   static constexpr int SHIFT_D2 = BOARD_WIDTH - 1;  // 左下 (19)
+  static constexpr std::array<int, 4> ALL_DIRS = {SHIFT_H, SHIFT_V, SHIFT_D1, SHIFT_D2};
 
   int _getIndex(int x, int y) const;
-  bool _hasFiveInARow(const BoardType& stones, int shift_amount) const;
   void _checkAndProcessCapture(int index);
+  BoardType _getFiveInARowBits(const BoardType& stones, int shift_amount) const;
+  bool _isStoneCapturable(int index, const BoardType& myStones, const BoardType& oppStones) const;
 };
 
 #endif
