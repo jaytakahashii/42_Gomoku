@@ -189,6 +189,7 @@ bool Board::checkWin() {
           if (_isStoneCapturable(stoneIdx, myStones, oppStones)) {
             // 一つでも捕獲される石があれば、このラインでの勝利は成立しない
             lineIsSafe = false;
+            std::cout << "Capturable!!" << std::endl;  // TODO: デバッグ用
             break;
           }
         }
