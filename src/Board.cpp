@@ -35,8 +35,8 @@ void Board::changeTurn() {
 }
 
 bool Board::checkWin() {
-  const auto& myStones = (_currentTurn == Player::WHITE) ? _whiteStones : _blackStones;
-  const auto& oppStones = (_currentTurn == Player::WHITE) ? _blackStones : _whiteStones;
+  const BoardType& myStones = (_currentTurn == Player::WHITE) ? _whiteStones : _blackStones;
+  const BoardType& oppStones = (_currentTurn == Player::WHITE) ? _blackStones : _whiteStones;
   int captures = (_currentTurn == Player::WHITE) ? _whiteCaptures : _blackCaptures;
 
   // 1. 捕獲勝ち
@@ -109,8 +109,8 @@ int Board::_getIndex(int x, int y) const {
 }
 
 void Board::_checkAndProcessCapture(int index) {
-  auto& myStones = (_currentTurn == Player::BLACK) ? _blackStones : _whiteStones;
-  auto& oppStones = (_currentTurn == Player::BLACK) ? _whiteStones : _blackStones;
+  BoardType& myStones = (_currentTurn == Player::BLACK) ? _blackStones : _whiteStones;
+  BoardType& oppStones = (_currentTurn == Player::BLACK) ? _whiteStones : _blackStones;
   int& myScore = (_currentTurn == Player::BLACK) ? _blackCaptures : _whiteCaptures;
 
   for (int d : ALL_DIRS) {
