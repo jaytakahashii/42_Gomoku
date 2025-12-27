@@ -10,8 +10,6 @@ const int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
 
 enum class Player { NONE, BLACK, WHITE };
 
-using BoardType = std::bitset<MAX_CELLS>;
-
 class Board {
  public:
   Board();
@@ -25,6 +23,8 @@ class Board {
   int getWhiteCaptures() const;
 
  private:
+  using BoardType = std::bitset<MAX_CELLS>;
+
   BoardType _blackStones;
   BoardType _whiteStones;
   Player _currentTurn;
