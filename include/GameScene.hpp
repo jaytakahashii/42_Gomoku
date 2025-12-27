@@ -26,6 +26,9 @@ class GameScene : public Scene {
 
  private:
   sf::Font& _font;
+  sf::Text _messageText;
+  float _messageTimer;
+  bool _showMessage;
   const unsigned int _boardSize = BOARD_SIZE;
   const unsigned int _cellSize = CELL_SIZE;
   sf::Vector2f _boardOffset;
@@ -34,6 +37,7 @@ class GameScene : public Scene {
 
   Board _board;
   void handleClick(int x, int y);
+  void displayTimedMessage(const std::string& message, sf::Vector2f pos);
   std::function<void(const std::string& winner)> _onGameOver;
 };
 

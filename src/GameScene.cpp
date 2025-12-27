@@ -1,6 +1,13 @@
 #include <GameScene.hpp>
 
-GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize) : _font(font) {
+GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
+    : _font(font), _messageText(font, "") {
+  this->_messageText.setCharacterSize(Theme::FontSize::Header);
+  // this->_messageText.setFillColor(sf::Color::Red);
+  this->_messageText.setFillColor(Theme::Color::AlertText);
+  this->_messageText.setOutlineColor(sf::Color::Black);
+  this->_messageText.setOutlineThickness(1.5f);
+
   onResize(initalSize);
 }
 
@@ -16,6 +23,26 @@ void GameScene::handleEvents(const EventList& events) {
   }
 }
 
+void GameScene::displayTimedMessage(const std::string& message, sf::Vector2f pos) {
+  _messageText.setString(message);
+
+  sf::FloatRect textRect = _messageText.getLocalBounds();
+  _messageText.setOrigin(
+      {textRect.position.x + textRect.size.x / 2.0f, textRect.position.y + textRect.size.y / 2.0f});
+
+  float centerX = _boardOffset.x + ((static_cast<float>(_boardSize) - 1.f) * _cellSize) / 2.f;
+  float centerY = _boardOffset.y + ((static_cast<float>(_boardSize) - 1.f) * _cellSize) / 2.f;
+
+  _messageText.setPosition({pos.x, pos.y - 20.f});
+
+  sf::Color color = _messageText.getFillColor();
+  color.a = 255;
+  _messageText.setFillColor(color);
+
+  _messageTimer = 1.0f;
+  _showMessage = true;
+}
+
 void GameScene::handleClick(int x, int y) {
   int col = static_cast<int>(std::round((x - _boardOffset.x) / _cellSize));
   int row = static_cast<int>(std::round((y - _boardOffset.y) / _cellSize));
@@ -24,6 +51,10 @@ void GameScene::handleClick(int x, int y) {
       row < static_cast<int>(_boardSize)) {
     // makeMoveが成功（ルール上OK）なら、内部状態が更新される
     if (_board.makeMove(col, row)) {
+      float posX = _boardOffset.x + static_cast<float>(col * _cellSize);
+      float posY = _boardOffset.y + static_cast<float>(row * _cellSize);
+      // displayTimedMessage("Hello", {posX, posY});
+
       // TODO: SEを鳴らすなどの処理があればここに書く
 
       if (_board.checkWin()) {
@@ -75,9 +106,28 @@ void GameScene::render(sf::RenderWindow& window) {
       }
     }
   }
+
+  if (_showMessage) {
+    window.draw(_messageText);
+  }
 }
 
 void GameScene::update(float df) {
+  if (_showMessage) {
+    _messageTimer -= df;
+
+    if (_messageTimer <= 0.0f) {
+      _showMessage = false;
+    } else {
+      float alphaProgress = std::min(1.0f, _messageTimer / 0.5f);
+      sf::Color color = _messageText.getFillColor();
+
+      color.a = static_cast<std::uint8_t>(255 * alphaProgress);
+      _messageText.setFillColor(color);
+
+      _messageText.move({0.f, -50.f * df});
+    }
+  }
 }
 
 void GameScene::onResize(const sf::Vector2u& windowSize) {
