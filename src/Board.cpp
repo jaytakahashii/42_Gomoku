@@ -36,7 +36,10 @@ void Board::_checkAndProcessCapture(int index) {
       myScore += 2;
 
       // TODO: デバッグ用にログを出すと分かりやすい
-      std::cout << "Capture occurred at dir: " << dir << std::endl;
+      std::cout << "Capture! Player " << ((_currentTurn == Player::BLACK) ? "BLACK" : "WHITE")
+                << std::endl;
+      std::cout << "Total captures - BLACK: " << _blackCaptures << ", WHITE: " << _whiteCaptures
+                << std::endl;
     }
   }
 }
