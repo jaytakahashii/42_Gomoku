@@ -27,24 +27,20 @@ void GameScene::handleClick(int x, int y) {
   if (col >= 0 && col < static_cast<int>(_boardSize) && row >= 0 &&
       row < static_cast<int>(_boardSize)) {
     // makeMoveが成功（ルール上OK）なら、内部状態が更新される
+    float posX = _boardOffset.x + static_cast<float>(col * _cellSize);
+    float posY = _boardOffset.y + static_cast<float>(row * _cellSize);
     if (_board.makeMove(col, row)) {
-      float posX = _boardOffset.x + static_cast<float>(col * _cellSize);
-      float posY = _boardOffset.y + static_cast<float>(row * _cellSize);
-      // static bool fg = false;
-      // fg = !fg;
-      // displayTimedMessage(fg ? "Hello" : "World", {posX, posY});
-
-      // TODO: SEを鳴らすなどの処理があればここに書く
-
       if (_board.checkWin()) {
-        // TODO: debug用
-        printf("Player %s wins!\n", _board.getCurrentTurn() == Player::BLACK ? "Black" : "White");
         std::string winner = _board.getCurrentTurn() == Player::BLACK ? "Black" : "White";
         if (_onGameOver)
           _onGameOver(winner);
       }
 
       _board.changeTurn();
+    }
+    if (_board.getDoubleThreeStatus()) {
+      displayTimedMessage("DoubleThree", {posX, posY});
+      _board.setDoubleThreeStatus(false);  // リセット
     }
   }
 }

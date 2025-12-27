@@ -7,7 +7,8 @@ Board::Board()
       _whiteStones(0),
       _currentTurn(Player::BLACK),
       _blackCaptures(0),
-      _whiteCaptures(0) {
+      _whiteCaptures(0),
+      _doubleThreeStatus(false) {
 }
 
 bool Board::makeMove(int x, int y) {
@@ -19,13 +20,16 @@ bool Board::makeMove(int x, int y) {
   if (_blackStones.test(index) || _whiteStones.test(index))
     return false;
 
+  if (!_checkAndProcessCapture(index)) {
+    if (_isDoubleThree(x, y))
+      return false;
+  }
+
   if (_currentTurn == Player::BLACK) {
     _blackStones.set(index);
   } else {
     _whiteStones.set(index);
   }
-
-  _checkAndProcessCapture(index);
 
   return true;
 }
@@ -35,8 +39,8 @@ void Board::changeTurn() {
 }
 
 bool Board::checkWin() {
-  const auto& myStones = (_currentTurn == Player::WHITE) ? _whiteStones : _blackStones;
-  const auto& oppStones = (_currentTurn == Player::WHITE) ? _blackStones : _whiteStones;
+  const BoardType& myStones = (_currentTurn == Player::WHITE) ? _whiteStones : _blackStones;
+  const BoardType& oppStones = (_currentTurn == Player::WHITE) ? _blackStones : _whiteStones;
   int captures = (_currentTurn == Player::WHITE) ? _whiteCaptures : _blackCaptures;
 
   // 1. 捕獲勝ち
@@ -102,16 +106,25 @@ int Board::getWhiteCaptures() const {
   return _whiteCaptures;
 }
 
+bool Board::getDoubleThreeStatus() const {
+  return _doubleThreeStatus;
+}
+
+void Board::setDoubleThreeStatus(bool status) {
+  _doubleThreeStatus = status;
+}
+
 // --- Private Helpers ---
 
 int Board::_getIndex(int x, int y) const {
   return y * BOARD_WIDTH + x;
 }
 
-void Board::_checkAndProcessCapture(int index) {
-  auto& myStones = (_currentTurn == Player::BLACK) ? _blackStones : _whiteStones;
-  auto& oppStones = (_currentTurn == Player::BLACK) ? _whiteStones : _blackStones;
+bool Board::_checkAndProcessCapture(int index) {
+  BoardType& myStones = (_currentTurn == Player::BLACK) ? _blackStones : _whiteStones;
+  BoardType& oppStones = (_currentTurn == Player::BLACK) ? _whiteStones : _blackStones;
   int& myScore = (_currentTurn == Player::BLACK) ? _blackCaptures : _whiteCaptures;
+  bool captured = false;
 
   for (int d : ALL_DIRS) {
     const int directions[] = {d, -d};
@@ -137,6 +150,8 @@ void Board::_checkAndProcessCapture(int index) {
         // スコア加算
         myScore += 2;
 
+        captured = true;
+
         // TODO: Debug output
         std::cout << "Capture! Player " << ((_currentTurn == Player::BLACK) ? "BLACK" : "WHITE")
                   << "\n"
@@ -145,6 +160,7 @@ void Board::_checkAndProcessCapture(int index) {
       }
     }
   }
+  return captured;
 }
 
 Board::BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) const {
@@ -201,5 +217,98 @@ bool Board::_isStoneCapturable(int index, const BoardType& myStones,
       }
     }
   }
+  return false;
+}
+
+bool Board::_isDoubleThree(int x, int y) {
+  const BoardType& myStones = (_currentTurn == Player::BLACK) ? _blackStones : _whiteStones;
+  const BoardType& oppStones = (_currentTurn == Player::BLACK) ? _whiteStones : _blackStones;
+
+  int freeThreeCount = 0;
+
+  // 4方向チェック
+  for (auto& dir : CHECK_DIRS) {
+    if (_checkFreeThree(x, y, dir.dx, dir.dy, myStones, oppStones))
+      freeThreeCount++;
+    if (freeThreeCount >= 2) {
+      _doubleThreeStatus = true;
+      break;
+    }
+  }
+
+  return (freeThreeCount >= 2);
+}
+
+bool Board::_checkFreeThree(int x, int y, int dx, int dy, const BoardType& myStones,
+                            const BoardType& oppStones) const {
+  // bit 5 を中心 (x,y) とする
+  uint16_t line_m = 0;  // m = my
+  uint16_t line_o = 0;  // o = opponent
+
+  // ±5マスを取得 (計11マス)
+  // Free-Threeパターンの最大長は .X.XX. (6マス) なのでこれで十分
+  for (int i = -5; i <= 5; ++i) {
+    if (i == 0) {
+      line_m |= (1 << 5);  // 中心は自分
+      continue;
+    }
+
+    int nx = x + i * dx;
+    int ny = y + i * dy;
+
+    // 範囲外チェック
+    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) {
+      line_o |= (1 << (i + 5));  // 壁
+    } else {
+      int idx = _getIndex(nx, ny);
+      if (myStones.test(idx))
+        line_m |= (1 << (i + 5));
+      else if (oppStones.test(idx))
+        line_o |= (1 << (i + 5));
+    }
+  }
+
+  // パターン定義 (1:石, 0:空)
+  // bit 0 が左端
+  static const uint16_t patterns[] = {
+      0b001110,  // .XXX.  (連三)
+      0b010110,  // .X.XX. (飛び三 A)
+      0b011010   // .XX.X. (飛び三 B)
+  };
+
+  // 各パターンを盤面上でスライドさせて照合
+  for (uint16_t p : patterns) {
+    // パターンの長さは6ビット (0b000000 ~ 0b111111)
+    // これを line_m, line_o に対してずらしながらチェック
+
+    // パターンの位置をスライド (ウィンドウ)
+    // line_m の幅は11ビット (0..10)。パターンは6ビット。
+    // i はパターンの開始位置 (0..5)
+    for (int i = 0; i <= 5; ++i) {
+      uint16_t mask = 0b111111 << i;
+      uint16_t target = p << i;
+
+      // 1. 自分の石の形が一致するか？
+      // マスク範囲内の石配置がパターンと完全一致すること
+      // (パターン内の0は「石がない」ことを要求)
+      if ((line_m & mask) != target)
+        continue;
+
+      // 2. 敵の石（壁）がないか？
+      // マスク範囲内は敵がゼロでなければならない（両端の空も含めて）
+      if ((line_o & mask) != 0)
+        continue;
+
+      // 3. 中心 (bit 5) がパターンに含まれているか？
+      // 今置いた石が、そのFree-Threeの一部でなければならない
+      // target (シフト済みのパターン) の bit 5 が 1 であるか確認
+      if ((target & (1 << 5)) == 0)
+        continue;
+
+      // すべてクリアならFree-Three
+      return true;
+    }
+  }
+
   return false;
 }
