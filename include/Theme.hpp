@@ -12,6 +12,7 @@ const sf::Color ButtonIdle = sf::Color(80, 80, 80);
 const sf::Color ButtonActive = sf::Color(180, 180, 180);
 const sf::Color Board = sf::Color(200, 160, 100);
 const sf::Color BoardDarkened = sf::Color(200 * 100 / 255, 160 * 100 / 255, 100 * 100 / 255);
+const sf::Color AlertText = sf::Color(180, 50, 50);
 }  // namespace Color
 
 namespace FontSize {

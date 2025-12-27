@@ -16,6 +16,10 @@ void GameScene::handleEvents(const EventList& events) {
   }
 }
 
+void GameScene::displayTimedMessage(const std::string& str, sf::Vector2f pos) {
+  this->_activeMessages.emplace_back(this->_font, str, pos);
+}
+
 void GameScene::handleClick(int x, int y) {
   int col = static_cast<int>(std::round((x - _boardOffset.x) / _cellSize));
   int row = static_cast<int>(std::round((y - _boardOffset.y) / _cellSize));
@@ -24,6 +28,12 @@ void GameScene::handleClick(int x, int y) {
       row < static_cast<int>(_boardSize)) {
     // makeMoveが成功（ルール上OK）なら、内部状態が更新される
     if (_board.makeMove(col, row)) {
+      float posX = _boardOffset.x + static_cast<float>(col * _cellSize);
+      float posY = _boardOffset.y + static_cast<float>(row * _cellSize);
+      // static bool fg = false;
+      // fg = !fg;
+      // displayTimedMessage(fg ? "Hello" : "World", {posX, posY});
+
       // TODO: SEを鳴らすなどの処理があればここに書く
 
       if (_board.checkWin()) {
@@ -75,9 +85,34 @@ void GameScene::render(sf::RenderWindow& window) {
       }
     }
   }
+  for (const auto& message : this->_activeMessages) {
+    window.draw(message.text);
+  }
 }
 
 void GameScene::update(float df) {
+  auto it = this->_activeMessages.begin();
+  while (it != this->_activeMessages.end()) {
+    it->timer -= df;
+
+    if (it->timer <= 0.0f) {
+      it = this->_activeMessages.erase(it);
+    } else {
+      float alphaProgress = std::min(1.0f, it->timer / 0.5f);
+      std::uint8_t alpha = static_cast<std::uint8_t>(255 * alphaProgress);
+
+      sf::Color color = it->text.getFillColor();
+      color.a = alpha;
+      it->text.setFillColor(color);
+
+      sf::Color outColor = it->text.getOutlineColor();
+      outColor.a = alpha;
+      it->text.setOutlineColor(outColor);
+
+      it->text.move({0.f, -40.f * df});
+      ++it;
+    }
+  }
 }
 
 void GameScene::onResize(const sf::Vector2u& windowSize) {
@@ -104,4 +139,23 @@ void GameScene::setAILevel(AILevel& level) {
 
 void GameScene::setTurnOrder(TurnOrder turnOrder) {
   this->_turnOrder = turnOrder;
+}
+
+GameScene::FloatingMessage::FloatingMessage(const sf::Font& font, const std::string& str,
+                                            sf::Vector2f pos)
+    : text(font), timer(1.0f) {
+  text.setString(str);
+  text.setCharacterSize(Theme::FontSize::Header);
+  text.setFillColor(Theme::Color::AlertText);
+  text.setOutlineColor(sf::Color::Black);
+  text.setOutlineThickness(1.5f);
+  sf::FloatRect textRect = text.getLocalBounds();
+  text.setOrigin(
+      {textRect.position.x + textRect.size.x / 2.0f, textRect.position.y + textRect.size.y / 2.0f});
+
+  text.setPosition({pos.x, pos.y - 20.f});
+
+  sf::Color color = text.getFillColor();
+  color.a = 255;
+  text.setFillColor(color);
 }
