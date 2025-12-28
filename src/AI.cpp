@@ -85,18 +85,57 @@ int AI::_minimax(Board board, int depth, int alpha, int beta, bool maximizingPla
 // (最適化のためには、石があるマスの周囲2マス以内のみを返すようにする)
 std::vector<std::pair<int, int>> AI::_generateMoves(const Board& board) {
   std::vector<std::pair<int, int>> moves;
+  std::bitset<MAX_CELLS> visited;  // 重複防止用
 
-  // 中心から探索するように並び替えるとAlpha-Beta剪定が効きやすい
-  // とりあえず今は単純な全探索（遅いので後で最適化必須）
-  for (int y = 0; y < BOARD_SIZE; ++y) {
-    for (int x = 0; x < BOARD_SIZE; ++x) {
-      if (board.getStoneAt(x, y) == Player::NONE) {
-        // 石の周囲だけ探索する最適化を入れる場所
-        // ここでは単純に全部追加
-        moves.push_back({x, y});
+  // 盤面サイズ
+  int size = BOARD_SIZE;
+
+  // すべてのマスを走査するのではなく、
+  // 「既に石が置かれている場所」を探し、その近傍を候補に追加する
+  // ※ ビットボードなら、(black | white) のビットが立っている場所を取得し、
+  //    その周囲のビットマスクと AND (NOT stones) を取ることで爆速化できますが、
+  //    まずはループで実装します。
+
+  bool isEmptyBoard = true;
+
+  for (int y = 0; y < size; ++y) {
+    for (int x = 0; x < size; ++x) {
+      if (board.getStoneAt(x, y) != Player::NONE) {
+        isEmptyBoard = false;
+
+        // 石がある場所(x,y)の周囲 radius=2 マスを探索候補に入れる
+        int radius = 2;
+        for (int dy = -radius; dy <= radius; ++dy) {
+          for (int dx = -radius; dx <= radius; ++dx) {
+            int nx = x + dx;
+            int ny = y + dy;
+
+            // 範囲外チェック
+            if (nx < 0 || nx >= size || ny < 0 || ny >= size)
+              continue;
+
+            // 既に石がある場所は置けない
+            if (board.getStoneAt(nx, ny) != Player::NONE)
+              continue;
+
+            int idx = ny * BOARD_WIDTH + nx;  // Boardクラスのindex計算に合わせる
+
+            // まだ候補に入れていない場合のみ追加
+            if (!visited.test(idx)) {
+              visited.set(idx);
+              moves.push_back({nx, ny});
+            }
+          }
+        }
       }
     }
   }
+
+  // 盤面が空の場合（初手）は、天元（中央）のみを返す
+  if (isEmptyBoard) {
+    moves.push_back({9, 9});
+  }
+
   return moves;
 }
 

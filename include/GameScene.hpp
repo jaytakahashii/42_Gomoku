@@ -8,6 +8,8 @@
 #include <functional>
 #include <list>
 
+#include "AI.hpp"
+
 const unsigned int CELL_SIZE = 40;
 const float OFFSET = 20.0f;
 const unsigned int WINDOW_WIDTH = BOARD_SIZE * CELL_SIZE;

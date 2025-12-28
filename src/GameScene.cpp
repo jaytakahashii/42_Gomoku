@@ -37,6 +37,21 @@ void GameScene::handleClick(int x, int y) {
       }
 
       _board.changeTurn();
+
+      // TODO: WhiteをAIとして実装する
+      if (_board.getCurrentTurn() == Player::WHITE) {
+        AI ai;
+        Move bestMove = ai.getBestMove(_board, Player::WHITE);
+        _board.makeMove(bestMove.x, bestMove.y);
+
+        if (_board.checkWin()) {
+          std::string winner = "White";
+          if (_onGameOver)
+            _onGameOver(winner);
+        }
+
+        _board.changeTurn();
+      }
     }
     if (_board.getDoubleThreeStatus()) {
       displayTimedMessage("DoubleThree", {posX, posY});
