@@ -2,6 +2,7 @@
 #define AI_HPP
 
 #include <algorithm>
+#include <chrono>
 #include <limits>
 #include <vector>
 
@@ -22,11 +23,19 @@ class AI {
 
  private:
   // 点数定義
-  static constexpr int _SCORE_WIN = 1000000;
-  static constexpr int _SCORE_OPEN_FOUR = 100000;
-  static constexpr int _SCORE_CLOSED_FOUR = 10000;
-  static constexpr int _SCORE_OPEN_THREE = 10000;
-  static constexpr int _SCORE_CAPTURE = 20000;
+  static constexpr int _SCORE_WIN = 100000000;
+  static constexpr int _SCORE_OPEN_FOUR = 10000000;
+  static constexpr int _SCORE_CLOSED_FOUR = 100000;
+  static constexpr int _SCORE_OPEN_THREE = 100000;
+  static constexpr int _SCORE_CAPTURE = 1000000;
+
+  // 探索開始時刻
+  std::chrono::time_point<std::chrono::high_resolution_clock> _startTime;
+  // タイムアウトしたかどうかのフラグ
+  bool _timeOut;
+
+  // 時間チェック用関数
+  bool _isTimeUp();
 
   Player _aiPlayer;
 
@@ -46,7 +55,9 @@ class AI {
 
   // 有効な手（探索候補）を生成する
   // 全マス調べるのは遅いので、石の周囲だけを返すなどの工夫が必要
-  std::vector<std::pair<int, int>> _generateMoves(const Board& board);
+  std::vector<Move> _generateMoves(const Board& board);
+
+  int _evaluateMoveOrdering(const Board& board, int x, int y, Player player);
 
   // パターン評価用のヘルパー
   int _evaluateLine(const BoardType& myStones, const BoardType& oppStones) const;

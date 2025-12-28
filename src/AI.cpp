@@ -2,42 +2,85 @@
 
 #include <iostream>
 
+// 時間制限 (ミリ秒) - 安全マージンを取って450msくらいにする
+const int TIME_LIMIT_MS = 1000;
+
+bool AI::_isTimeUp() {
+  auto now = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - _startTime).count();
+  return duration >= TIME_LIMIT_MS;
+}
+
 Move AI::getBestMove(Board board, Player player) {
   _aiPlayer = player;
-
-  // 本来は Iterative Deepening (深さ1, 2, 3...) を行うが、
-  // まずは固定深さでテスト
-  int depth = 3;
+  _startTime = std::chrono::high_resolution_clock::now();
+  _timeOut = false;
 
   Move bestMove = {-1, -1, -std::numeric_limits<int>::max()};
 
-  // 候補手を取得
-  std::vector<std::pair<int, int>> moves = _generateMoves(board);
+  // 反復深化: 深さ1, 2, 3... と増やしていく
+  // 最大深さはとりあえず20にしておく（時間切れで止まるのでOK）
+  for (int depth = 1; depth <= 20; ++depth) {
+    // この深さでの探索を実行
+    // 戻り値をMove構造体ごと返すように _minimax を少し改造するか、
+    // あるいはここ（ルートノード）だけ特別扱いしてループする
 
-  for (const std::pair<int, int>& p : moves) {
-    int x = p.first;
-    int y = p.second;
+    int alpha = -std::numeric_limits<int>::max();
+    int beta = std::numeric_limits<int>::max();
+    Move currentDepthBest = {-1, -1, -std::numeric_limits<int>::max()};
 
-    // 1手進める (コピーを作成してシミュレーション)
-    Board nextBoard = board;
-    if (!nextBoard.makeMove(x, y))
-      continue;
+    // 候補手を取得 (ソート済み)
+    std::vector<Move> moves = _generateMoves(board);
+    if (moves.empty())
+      break;
 
-    // Minimax呼び出し (次は相手の番なので maximizing=false)
-    int score = _minimax(nextBoard, depth - 1, -std::numeric_limits<int>::max(),
-                         std::numeric_limits<int>::max(), false);
+    for (const Move& m : moves) {
+      Board nextBoard = board;
+      if (!nextBoard.makeMove(m.x, m.y))
+        continue;
 
-    if (score > bestMove.score) {
-      bestMove.x = x;
-      bestMove.y = y;
-      bestMove.score = score;
+      // 再帰呼び出し
+      int score = _minimax(nextBoard, depth - 1, alpha, beta, false);
+
+      // 時間切れチェック: 探索途中で時間が来たら、この深さの結果は信頼できないので捨てる
+      if (_timeOut)
+        break;
+
+      if (score > currentDepthBest.score) {
+        currentDepthBest.x = m.x;
+        currentDepthBest.y = m.y;
+        currentDepthBest.score = score;
+      }
+      // Alpha更新
+      alpha = std::max(alpha, score);
     }
+
+    if (_timeOut) {
+      std::cout << "Time up at depth " << depth << std::endl;
+      break;
+    }
+
+    // 時間内に探索完了できたら、その結果をベストとして採用
+    bestMove = currentDepthBest;
+    std::cout << "Depth " << depth << " finished. Best: " << bestMove.score << std::endl;
+
+    // もし「必勝（これ以上探さなくていい）」が見つかったら終了
+    if (bestMove.score >= _SCORE_WIN - 100)
+      break;
   }
 
   return bestMove;
 }
 
 int AI::_minimax(Board board, int depth, int alpha, int beta, bool maximizingPlayer) {
+  if (_isTimeUp()) {
+    _timeOut = true;
+    return 0;  // 値はどうでもいい
+  }
+
+  if (_timeOut)
+    return 0;  // 既にタイムアウトしていれば即帰る
+
   // 1. 終局判定 or 深さ制限到達
   if (board.checkWin()) {
     // 勝ったプレイヤーがAIなら高得点、敵なら低得点
@@ -54,7 +97,7 @@ int AI::_minimax(Board board, int depth, int alpha, int beta, bool maximizingPla
     int maxEval = -std::numeric_limits<int>::max();
     for (const auto& p : moves) {
       Board nextBoard = board;
-      if (!nextBoard.makeMove(p.first, p.second))
+      if (!nextBoard.makeMove(p.x, p.y))
         continue;
 
       int eval = _minimax(nextBoard, depth - 1, alpha, beta, false);
@@ -68,7 +111,7 @@ int AI::_minimax(Board board, int depth, int alpha, int beta, bool maximizingPla
     int minEval = std::numeric_limits<int>::max();
     for (const auto& p : moves) {
       Board nextBoard = board;
-      if (!nextBoard.makeMove(p.first, p.second))
+      if (!nextBoard.makeMove(p.x, p.y))
         continue;
 
       int eval = _minimax(nextBoard, depth - 1, alpha, beta, true);
@@ -81,11 +124,24 @@ int AI::_minimax(Board board, int depth, int alpha, int beta, bool maximizingPla
   }
 }
 
+// 簡易評価用のヘルパー (Move Ordering用)
+// ちゃんと計算すると重いので、「石の近く」や「攻撃に参加できるか」だけ軽く見る
+int AI::_evaluateMoveOrdering(const Board& board, int x, int y, Player player) {
+  // 実際に置いてみて、評価関数(深さ0)を呼ぶ
+  // ※ 本来はもっと軽量な計算が良いが、まずはこれで精度を出す
+  Board next = board;
+  if (!next.makeMove(x, y))
+    return -10000000;  // 禁じ手などは論外
+
+  // _evaluate は「その盤面の静的評価」を返す
+  return _evaluate(next, player);
+}
+
 // 非常に単純な候補手生成
 // (最適化のためには、石があるマスの周囲2マス以内のみを返すようにする)
-std::vector<std::pair<int, int>> AI::_generateMoves(const Board& board) {
-  std::vector<std::pair<int, int>> moves;
-  std::bitset<MAX_CELLS> visited;  // 重複防止用
+std::vector<Move> AI::_generateMoves(const Board& board) {
+  std::vector<Move> moves;
+  BoardType visited;  // 重複防止用
 
   // 盤面サイズ
   int size = BOARD_SIZE;
@@ -123,7 +179,16 @@ std::vector<std::pair<int, int>> AI::_generateMoves(const Board& board) {
             // まだ候補に入れていない場合のみ追加
             if (!visited.test(idx)) {
               visited.set(idx);
-              moves.push_back({nx, ny});
+
+              // Move構造体を作ってスコアを入れる
+              Move m;
+              m.x = nx;
+              m.y = ny;
+              // ここで「並び替えのためのスコア」を計算
+              // AIの手番での評価値を出したいので _aiPlayer を渡す
+              // m.score = _evaluateMoveOrdering(board, nx, ny, _aiPlayer);
+              m.score = _evaluateMoveOrdering(board, nx, ny, board.getCurrentTurn());
+              moves.push_back(m);  // , m.score
             }
           }
         }
@@ -131,10 +196,15 @@ std::vector<std::pair<int, int>> AI::_generateMoves(const Board& board) {
     }
   }
 
-  // 盤面が空の場合（初手）は、天元（中央）のみを返す
   if (isEmptyBoard) {
-    moves.push_back({9, 9});
+    // 盤面が空の場合、中央に置くのが最善手
+    int center = size / 2;
+    moves.push_back({center, center, 0});
   }
+  // ★重要: スコアが高い順にソートする (降順)
+  // これにより Alpha-Beta が効率的に枝刈りできる
+  std::sort(moves.begin(), moves.end(),
+            [](const Move& a, const Move& b) { return a.score > b.score; });
 
   return moves;
 }
@@ -185,7 +255,7 @@ int AI::_evaluate(const Board& board, Player player) {
   score += myCaptures * _SCORE_CAPTURE;
   oppScore += oppCaptures * _SCORE_CAPTURE;
 
-  return score - oppScore;
+  return score - (oppScore * 1.5);
 }
 
 // パターンをカウントする関数
@@ -204,7 +274,9 @@ int AI::_countPatterns(const BoardType& stones, const BoardType& empty) {
     BoardType s2 = s1 >> s;
     BoardType s3 = s2 >> s;
     BoardType s4 = s3 >> s;  // s >> 4*s
+
     BoardType e0 = empty;
+    BoardType e4 = empty >> (4 * s);
     BoardType e5 = s4 >> s;  // empty >> 5*s
 
     BoardType openFour = e0 & s1 & s2 & s3 & s4 & e5;
@@ -214,7 +286,7 @@ int AI::_countPatterns(const BoardType& stones, const BoardType& empty) {
 
     // --- Open Three ( .XXX. ) ---
     // パターン: [空] [石] [石] [石] [空]
-    BoardType openThree = e0 & s1 & s2 & s3 & (s3 >> s);  // e >> 4*s
+    BoardType openThree = e0 & s1 & s2 & s3 & e4;
     if (openThree.any()) {
       score += openThree.count() * _SCORE_OPEN_THREE;
     }
