@@ -58,6 +58,7 @@ class AI {
   std::vector<Move> _generateMoves(const Board& board);
 
   int _evaluateMoveOrdering(const Board& board, int x, int y, Player player);
+  int _evaluatePoint(const Board& board, int x, int y, Player player);
 
   // パターン評価用のヘルパー
   int _evaluateLine(const BoardType& myStones, const BoardType& oppStones) const;

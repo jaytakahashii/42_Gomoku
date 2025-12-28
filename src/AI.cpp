@@ -137,6 +137,78 @@ int AI::_evaluateMoveOrdering(const Board& board, int x, int y, Player player) {
   return _evaluate(next, player);
 }
 
+// 盤面全体ではなく、(x,y)に関わるラインだけを見て点数をつける
+// これなら _evaluate よりも何十倍も高速です
+int AI::_evaluatePoint(const Board& board, int x, int y, Player player) {
+  int score = 0;
+
+  // 自分の石と敵の石
+  const BoardType& myStones =
+      (player == Player::BLACK) ? board.getBlackStones() : board.getWhiteStones();
+  const BoardType& oppStones =
+      (player == Player::BLACK) ? board.getWhiteStones() : board.getBlackStones();
+
+  // 調べる方向（横、縦、右下、左下）
+  const int dx[] = {1, 0, 1, 1};
+  const int dy[] = {0, 1, 1, -1};
+
+  for (int i = 0; i < 4; ++i) {
+    // その方向の並びをカウントする簡易ロジック
+    // (ビット演算ではなく、ここだけはループで泥臭く数えた方が局所評価としては速い場合が多い)
+    // あるいは、ビット演算を使うなら以下のようにマスクを小さく絞る
+
+    int countMy = 1;  // 今置いた石
+    int countOpp = 0;
+
+    // 前後4マスを見る
+    for (int sign = -1; sign <= 1; sign += 2) {
+      for (int k = 1; k <= 4; ++k) {
+        int nx = x + dx[i] * k * sign;
+        int ny = y + dy[i] * k * sign;
+
+        if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE)
+          break;  // 壁
+
+        // Boardクラスに isStoneAt のような軽量メソッドがあると良いですが、
+        // ここでは bitset を直接チェック
+        int idx = ny * BOARD_WIDTH + nx;
+
+        if (myStones.test(idx)) {
+          countMy++;
+        } else if (oppStones.test(idx)) {
+          // 敵がいたらブロック価値として加点（防御点）
+          // ただしラインは途切れる
+          countOpp++;
+          break;
+        } else {
+          // 空きマスなら伸び代あり
+          break;
+        }
+      }
+    }
+
+    // 簡易スコア付け
+    if (countMy >= 5)
+      score += 100000;
+    else if (countMy == 4)
+      score += 10000;
+    else if (countMy == 3)
+      score += 1000;
+    else if (countMy == 2)
+      score += 100;
+
+    // 敵の石が近くにある＝防御の手としても評価
+    if (countOpp > 0)
+      score += 50;
+  }
+
+  // 中心に近いほど少し加点（戦略的価値）
+  int centerDist = std::abs(x - 9) + std::abs(y - 9);
+  score -= centerDist;
+
+  return score;
+}
+
 // 非常に単純な候補手生成
 // (最適化のためには、石があるマスの周囲2マス以内のみを返すようにする)
 std::vector<Move> AI::_generateMoves(const Board& board) {
@@ -187,7 +259,9 @@ std::vector<Move> AI::_generateMoves(const Board& board) {
               // ここで「並び替えのためのスコア」を計算
               // AIの手番での評価値を出したいので _aiPlayer を渡す
               // m.score = _evaluateMoveOrdering(board, nx, ny, _aiPlayer);
-              m.score = _evaluateMoveOrdering(board, nx, ny, board.getCurrentTurn());
+              // m.score = _evaluateMoveOrdering(board, nx, ny, board.getCurrentTurn());
+              // これにより nextBoard のコピーコストと makeMove の計算コストも削減できます
+              m.score = _evaluatePoint(board, nx, ny, board.getCurrentTurn());
               moves.push_back(m);  // , m.score
             }
           }
@@ -205,6 +279,14 @@ std::vector<Move> AI::_generateMoves(const Board& board) {
   // これにより Alpha-Beta が効率的に枝刈りできる
   std::sort(moves.begin(), moves.end(),
             [](const Move& a, const Move& b) { return a.score > b.score; });
+
+  // ★高速化の肝: 上位N個だけを残して、あとは切り捨てる
+  // これを「ビームサーチ」や「多段階枝刈り」と呼びます
+  const int MAX_MOVES_TO_CHECK = 15;  // 10〜15くらいが妥当
+
+  if (moves.size() > MAX_MOVES_TO_CHECK) {
+    moves.resize(MAX_MOVES_TO_CHECK);
+  }
 
   return moves;
 }
