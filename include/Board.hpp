@@ -11,6 +11,8 @@ constexpr int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
 
 enum class Player { NONE, BLACK, WHITE };
 
+using BoardType = std::bitset<MAX_CELLS>;
+
 struct Direction {
   int dx;
   int dy;
@@ -34,8 +36,6 @@ class Board {
   void setDoubleThreeStatus(bool status);
 
  private:
-  using BoardType = std::bitset<MAX_CELLS>;
-
   BoardType _blackStones;
   BoardType _whiteStones;
   Player _currentTurn;

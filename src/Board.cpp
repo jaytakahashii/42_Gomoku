@@ -163,7 +163,7 @@ bool Board::_checkAndProcessCapture(int index) {
   return captured;
 }
 
-Board::BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) const {
+BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) const {
   BoardType temp = stones;
 
   // 1回ずらしてAND = 2連
