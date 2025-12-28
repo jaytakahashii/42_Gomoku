@@ -7,12 +7,6 @@
 
 #include "Board.hpp"
 
-// 点数定義
-constexpr int SCORE_WIN = 1000000;
-constexpr int SCORE_OPEN_FOUR = 100000;
-constexpr int SCORE_CLOSED_FOUR = 10000;
-constexpr int SCORE_OPEN_THREE = 5000;
-
 struct Move {
   int x;
   int y;
@@ -27,6 +21,12 @@ class AI {
   Move getBestMove(Board board, Player player);
 
  private:
+  // 点数定義
+  static constexpr int _SCORE_WIN = 1000000;
+  static constexpr int _SCORE_OPEN_FOUR = 100000;
+  static constexpr int _SCORE_CLOSED_FOUR = 10000;
+  static constexpr int _SCORE_OPEN_THREE = 5000;
+
   Player _aiPlayer;
 
   // Minimax法 (Alpha-Beta法)

@@ -42,7 +42,7 @@ int AI::_minimax(Board board, int depth, int alpha, int beta, bool maximizingPla
   if (board.checkWin()) {
     // 勝ったプレイヤーがAIなら高得点、敵なら低得点
     // 深さが浅い(早い)勝ちほど価値が高いように depth を加算する
-    return maximizingPlayer ? -SCORE_WIN + depth : SCORE_WIN - depth;
+    return maximizingPlayer ? -_SCORE_WIN + depth : _SCORE_WIN - depth;
   }
   if (depth == 0) {
     return _evaluate(board, _aiPlayer);
