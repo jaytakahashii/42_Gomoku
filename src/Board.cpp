@@ -83,7 +83,7 @@ bool Board::checkWin() {
   return false;
 }
 
-// --- Getters ---
+// --- Getters / Setters ---
 
 Player Board::getStoneAt(int x, int y) const {
   int index = _getIndex(x, y);
@@ -112,6 +112,14 @@ bool Board::getDoubleThreeStatus() const {
 
 void Board::setDoubleThreeStatus(bool status) {
   _doubleThreeStatus = status;
+}
+
+const BoardType& Board::getBlackStones() const {
+  return _blackStones;
+}
+
+const BoardType& Board::getWhiteStones() const {
+  return _whiteStones;
 }
 
 // --- Private Helpers ---

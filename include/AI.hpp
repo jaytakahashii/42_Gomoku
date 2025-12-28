@@ -25,7 +25,8 @@ class AI {
   static constexpr int _SCORE_WIN = 1000000;
   static constexpr int _SCORE_OPEN_FOUR = 100000;
   static constexpr int _SCORE_CLOSED_FOUR = 10000;
-  static constexpr int _SCORE_OPEN_THREE = 5000;
+  static constexpr int _SCORE_OPEN_THREE = 10000;
+  static constexpr int _SCORE_CAPTURE = 20000;
 
   Player _aiPlayer;
 
@@ -38,6 +39,10 @@ class AI {
 
   // 評価関数: 盤面の点数を計算する
   int _evaluate(const Board& board, Player player);
+
+  // 特定のパターンが盤面にいくつあるか数える高速関数
+  // stones: 自分の石, empty: 空点
+  int _countPatterns(const BoardType& stones, const BoardType& empty);
 
   // 有効な手（探索候補）を生成する
   // 全マス調べるのは遅いので、石の周囲だけを返すなどの工夫が必要

@@ -34,6 +34,8 @@ class Board {
   int getWhiteCaptures() const;
   bool getDoubleThreeStatus() const;
   void setDoubleThreeStatus(bool status);
+  const BoardType& getBlackStones() const;
+  const BoardType& getWhiteStones() const;
 
  private:
   BoardType _blackStones;
