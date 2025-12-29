@@ -2,14 +2,9 @@
 
 #include <iostream>
 
-// 時間制限 (ミリ秒) - 安全マージンを取って450msくらいにする
-const int TIME_LIMIT_MS = 1000;
-
-bool AI::_isTimeUp() {
-  auto now = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - _startTime).count();
-  return duration >= TIME_LIMIT_MS;
-}
+// -------------------------------------------------------------------------
+// 公開メソッド (Public Methods)
+// -------------------------------------------------------------------------
 
 Move AI::getBestMove(Board board, Player player) {
   _aiPlayer = player;
@@ -18,40 +13,42 @@ Move AI::getBestMove(Board board, Player player) {
 
   Move bestMove = {-1, -1, -std::numeric_limits<int>::max()};
 
-  // 反復深化: 深さ1, 2, 3... と増やしていく
-  // 最大深さはとりあえず20にしておく（時間切れで止まるのでOK）
-  for (int depth = 1; depth <= 20; ++depth) {
-    // この深さでの探索を実行
-    // 戻り値をMove構造体ごと返すように _minimax を少し改造するか、
-    // あるいはここ（ルートノード）だけ特別扱いしてループする
-
+  // 反復深化探索 (Iterative Deepening)
+  // 深さ1, 2, 3... と徐々に深く読み、時間切れになったら直前の深さの結果を採用する
+  for (int depth = 1; depth <= MAX_DEPTH; ++depth) {
+    // ルートノード（最初の分岐）の処理
+    // ここでMove構造体を取得し、時間切れチェックを行う
     int alpha = -std::numeric_limits<int>::max();
     int beta = std::numeric_limits<int>::max();
     Move currentDepthBest = {-1, -1, -std::numeric_limits<int>::max()};
 
-    // 候補手を取得 (ソート済み)
     std::vector<Move> moves = _generateMoves(board);
-    if (moves.empty())
+    if (moves.empty()) {
       break;
+    }
 
+    // ルートでの探索ループ
     for (const Move& m : moves) {
       Board nextBoard = board;
-      if (!nextBoard.makeMove(m.x, m.y))
+      if (!nextBoard.makeMove(m.x, m.y)) {
         continue;
+      }
 
-      // 再帰呼び出し
+      // 次の手番は相手（Min層）なので maximizingPlayer=false
       int score = _minimax(nextBoard, depth - 1, alpha, beta, false);
 
-      // 時間切れチェック: 探索途中で時間が来たら、この深さの結果は信頼できないので捨てる
-      if (_timeOut)
+      // 探索中に時間が切れた場合、この深さの結果は不完全なので破棄する
+      if (_timeOut) {
         break;
+      }
 
       if (score > currentDepthBest.score) {
         currentDepthBest.x = m.x;
         currentDepthBest.y = m.y;
         currentDepthBest.score = score;
       }
-      // Alpha更新
+
+      // Alpha値の更新（より良い手が見つかった）
       alpha = std::max(alpha, score);
     }
 
@@ -60,129 +57,214 @@ Move AI::getBestMove(Board board, Player player) {
       break;
     }
 
-    // 時間内に探索完了できたら、その結果をベストとして採用
+    // 最後まで探索できた場合のみ、最善手を更新
     bestMove = currentDepthBest;
-    std::cout << "Depth " << depth << " finished. Best: " << bestMove.score << std::endl;
+    std::cout << "Depth " << depth << " finished. Best Score: " << bestMove.score << std::endl;
 
-    // もし「必勝（これ以上探さなくていい）」が見つかったら終了
-    if (bestMove.score >= _SCORE_WIN - 100)
+    // 必勝が見つかったらこれ以上深く読む必要はない
+    if (bestMove.score >= SCORE_WIN - 100) {
       break;
+    }
   }
 
   return bestMove;
 }
 
+// -------------------------------------------------------------------------
+// 探索ロジック (Search Logic)
+// -------------------------------------------------------------------------
+
+bool AI::_isTimeUp() {
+  std::chrono::time_point<std::chrono::high_resolution_clock> now =
+      std::chrono::high_resolution_clock::now();
+
+  long long duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(now - _startTime).count();
+
+  // 安全マージンとして少し早めに切り上げる (例: 950ms)
+  return duration >= (TIME_LIMIT_MS - 50);
+}
+
 int AI::_minimax(Board board, int depth, int alpha, int beta, bool maximizingPlayer) {
-  if (_isTimeUp()) {
+  // 時間切れチェック（重くなりすぎないよう、このチェックは重要）
+  if (_timeOut || _isTimeUp()) {
     _timeOut = true;
-    return 0;  // 値はどうでもいい
+    return 0;  // 値は無視されるので適当な値を返す
   }
 
-  if (_timeOut)
-    return 0;  // 既にタイムアウトしていれば即帰る
-
-  // 1. 終局判定 or 深さ制限到達
+  // 1. 終局判定
   if (board.checkWin()) {
-    // 勝ったプレイヤーがAIなら高得点、敵なら低得点
-    // 深さが浅い(早い)勝ちほど価値が高いように depth を加算する
-    return maximizingPlayer ? -_SCORE_WIN + depth : _SCORE_WIN - depth;
+    // AIが勝ちならプラス、負けならマイナス
+    // 浅い階層（早いターン）での勝ちほど価値を高くする (+ depth)
+    return maximizingPlayer ? -SCORE_WIN + depth : SCORE_WIN - depth;
   }
+
+  // 2. 深さ制限到達（葉ノード）
   if (depth == 0) {
     return _evaluate(board, _aiPlayer);
   }
 
-  auto moves = _generateMoves(board);
+  // 3. 次の手の生成
+  std::vector<Move> moves = _generateMoves(board);
+  if (moves.empty()) {
+    // 打つ場所がない（引き分け）
+    return 0;
+  }
 
+  // 4. 再帰探索 (Alpha-Beta Pruning)
   if (maximizingPlayer) {
     int maxEval = -std::numeric_limits<int>::max();
-    for (const auto& p : moves) {
+    for (const Move& m : moves) {
       Board nextBoard = board;
-      if (!nextBoard.makeMove(p.x, p.y))
+      if (!nextBoard.makeMove(m.x, m.y))
         continue;
 
       int eval = _minimax(nextBoard, depth - 1, alpha, beta, false);
+
+      // 時間切れならループを抜ける
+      if (_timeOut)
+        return 0;
+
       maxEval = std::max(maxEval, eval);
       alpha = std::max(alpha, eval);
-      if (beta <= alpha)
-        break;  // Beta cut-off
+
+      // Beta Cut-off: これ以上探しても相手が選ばない手なので打ち切り
+      if (beta <= alpha) {
+        break;
+      }
     }
     return maxEval;
   } else {
     int minEval = std::numeric_limits<int>::max();
-    for (const auto& p : moves) {
+    for (const Move& m : moves) {
       Board nextBoard = board;
-      if (!nextBoard.makeMove(p.x, p.y))
+      if (!nextBoard.makeMove(m.x, m.y))
         continue;
 
       int eval = _minimax(nextBoard, depth - 1, alpha, beta, true);
+
+      if (_timeOut)
+        return 0;
+
       minEval = std::min(minEval, eval);
       beta = std::min(beta, eval);
-      if (beta <= alpha)
-        break;  // Alpha cut-off
+
+      // Alpha Cut-off: これ以上探しても自分が選ばない手なので打ち切り
+      if (beta <= alpha) {
+        break;
+      }
     }
     return minEval;
   }
 }
 
-// 簡易評価用のヘルパー (Move Ordering用)
-// ちゃんと計算すると重いので、「石の近く」や「攻撃に参加できるか」だけ軽く見る
-int AI::_evaluateMoveOrdering(const Board& board, int x, int y, Player player) {
-  // 実際に置いてみて、評価関数(深さ0)を呼ぶ
-  // ※ 本来はもっと軽量な計算が良いが、まずはこれで精度を出す
-  Board next = board;
-  if (!next.makeMove(x, y))
-    return -10000000;  // 禁じ手などは論外
+// -------------------------------------------------------------------------
+// 手の生成と順序付け (Move Generation & Ordering)
+// -------------------------------------------------------------------------
 
-  // _evaluate は「その盤面の静的評価」を返す
-  return _evaluate(next, player);
+std::vector<Move> AI::_generateMoves(const Board& board) {
+  std::vector<Move> moves;
+  BoardType visited;  // 重複追加を防ぐためのビットセット
+
+  bool isEmptyBoard = true;
+  int size = BOARD_SIZE;
+  int radius = 2;  // 石の周囲何マスを探索候補にするか
+
+  // 盤面上のすべての石を走査し、その周囲の空きマスを候補に追加する
+  // 本来はビット演算で高速化すべきだが、可読性のためループ処理とする
+  for (int y = 0; y < size; ++y) {
+    for (int x = 0; x < size; ++x) {
+      if (board.getStoneAt(x, y) != Player::NONE) {
+        isEmptyBoard = false;
+
+        // 石がある場所(x,y)の近傍を探索
+        for (int dy = -radius; dy <= radius; ++dy) {
+          for (int dx = -radius; dx <= radius; ++dx) {
+            int nx = x + dx;
+            int ny = y + dy;
+
+            // 範囲外または既に石がある場所はスキップ
+            if (nx < 0 || nx >= size || ny < 0 || ny >= size)
+              continue;
+            if (board.getStoneAt(nx, ny) != Player::NONE)
+              continue;
+
+            int idx = ny * BOARD_WIDTH + nx;
+
+            // まだ候補リストに入れていない場合のみ追加
+            if (!visited.test(idx)) {
+              visited.set(idx);
+
+              Move m;
+              m.x = nx;
+              m.y = ny;
+              // Alpha-Beta法の効率化のため、この時点で簡易スコアをつける
+              m.score = _evaluatePoint(board, nx, ny, board.getCurrentTurn());
+              moves.push_back(m);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 初手（盤面が空）の場合は中央に打つ
+  if (isEmptyBoard) {
+    int center = size / 2;
+    moves.push_back({center, center, 0});
+    return moves;
+  }
+
+  // 重要: スコアが高い順にソートする (Move Ordering)
+  // これにより、良い手から先に探索され、枝刈りが多く発生するようになる
+  std::sort(moves.begin(), moves.end(),
+            [](const Move& a, const Move& b) { return a.score > b.score; });
+
+  // ビームサーチ的な枝刈り: 上位の手だけを残す
+  // 候補手が多すぎると深く読めないため、有望な15手程度に絞る
+  const size_t MAX_MOVES_TO_CHECK = 15;
+  if (moves.size() > MAX_MOVES_TO_CHECK) {
+    moves.resize(MAX_MOVES_TO_CHECK);
+  }
+
+  return moves;
 }
 
-// 盤面全体ではなく、(x,y)に関わるラインだけを見て点数をつける
-// これなら _evaluate よりも何十倍も高速です
 int AI::_evaluatePoint(const Board& board, int x, int y, Player player) {
   int score = 0;
 
-  // 自分の石と敵の石
+  // 自分と相手の石を取得
   const BoardType& myStones =
       (player == Player::BLACK) ? board.getBlackStones() : board.getWhiteStones();
   const BoardType& oppStones =
       (player == Player::BLACK) ? board.getWhiteStones() : board.getBlackStones();
 
-  // 調べる方向（横、縦、右下、左下）
+  // 4方向（横、縦、右下、左下）
   const int dx[] = {1, 0, 1, 1};
   const int dy[] = {0, 1, 1, -1};
 
+  // 置こうとしている場所(x,y)を中心に、4方向の繋がり具合を見る
   for (int i = 0; i < 4; ++i) {
-    // その方向の並びをカウントする簡易ロジック
-    // (ビット演算ではなく、ここだけはループで泥臭く数えた方が局所評価としては速い場合が多い)
-    // あるいは、ビット演算を使うなら以下のようにマスクを小さく絞る
+    int countMy = 1;   // 今置いた石
+    int countOpp = 0;  // 敵に挟まれているか
 
-    int countMy = 1;  // 今置いた石
-    int countOpp = 0;
-
-    // 前後4マスを見る
+    // 前後4マスを確認
     for (int sign = -1; sign <= 1; sign += 2) {
       for (int k = 1; k <= 4; ++k) {
         int nx = x + dx[i] * k * sign;
         int ny = y + dy[i] * k * sign;
 
         if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE)
-          break;  // 壁
+          break;
 
-        // Boardクラスに isStoneAt のような軽量メソッドがあると良いですが、
-        // ここでは bitset を直接チェック
         int idx = ny * BOARD_WIDTH + nx;
-
         if (myStones.test(idx)) {
           countMy++;
         } else if (oppStones.test(idx)) {
-          // 敵がいたらブロック価値として加点（防御点）
-          // ただしラインは途切れる
           countOpp++;
-          break;
+          break;  // 敵にブロックされている
         } else {
-          // 空きマスなら伸び代あり
-          break;
+          break;  // 空きマス（伸びしろ）
         }
       }
     }
@@ -197,194 +279,98 @@ int AI::_evaluatePoint(const Board& board, int x, int y, Player player) {
     else if (countMy == 2)
       score += 100;
 
-    // 敵の石が近くにある＝防御の手としても評価
+    // 敵の石が近くにある＝防御の手としての価値を加算
     if (countOpp > 0)
       score += 50;
   }
 
-  // 中心に近いほど少し加点（戦略的価値）
+  // 中央に近いほど少し評価を高くする（戦術的価値）
   int centerDist = std::abs(x - 9) + std::abs(y - 9);
   score -= centerDist;
 
   return score;
 }
 
-// 非常に単純な候補手生成
-// (最適化のためには、石があるマスの周囲2マス以内のみを返すようにする)
-std::vector<Move> AI::_generateMoves(const Board& board) {
-  std::vector<Move> moves;
-  BoardType visited;  // 重複防止用
+// -------------------------------------------------------------------------
+// 評価関数 (Evaluation)
+// -------------------------------------------------------------------------
 
-  // 盤面サイズ
-  int size = BOARD_SIZE;
-
-  // すべてのマスを走査するのではなく、
-  // 「既に石が置かれている場所」を探し、その近傍を候補に追加する
-  // ※ ビットボードなら、(black | white) のビットが立っている場所を取得し、
-  //    その周囲のビットマスクと AND (NOT stones) を取ることで爆速化できますが、
-  //    まずはループで実装します。
-
-  bool isEmptyBoard = true;
-
-  for (int y = 0; y < size; ++y) {
-    for (int x = 0; x < size; ++x) {
-      if (board.getStoneAt(x, y) != Player::NONE) {
-        isEmptyBoard = false;
-
-        // 石がある場所(x,y)の周囲 radius=2 マスを探索候補に入れる
-        int radius = 2;
-        for (int dy = -radius; dy <= radius; ++dy) {
-          for (int dx = -radius; dx <= radius; ++dx) {
-            int nx = x + dx;
-            int ny = y + dy;
-
-            // 範囲外チェック
-            if (nx < 0 || nx >= size || ny < 0 || ny >= size)
-              continue;
-
-            // 既に石がある場所は置けない
-            if (board.getStoneAt(nx, ny) != Player::NONE)
-              continue;
-
-            int idx = ny * BOARD_WIDTH + nx;  // Boardクラスのindex計算に合わせる
-
-            // まだ候補に入れていない場合のみ追加
-            if (!visited.test(idx)) {
-              visited.set(idx);
-
-              // Move構造体を作ってスコアを入れる
-              Move m;
-              m.x = nx;
-              m.y = ny;
-              // ここで「並び替えのためのスコア」を計算
-              // AIの手番での評価値を出したいので _aiPlayer を渡す
-              // m.score = _evaluateMoveOrdering(board, nx, ny, _aiPlayer);
-              // m.score = _evaluateMoveOrdering(board, nx, ny, board.getCurrentTurn());
-              // これにより nextBoard のコピーコストと makeMove の計算コストも削減できます
-              m.score = _evaluatePoint(board, nx, ny, board.getCurrentTurn());
-              moves.push_back(m);  // , m.score
-            }
-          }
-        }
-      }
-    }
-  }
-
-  if (isEmptyBoard) {
-    // 盤面が空の場合、中央に置くのが最善手
-    int center = size / 2;
-    moves.push_back({center, center, 0});
-  }
-  // ★重要: スコアが高い順にソートする (降順)
-  // これにより Alpha-Beta が効率的に枝刈りできる
-  std::sort(moves.begin(), moves.end(),
-            [](const Move& a, const Move& b) { return a.score > b.score; });
-
-  // ★高速化の肝: 上位N個だけを残して、あとは切り捨てる
-  // これを「ビームサーチ」や「多段階枝刈り」と呼びます
-  const int MAX_MOVES_TO_CHECK = 15;  // 10〜15くらいが妥当
-
-  if (moves.size() > MAX_MOVES_TO_CHECK) {
-    moves.resize(MAX_MOVES_TO_CHECK);
-  }
-
-  return moves;
-}
-
-// 評価関数 (仮)
-// 今は「自分の石の数」を返すだけなどの超適当な実装でOK
 int AI::_evaluate(const Board& board, Player player) {
-  // 1. 自分の石、敵の石、空きマスのビットボードを用意
-  // Boardクラスに getter を追加する必要があるかもしれません
-  // (friend class AI にするか、public getterを使う)
-  // ここでは public getter があると仮定して、Board内部の bitset を取得します。
-  // ※ Board.hpp に `const std::bitset<MAX_CELLS>& getBlackStones() const` 等を追加してください。
-
+  // 評価は常に「自分のスコア - 敵のスコア」で行う
   Player opponent = (player == Player::BLACK) ? Player::WHITE : Player::BLACK;
 
-  // 自分の石、敵の石
   const BoardType& myStones =
       (player == Player::BLACK) ? board.getBlackStones() : board.getWhiteStones();
   const BoardType& oppStones =
       (player == Player::BLACK) ? board.getWhiteStones() : board.getBlackStones();
 
-  // 空きマス (自分も敵もいない場所)
-  // パディング(壁)部分は「石がある扱い」にしたいので、
-  // 「自分でも敵でもない」=「真の空きマス」を計算します。
-  // 壁の部分は myStonesにもoppStonesにも含まれないが、emptyとしても扱いたくない...
-  // -> 壁は「敵」とみなして計算するのが安全です（Closed判定になるため）。
-  // ここでは単純化のため、「石がない場所」をemptyとします。
+  // 空きマス（自分も敵もいない場所）のビットマップを作成
+  // 壁の部分を含まないよう注意が必要だが、ここでは簡易的に「どちらの石もない場所」とする
   BoardType empty = ~(myStones | oppStones);
 
-  int score = 0;
+  int myScore = 0;
+  int oppScore = 0;
 
-  // --- 攻撃スコア (自分の形) ---
-  score += _countPatterns(myStones, empty);
-
-  // --- 防御スコア (敵の形) ---
-  // 敵に高い点数の形を作らせないことが重要
-  // 敵のスコアを引く、あるいは「敵のOpenFourがある＝超危険」として処理
-  // Minimax法なので、敵の手番での評価値は自然と考慮されますが、
-  // ここで明示的に評価することも可能です。
-  // 今回はシンプルに「自分のスコア - 敵のスコア」を返します。
-
-  int oppScore = _countPatterns(oppStones, empty);
+  // 形の評価（連の数）
+  myScore += _countPatterns(myStones, empty);
+  oppScore += _countPatterns(oppStones, empty);
 
   // 捕獲数の評価
   int myCaptures = (player == Player::BLACK) ? board.getBlackCaptures() : board.getWhiteCaptures();
   int oppCaptures = (player == Player::BLACK) ? board.getWhiteCaptures() : board.getBlackCaptures();
 
-  score += myCaptures * _SCORE_CAPTURE;
-  oppScore += oppCaptures * _SCORE_CAPTURE;
+  myScore += myCaptures * SCORE_CAPTURE;
+  oppScore += oppCaptures * SCORE_CAPTURE;
 
-  return score - (oppScore * 1.5);
+  // 敵のスコアは重めに引く（攻撃よりも防御を優先させるため）
+  return myScore - static_cast<int>(oppScore * 1.5);
 }
 
-// パターンをカウントする関数
 int AI::_countPatterns(const BoardType& stones, const BoardType& empty) {
   int score = 0;
 
-  // 全方向 (横, 縦, 右下, 左下)
-  const int shifts[] = {1, 20, 21, 19};
+  // 4方向のシフト量 (横1, 縦20, 斜め21, 斜め19)
+  // Boardの仕様に依存する値
+  const int shifts[] = {1, BOARD_WIDTH, BOARD_WIDTH + 1, BOARD_WIDTH - 1};
 
   for (int s : shifts) {
-    // --- Open Four ( .XXXX. ) ---
-    // パターン: [空] [石] [石] [石] [石] [空]
-    // ビット演算: (e) & (s>>1) & (s>>2) & (s>>3) & (s>>4) & (e>>5)
-    // ※右シフトで位置を合わせます
+    // ビットシフトを利用してパターンマッチングを行う
+    // stones >> s は「sだけずらした位置に自分の石があるか」を表す
+
     BoardType s1 = stones >> s;
     BoardType s2 = s1 >> s;
     BoardType s3 = s2 >> s;
-    BoardType s4 = s3 >> s;  // s >> 4*s
+    BoardType s4 = s3 >> s;
 
-    BoardType e0 = empty;
-    BoardType e4 = empty >> (4 * s);
-    BoardType e5 = s4 >> s;  // empty >> 5*s
+    // 空きマスのチェック用
+    BoardType e0 = empty;             // 左端
+    BoardType e4 = empty >> (4 * s);  // 4つ右
+    BoardType e5 = s4 >> s;           // 5つ右
 
+    // --- Open Four ( .XXXX. ) ---
+    // パターン: [空] [石] [石] [石] [石] [空]
     BoardType openFour = e0 & s1 & s2 & s3 & s4 & e5;
     if (openFour.any()) {
-      score += openFour.count() * _SCORE_OPEN_FOUR;
+      score += (int)openFour.count() * SCORE_OPEN_FOUR;
     }
 
     // --- Open Three ( .XXX. ) ---
     // パターン: [空] [石] [石] [石] [空]
+    // 注: e4 は 4*s シフト済み
     BoardType openThree = e0 & s1 & s2 & s3 & e4;
     if (openThree.any()) {
-      score += openThree.count() * _SCORE_OPEN_THREE;
+      score += (int)openThree.count() * SCORE_OPEN_THREE;
     }
 
-    // --- Closed Four ( 2XXXX. or .XXXX2 ) ---
-    // OpenFourでカウントしなかった「4連」を探す
-    // 簡単のため「とにかく4連」を探して、OpenFour分を引く手抜き実装もアリですが、
-    // ここでは「石が4つ連続している」ものを探します。
+    // --- Closed Four / Four ( XXXX ) ---
+    // OpenFourも含んでしまうため、後で差し引く処理が必要
     BoardType four = s1 & s2 & s3 & s4;
     if (four.any()) {
-      // OpenFourとしてカウント済みのものは重複するので考慮が必要
-      // 単純加算だと二重計上になるので、
-      // 「Fourの総数 - OpenFourの数」を ClosedFour とするロジックが良いです。
-      int totalFours = four.count();
-      int openFours = openFour.count();
-      score += (totalFours - openFours) * _SCORE_CLOSED_FOUR;
+      int totalFours = (int)four.count();
+      int openFours = (int)openFour.count();
+
+      // 純粋なClosed Four (端が塞がれている4連) のみを加算
+      score += (totalFours - openFours) * SCORE_CLOSED_FOUR;
     }
   }
 
