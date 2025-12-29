@@ -20,7 +20,8 @@ bool Board::makeMove(int x, int y) {
   if (_blackStones.test(index) || _whiteStones.test(index))
     return false;
 
-  if (!_checkAndProcessCapture(index)) {
+  this->_capturedStatus = _checkAndProcessCapture(index);
+  if (!_capturedStatus) {
     if (_isDoubleThree(x, y))
       return false;
   }
@@ -108,6 +109,10 @@ int Board::getWhiteCaptures() const {
 
 bool Board::getDoubleThreeStatus() const {
   return _doubleThreeStatus;
+}
+
+bool Board::getCapturedStatus() const {
+  return this->_capturedStatus;
 }
 
 void Board::setDoubleThreeStatus(bool status) {

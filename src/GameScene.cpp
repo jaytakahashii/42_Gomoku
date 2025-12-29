@@ -40,6 +40,9 @@ void GameScene::handleClick(int x, int y) {
     float posX = _boardOffset.x + static_cast<float>(col * _cellSize);
     float posY = _boardOffset.y + static_cast<float>(row * _cellSize);
     if (_board.makeMove(col, row)) {
+      if (_board.getCapturedStatus()) {
+        displayTimedMessage("Capture", {posX, posY});
+      }
       int whiteCaptures = this->_board.getWhiteCaptures();
       int blackCaptures = this->_board.getBlackCaptures();
       this->_countWhiteCaptures.setString("White Captured: " + std::to_string(whiteCaptures));
@@ -49,7 +52,6 @@ void GameScene::handleClick(int x, int y) {
         if (_onGameOver)
           _onGameOver(winner);
       }
-
       _board.changeTurn();
     }
     if (_board.getDoubleThreeStatus()) {
