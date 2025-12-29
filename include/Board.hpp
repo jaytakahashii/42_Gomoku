@@ -33,6 +33,7 @@ class Board {
   int getBlackCaptures() const;
   int getWhiteCaptures() const;
   bool getDoubleThreeStatus() const;
+  bool getCapturedStatus() const;
   void setDoubleThreeStatus(bool status);
   const BoardType& getBlackStones() const;
   const BoardType& getWhiteStones() const;
@@ -44,6 +45,7 @@ class Board {
   int _blackCaptures;
   int _whiteCaptures;
   bool _doubleThreeStatus;
+  bool _capturedStatus;
 
   // 方向定数
   static constexpr int SHIFT_H = 1;                 // 横
