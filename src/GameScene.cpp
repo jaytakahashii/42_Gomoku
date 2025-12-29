@@ -30,12 +30,14 @@ void GameScene::handleClick(int x, int y) {
     float posX = _boardOffset.x + static_cast<float>(col * _cellSize);
     float posY = _boardOffset.y + static_cast<float>(row * _cellSize);
     if (_board.makeMove(col, row)) {
+      if (_board.getCapturedStatus()) {
+        displayTimedMessage("Capture", {posX, posY});
+      }
       if (_board.checkWin()) {
         std::string winner = _board.getCurrentTurn() == Player::BLACK ? "Black" : "White";
         if (_onGameOver)
           _onGameOver(winner);
       }
-
       _board.changeTurn();
     }
     if (_board.getDoubleThreeStatus()) {
