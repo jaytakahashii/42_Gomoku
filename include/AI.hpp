@@ -26,11 +26,11 @@ class AI {
   // --- 定数定義 ---
 
   // 評価スコア
-  static constexpr int SCORE_WIN = 100000000;
-  static constexpr int SCORE_OPEN_FOUR = 10000000;  // 次に確実に勝てる形
-  static constexpr int SCORE_CAPTURE = 1000000;     // 石を取る価値
-  static constexpr int SCORE_CLOSED_FOUR = 100000;  // 防がれないと勝てる形
-  static constexpr int SCORE_OPEN_THREE = 100000;   // 次にOpenFourになる形
+  static constexpr int _SCORE_WIN = 100000000;
+  static constexpr int _SCORE_OPEN_FOUR = 10000000;  // 次に確実に勝てる形
+  static constexpr int _SCORE_CAPTURE = 1000000;     // 石を取る価値
+  static constexpr int _SCORE_CLOSED_FOUR = 100000;  // 防がれないと勝てる形
+  static constexpr int _SCORE_OPEN_THREE = 100000;   // 次にOpenFourになる形
 
   // 探索設定
   static constexpr int TIME_LIMIT_MS = 1000;  // 思考時間（ミリ秒）

@@ -62,7 +62,7 @@ Move AI::getBestMove(Board board, Player player) {
     std::cout << "Depth " << depth << " finished. Best Score: " << bestMove.score << std::endl;
 
     // 必勝が見つかったらこれ以上深く読む必要はない
-    if (bestMove.score >= SCORE_WIN - 100) {
+    if (bestMove.score >= _SCORE_WIN - 100) {
       break;
     }
   }
@@ -96,7 +96,7 @@ int AI::_minimax(Board board, int depth, int alpha, int beta, bool maximizingPla
   if (board.checkWin()) {
     // AIが勝ちならプラス、負けならマイナス
     // 浅い階層（早いターン）での勝ちほど価値を高くする (+ depth)
-    return maximizingPlayer ? -SCORE_WIN + depth : SCORE_WIN - depth;
+    return maximizingPlayer ? -_SCORE_WIN + depth : _SCORE_WIN - depth;
   }
 
   // 2. 深さ制限到達（葉ノード）
@@ -319,8 +319,8 @@ int AI::_evaluate(const Board& board, Player player) {
   int myCaptures = (player == Player::BLACK) ? board.getBlackCaptures() : board.getWhiteCaptures();
   int oppCaptures = (player == Player::BLACK) ? board.getWhiteCaptures() : board.getBlackCaptures();
 
-  myScore += myCaptures * SCORE_CAPTURE;
-  oppScore += oppCaptures * SCORE_CAPTURE;
+  myScore += myCaptures * _SCORE_CAPTURE;
+  oppScore += oppCaptures * _SCORE_CAPTURE;
 
   // 敵のスコアは重めに引く（攻撃よりも防御を優先させるため）
   return myScore - static_cast<int>(oppScore * 1.5);
@@ -351,7 +351,7 @@ int AI::_countPatterns(const BoardType& stones, const BoardType& empty) {
     // パターン: [空] [石] [石] [石] [石] [空]
     BoardType openFour = e0 & s1 & s2 & s3 & s4 & e5;
     if (openFour.any()) {
-      score += (int)openFour.count() * SCORE_OPEN_FOUR;
+      score += (int)openFour.count() * _SCORE_OPEN_FOUR;
     }
 
     // --- Open Three ( .XXX. ) ---
@@ -359,7 +359,7 @@ int AI::_countPatterns(const BoardType& stones, const BoardType& empty) {
     // 注: e4 は 4*s シフト済み
     BoardType openThree = e0 & s1 & s2 & s3 & e4;
     if (openThree.any()) {
-      score += (int)openThree.count() * SCORE_OPEN_THREE;
+      score += (int)openThree.count() * _SCORE_OPEN_THREE;
     }
 
     // --- Closed Four / Four ( XXXX ) ---
@@ -370,7 +370,7 @@ int AI::_countPatterns(const BoardType& stones, const BoardType& empty) {
       int openFours = (int)openFour.count();
 
       // 純粋なClosed Four (端が塞がれている4連) のみを加算
-      score += (totalFours - openFours) * SCORE_CLOSED_FOUR;
+      score += (totalFours - openFours) * _SCORE_CLOSED_FOUR;
     }
   }
 
