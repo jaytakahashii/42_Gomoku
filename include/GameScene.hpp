@@ -47,6 +47,8 @@ class GameScene : public Scene {
   void handleClick(int x, int y);
   void displayTimedMessage(const std::string& message, sf::Vector2f pos);
   std::function<void(const std::string& winner)> _onGameOver;
+  sf::Text _countWhiteCaptures;
+  sf::Text _countBlackCaptures;
 };
 
 #endif

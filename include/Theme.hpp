@@ -18,6 +18,7 @@ const sf::Color AlertText = sf::Color(180, 50, 50);
 namespace FontSize {
 const unsigned int Title = 80;
 const unsigned int Header = 45;
+const unsigned int Text = 35;
 const unsigned int Button = 25;
 }  // namespace FontSize
 

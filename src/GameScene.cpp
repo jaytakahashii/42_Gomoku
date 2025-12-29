@@ -1,6 +1,16 @@
 #include <GameScene.hpp>
 
-GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize) : _font(font) {
+GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
+    : _font(font),
+      _countWhiteCaptures(font, "White Captured: 0"),
+      _countBlackCaptures(font, "Black Captured: 0") {
+  this->_countWhiteCaptures.setCharacterSize(Theme::FontSize::Text);
+  this->_countWhiteCaptures.setFillColor(Theme::Color::Text);
+  this->_countWhiteCaptures.setOrigin(this->_countWhiteCaptures.getGlobalBounds().getCenter());
+
+  this->_countBlackCaptures.setCharacterSize(Theme::FontSize::Text);
+  this->_countBlackCaptures.setFillColor(Theme::Color::Text);
+  this->_countBlackCaptures.setOrigin(this->_countBlackCaptures.getGlobalBounds().getCenter());
   onResize(initalSize);
 }
 
@@ -30,6 +40,10 @@ void GameScene::handleClick(int x, int y) {
     float posX = _boardOffset.x + static_cast<float>(col * _cellSize);
     float posY = _boardOffset.y + static_cast<float>(row * _cellSize);
     if (_board.makeMove(col, row)) {
+      int whiteCaptures = this->_board.getWhiteCaptures();
+      int blackCaptures = this->_board.getBlackCaptures();
+      this->_countWhiteCaptures.setString("White Captured: " + std::to_string(whiteCaptures));
+      this->_countBlackCaptures.setString("Black Captured: " + std::to_string(blackCaptures));
       if (_board.checkWin()) {
         std::string winner = _board.getCurrentTurn() == Player::BLACK ? "Black" : "White";
         if (_onGameOver)
@@ -99,6 +113,8 @@ void GameScene::render(sf::RenderWindow& window) {
   for (const auto& message : this->_activeMessages) {
     window.draw(message.text);
   }
+  window.draw(this->_countWhiteCaptures);
+  window.draw(this->_countBlackCaptures);
 }
 
 void GameScene::update(float df) {
@@ -138,6 +154,9 @@ void GameScene::onResize(const sf::Vector2u& windowSize) {
   // (画面幅 - 盤面幅) / 2 = 左側の余白
   _boardOffset.x = (w - boardPixelSize) / 2.f;
   _boardOffset.y = (h - boardPixelSize) / 2.f;
+
+  this->_countWhiteCaptures.setPosition({w / 4.f, h / 9.5f});
+  this->_countBlackCaptures.setPosition({w * 3 / 4.f, h / 9.5f});
 }
 
 void GameScene::setOnGameOver(std::function<void(const std::string& winner)> callback) {
