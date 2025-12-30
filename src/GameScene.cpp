@@ -59,6 +59,21 @@ void GameScene::handleClick(int x, int y) {
           _onGameOver(winner);
       }
       _board.changeTurn();
+
+      // TODO: WhiteをAIとして実装する
+      if (_board.getCurrentPlayer() == Player::AI) {
+        AI ai;
+        Move bestMove = ai.getBestMove(_board, this->_board.getCurrentTurn());
+        _board.makeMove(bestMove.x, bestMove.y);
+
+        if (_board.checkWin()) {
+          std::string winner = "White";
+          if (_onGameOver)
+            _onGameOver(winner);
+        }
+
+        _board.changeTurn();
+      }
     }
     if (_board.getDoubleThreeStatus()) {
       displayTimedMessage("DoubleThree", {posX, posY});
@@ -91,7 +106,7 @@ void GameScene::render(sf::RenderWindow& window) {
 
   for (unsigned int y = 0; y < _boardSize; ++y) {
     for (unsigned int x = 0; x < _boardSize; ++x) {
-      Color p = _board.getStoneAt(x, y);
+      Color p = _board.getColorAt(x, y);
 
       if (p != Color::NONE) {
         float posX = _boardOffset.x + static_cast<float>(x * _cellSize);
