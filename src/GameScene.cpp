@@ -48,7 +48,7 @@ void GameScene::handleClick(int x, int y) {
       this->_countWhiteCaptures.setString("White Captured: " + std::to_string(whiteCaptures));
       this->_countBlackCaptures.setString("Black Captured: " + std::to_string(blackCaptures));
       if (_board.checkWin()) {
-        std::string winner = _board.getCurrentTurn() == Player::BLACK ? "Black" : "White";
+        std::string winner = _board.getCurrentPlayer() == Player::HUMAN ? "You" : "AI";
         if (_onGameOver)
           _onGameOver(winner);
       }
@@ -85,14 +85,14 @@ void GameScene::render(sf::RenderWindow& window) {
 
   for (unsigned int y = 0; y < _boardSize; ++y) {
     for (unsigned int x = 0; x < _boardSize; ++x) {
-      Player p = _board.getStoneAt(x, y);
+      Color p = _board.getStoneAt(x, y);
 
-      if (p != Player::NONE) {
+      if (p != Color::NONE) {
         float posX = _boardOffset.x + static_cast<float>(x * _cellSize);
         float posY = _boardOffset.y + static_cast<float>(y * _cellSize);
         stone.setPosition(sf::Vector2f(posX, posY));
 
-        stone.setFillColor(p == Player::BLACK ? sf::Color::Black : sf::Color::White);
+        stone.setFillColor(p == Color::BLACK ? sf::Color::Black : sf::Color::White);
         window.draw(stone);
       }
     }
@@ -155,7 +155,7 @@ void GameScene::setAILevel(AILevel& level) {
 }
 
 void GameScene::setTurnOrder(TurnOrder turnOrder) {
-  this->_turnOrder = turnOrder;
+  this->_board.setupPlayers(turnOrder);
 }
 
 GameScene::FloatingMessage::FloatingMessage(const sf::Font& font, const std::string& str,

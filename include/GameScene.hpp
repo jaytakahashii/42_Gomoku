@@ -39,7 +39,6 @@ class GameScene : public Scene {
   const unsigned int _cellSize = CELL_SIZE;
   sf::Vector2f _boardOffset;
   AILevel _aiLevel;
-  TurnOrder _turnOrder;
 
   Board _board;
   void handleClick(int x, int y);
