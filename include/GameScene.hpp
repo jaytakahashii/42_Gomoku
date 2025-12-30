@@ -39,7 +39,6 @@ class GameScene : public Scene {
   const unsigned int _cellSize = CELL_SIZE;
   sf::Vector2f _boardOffset;
   AILevel _aiLevel;
-  TurnOrder _turnOrder;
 
   Board _board;
   void handleClick(int x, int y);
@@ -47,6 +46,8 @@ class GameScene : public Scene {
   std::function<void(const std::string& winner)> _onGameOver;
   sf::Text _countWhiteCaptures;
   sf::Text _countBlackCaptures;
+  sf::Text _turnNotification;
+  float _turnAnimTimer = 0.0f;
 };
 
 #endif

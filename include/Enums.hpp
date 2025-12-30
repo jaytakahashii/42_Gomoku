@@ -3,6 +3,6 @@
 
 enum class AILevel { Easy, Medium, Hard };
 
-enum class TurnOrder { PlayerFirst, AIFirst };
+enum class TurnOrder { HumanFirst, AIFirst };
 
 #endif

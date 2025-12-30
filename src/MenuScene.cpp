@@ -96,7 +96,7 @@ void MenuScene::handleEvents(const EventList& events) {
         }
 
         if (this->_firstButton.getGlobalBounds().contains(mousePos)) {
-          this->_turnOrder = TurnOrder::PlayerFirst;
+          this->_turnOrder = TurnOrder::HumanFirst;
         } else if (this->_secondButton.getGlobalBounds().contains(mousePos)) {
           this->_turnOrder = TurnOrder::AIFirst;
         }
@@ -114,7 +114,7 @@ void MenuScene::handleEvents(const EventList& events) {
 }
 
 void MenuScene::update(float dt) {
-  if (this->_turnOrder == TurnOrder::PlayerFirst) {
+  if (this->_turnOrder == TurnOrder::HumanFirst) {
     this->_firstButton.setFillColor(Theme::Color::ButtonActive);
     this->_secondButton.setFillColor(Theme::Color::ButtonIdle);
   } else {

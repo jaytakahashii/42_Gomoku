@@ -97,7 +97,7 @@ void ResultScene::setBackground(const sf::Window& window) {
 }
 
 void ResultScene::setWinner(const std::string& winner) {
-  this->_winnerText.setString("Player " + winner + " wins!");
+  this->_winnerText.setString(winner + " wins!");
   this->_winnerText.setOrigin(_winnerText.getLocalBounds().getCenter());
 }
 
