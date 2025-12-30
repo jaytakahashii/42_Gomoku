@@ -163,12 +163,6 @@ bool Board::_checkAndProcessCapture(int index) {
         myScore += 2;
 
         captured = true;
-
-        // TODO: Debug output
-        std::cout << "Capture! Player " << ((_currentTurn == Player::BLACK) ? "BLACK" : "WHITE")
-                  << "\n"
-                  << "Total captures - BLACK: " << _blackCaptures << ", WHITE: " << _whiteCaptures
-                  << std::endl;
       }
     }
   }
