@@ -21,6 +21,8 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
 }
 
 void GameScene::handleEvents(const EventList& events) {
+  if (this->_board.getCurrentPlayer() == Player::AI)
+    return;
   for (const auto e : events) {
     if (const auto* mousePtr = e->getIf<sf::Event::MouseButtonPressed>()) {
       if (mousePtr->button == sf::Mouse::Button::Left) {
@@ -54,26 +56,10 @@ void GameScene::handleClick(int x, int y) {
       this->_countWhiteCaptures.setString("White Captured: " + std::to_string(whiteCaptures));
       this->_countBlackCaptures.setString("Black Captured: " + std::to_string(blackCaptures));
       if (_board.checkWin()) {
-        std::string winner = _board.getCurrentPlayer() == Player::HUMAN ? "You" : "AI";
         if (_onGameOver)
-          _onGameOver(winner);
+          _onGameOver("You");
       }
       _board.changeTurn();
-
-      // TODO: WhiteをAIとして実装する
-      if (_board.getCurrentPlayer() == Player::AI) {
-        AI ai;
-        Move bestMove = ai.getBestMove(_board, this->_board.getCurrentTurn());
-        _board.makeMove(bestMove.x, bestMove.y);
-
-        if (_board.checkWin()) {
-          std::string winner = "White";
-          if (_onGameOver)
-            _onGameOver(winner);
-        }
-
-        _board.changeTurn();
-      }
     }
     if (_board.getDoubleThreeStatus()) {
       displayTimedMessage("DoubleThree", {posX, posY});
@@ -162,6 +148,38 @@ void GameScene::update(float df) {
     color.a = alpha;
     _turnNotification.setFillColor(color);
   }
+  if (_board.getCurrentPlayer() == Player::AI) {
+    _aiMoveTimer += df;
+
+    if (_aiMoveTimer >= 0.5f) {
+      _performAIMove();
+      _aiMoveTimer = 0.0f;
+    }
+  } else {
+    _aiMoveTimer = 0.0f;
+  }
+}
+
+void GameScene::_performAIMove() {
+  AI ai;
+  Move bestMove = ai.getBestMove(_board, this->_board.getCurrentTurn());
+
+  _board.makeMove(bestMove.x, bestMove.y);
+
+  int whiteCaptures = this->_board.getWhiteCaptures();
+  int blackCaptures = this->_board.getBlackCaptures();
+  this->_countWhiteCaptures.setString("White Captured: " + std::to_string(whiteCaptures));
+  this->_countBlackCaptures.setString("Black Captured: " + std::to_string(blackCaptures));
+
+  if (_board.checkWin()) {
+    std::cout << "fdasfasfda" << std::endl;
+    std::string winner = "AI";
+    if (_onGameOver)
+      _onGameOver(winner);
+    return;
+  }
+
+  _board.changeTurn();
 }
 
 void GameScene::onResize(const sf::Vector2u& windowSize) {

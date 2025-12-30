@@ -50,6 +50,8 @@ class GameScene : public Scene {
   sf::Text _countBlackCaptures;
   sf::Text _turnNotification;
   float _turnAnimTimer = 0.0f;
+  float _aiMoveTimer = 0.0f;
+  void _performAIMove();
 };
 
 #endif
