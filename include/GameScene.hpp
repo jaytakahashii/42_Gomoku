@@ -7,7 +7,9 @@
 #include <Theme.hpp>
 #include <functional>
 #include <future>
+#include <iomanip>
 #include <list>
+#include <sstream>
 #include <thread>
 
 #include "AI.hpp"
@@ -56,6 +58,8 @@ class GameScene : public Scene {
   std::future<Move> _aiFuture;
   bool _isAIThinking = false;
   void _applyAIMove(Move move);
+  sf::Text _aiInfoText;
+  sf::Clock _aiClock;
 };
 
 #endif

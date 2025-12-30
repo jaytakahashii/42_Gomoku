@@ -4,7 +4,8 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
     : _font(font),
       _countWhiteCaptures(font, "White Captured: 0"),
       _countBlackCaptures(font, "Black Captured: 0"),
-      _turnNotification(font, "Your Turn") {
+      _turnNotification(font, "Your Turn"),
+      _aiInfoText(font, "AI Time: 0.00s") {
   this->_countWhiteCaptures.setCharacterSize(Theme::FontSize::Text);
   this->_countWhiteCaptures.setFillColor(Theme::Color::Text);
   this->_countWhiteCaptures.setOrigin(this->_countWhiteCaptures.getGlobalBounds().getCenter());
@@ -16,6 +17,9 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_turnNotification.setCharacterSize(Theme::FontSize::Header);
   this->_turnNotification.setFillColor(Theme::Color::AlertText);
   this->_turnNotification.setOrigin(this->_turnNotification.getGlobalBounds().getCenter());
+
+  this->_aiInfoText.setCharacterSize(Theme::FontSize::Text);
+  this->_aiInfoText.setFillColor(Theme::Color::Text);
 
   onResize(initalSize);
 }
@@ -110,9 +114,11 @@ void GameScene::render(sf::RenderWindow& window) {
   window.draw(this->_countWhiteCaptures);
   window.draw(this->_countBlackCaptures);
 
-  if (_board.getCurrentPlayer() == Player::HUMAN) {
-    window.draw(_turnNotification);
+  if (this->_board.getCurrentPlayer() == Player::HUMAN) {
+    window.draw(this->_turnNotification);
   }
+
+  window.draw(this->_aiInfoText);
 }
 
 void GameScene::update(float df) {
@@ -138,65 +144,70 @@ void GameScene::update(float df) {
       ++it;
     }
   }
-  if (_board.getCurrentPlayer() == Player::HUMAN) {
-    _turnAnimTimer += df;
+  if (this->_board.getCurrentPlayer() == Player::HUMAN) {
+    this->_turnAnimTimer += df;
 
-    float sinVal = std::sin(_turnAnimTimer * 5.0f);
+    float sinVal = std::sin(this->_turnAnimTimer * 5.0f);
     std::uint8_t alpha = static_cast<std::uint8_t>(190 + 65 * sinVal);
 
-    sf::Color color = _turnNotification.getFillColor();
+    sf::Color color = this->_turnNotification.getFillColor();
     color.a = alpha;
-    _turnNotification.setFillColor(color);
+    this->_turnNotification.setFillColor(color);
   }
 
-  if (_board.getCurrentPlayer() == Player::AI) {
-    if (!_isAIThinking) {
-      _aiMoveTimer += df;
+  if (this->_board.getCurrentPlayer() == Player::AI) {
+    if (!this->_isAIThinking) {
+      this->_aiMoveTimer += df;
 
-      if (_aiMoveTimer >= 0.5f) {
-        _isAIThinking = true;
-        _aiMoveTimer = 0.0f;
+      if (this->_aiMoveTimer >= 0.5f) {
+        this->_isAIThinking = true;
+        this->_aiMoveTimer = 0.0f;
 
         AI ai;
-        Color turnColor = _board.getCurrentTurn();
-        Board boardCopy = _board;
+        Color turnColor = this->_board.getCurrentTurn();
+        Board boardCopy = this->_board;
 
-        _aiFuture = std::async(std::launch::async, [ai, boardCopy, turnColor]() mutable {
+        this->_aiClock.restart();
+        this->_aiFuture = std::async(std::launch::async, [ai, boardCopy, turnColor]() mutable {
           return ai.getBestMove(boardCopy, turnColor);
         });
       }
     } else {
-      if (_aiFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-        Move bestMove = _aiFuture.get();
+      float elapsed = this->_aiClock.getElapsedTime().asSeconds();
+
+      std::stringstream ss;
+      ss << "AI Thinking... " << std::fixed << std::setprecision(2) << elapsed << "s";
+      this->_aiInfoText.setString(ss.str());
+      if (this->_aiFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        Move bestMove = this->_aiFuture.get();
+        float finalTime = this->_aiClock.getElapsedTime().asSeconds();
+        std::stringstream ssFinal;
+        ssFinal << "AI Time: " << std::fixed << std::setprecision(2) << finalTime << "s";
+        this->_aiInfoText.setString(ssFinal.str());
         _applyAIMove(bestMove);
-        _isAIThinking = false;
+        this->_isAIThinking = false;
       }
     }
   } else {
-    _aiMoveTimer = 0.0f;
-    _isAIThinking = false;
+    this->_aiMoveTimer = 0.0f;
+    this->_isAIThinking = false;
   }
 }
 
 void GameScene::_applyAIMove(Move move) {
-  // 1. 盤面更新
-  _board.makeMove(move.x, move.y);
+  this->_board.makeMove(move.x, move.y);
 
-  // 2. キャプチャ情報の更新
   int whiteCaptures = this->_board.getWhiteCaptures();
   int blackCaptures = this->_board.getBlackCaptures();
   this->_countWhiteCaptures.setString("White Captured: " + std::to_string(whiteCaptures));
   this->_countBlackCaptures.setString("Black Captured: " + std::to_string(blackCaptures));
 
-  // 3. 勝利判定
-  if (_board.checkWin()) {
-    std::string winner = "AI";
-    if (_onGameOver)
-      _onGameOver(winner);
+  if (this->_board.checkWin()) {
+    if (this->_onGameOver)
+      this->_onGameOver("AI");
     return;
   }
 
-  // 4. ターン交代
   _board.changeTurn();
 }
 
@@ -216,7 +227,9 @@ void GameScene::onResize(const sf::Vector2u& windowSize) {
   this->_countWhiteCaptures.setPosition({w / 4.f, h / 9.5f});
   this->_countBlackCaptures.setPosition({w * 3 / 4.f, h / 9.5f});
 
-  _turnNotification.setPosition({w / 2.f, 50.f});
+  this->_turnNotification.setPosition({w / 2.f, 50.f});
+
+  this->_aiInfoText.setPosition({20.f, h - 50.f});
 }
 
 void GameScene::setOnGameOver(std::function<void(const std::string& winner)> callback) {
