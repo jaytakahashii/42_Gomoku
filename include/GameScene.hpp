@@ -6,7 +6,9 @@
 #include <Scene.hpp>
 #include <Theme.hpp>
 #include <functional>
+#include <future>
 #include <list>
+#include <thread>
 
 #include "AI.hpp"
 
@@ -51,7 +53,9 @@ class GameScene : public Scene {
   sf::Text _turnNotification;
   float _turnAnimTimer = 0.0f;
   float _aiMoveTimer = 0.0f;
-  void _performAIMove();
+  std::future<Move> _aiFuture;
+  bool _isAIThinking = false;
+  void _applyAIMove(Move move);
 };
 
 #endif

@@ -148,37 +148,55 @@ void GameScene::update(float df) {
     color.a = alpha;
     _turnNotification.setFillColor(color);
   }
-  if (_board.getCurrentPlayer() == Player::AI) {
-    _aiMoveTimer += df;
 
-    if (_aiMoveTimer >= 0.5f) {
-      _performAIMove();
-      _aiMoveTimer = 0.0f;
+  if (_board.getCurrentPlayer() == Player::AI) {
+    if (!_isAIThinking) {
+      _aiMoveTimer += df;
+
+      if (_aiMoveTimer >= 0.5f) {
+        _isAIThinking = true;
+        _aiMoveTimer = 0.0f;
+
+        AI ai;
+        Color turnColor = _board.getCurrentTurn();
+        Board boardCopy = _board;
+
+        _aiFuture = std::async(std::launch::async, [ai, boardCopy, turnColor]() mutable {
+          return ai.getBestMove(boardCopy, turnColor);
+        });
+      }
+    } else {
+      if (_aiFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        Move bestMove = _aiFuture.get();
+        _applyAIMove(bestMove);
+        _isAIThinking = false;
+      }
     }
   } else {
     _aiMoveTimer = 0.0f;
+    _isAIThinking = false;
   }
 }
 
-void GameScene::_performAIMove() {
-  AI ai;
-  Move bestMove = ai.getBestMove(_board, this->_board.getCurrentTurn());
+void GameScene::_applyAIMove(Move move) {
+  // 1. 盤面更新
+  _board.makeMove(move.x, move.y);
 
-  _board.makeMove(bestMove.x, bestMove.y);
-
+  // 2. キャプチャ情報の更新
   int whiteCaptures = this->_board.getWhiteCaptures();
   int blackCaptures = this->_board.getBlackCaptures();
   this->_countWhiteCaptures.setString("White Captured: " + std::to_string(whiteCaptures));
   this->_countBlackCaptures.setString("Black Captured: " + std::to_string(blackCaptures));
 
+  // 3. 勝利判定
   if (_board.checkWin()) {
-    std::cout << "fdasfasfda" << std::endl;
     std::string winner = "AI";
     if (_onGameOver)
       _onGameOver(winner);
     return;
   }
 
+  // 4. ターン交代
   _board.changeTurn();
 }
 
