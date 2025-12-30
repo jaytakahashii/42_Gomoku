@@ -2,6 +2,7 @@
 #define SCENE_HPP
 
 #include <SFML/Graphics.hpp>
+#include <functional>
 #include <iostream>
 #include <optional>
 #include <string>
