@@ -46,6 +46,8 @@ class GameScene : public Scene {
   std::function<void(const std::string& winner)> _onGameOver;
   sf::Text _countWhiteCaptures;
   sf::Text _countBlackCaptures;
+  sf::Text _turnNotification;
+  float _turnAnimTimer = 0.0f;
 };
 
 #endif

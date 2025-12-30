@@ -3,7 +3,8 @@
 GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
     : _font(font),
       _countWhiteCaptures(font, "White Captured: 0"),
-      _countBlackCaptures(font, "Black Captured: 0") {
+      _countBlackCaptures(font, "Black Captured: 0"),
+      _turnNotification(font, "Your Turn") {
   this->_countWhiteCaptures.setCharacterSize(Theme::FontSize::Text);
   this->_countWhiteCaptures.setFillColor(Theme::Color::Text);
   this->_countWhiteCaptures.setOrigin(this->_countWhiteCaptures.getGlobalBounds().getCenter());
@@ -11,6 +12,11 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_countBlackCaptures.setCharacterSize(Theme::FontSize::Text);
   this->_countBlackCaptures.setFillColor(Theme::Color::Text);
   this->_countBlackCaptures.setOrigin(this->_countBlackCaptures.getGlobalBounds().getCenter());
+
+  this->_turnNotification.setCharacterSize(Theme::FontSize::Header);
+  this->_turnNotification.setFillColor(Theme::Color::AlertText);
+  this->_turnNotification.setOrigin(this->_turnNotification.getGlobalBounds().getCenter());
+
   onResize(initalSize);
 }
 
@@ -102,6 +108,10 @@ void GameScene::render(sf::RenderWindow& window) {
   }
   window.draw(this->_countWhiteCaptures);
   window.draw(this->_countBlackCaptures);
+
+  if (_board.getCurrentPlayer() == Player::HUMAN) {
+    window.draw(_turnNotification);
+  }
 }
 
 void GameScene::update(float df) {
@@ -127,6 +137,16 @@ void GameScene::update(float df) {
       ++it;
     }
   }
+  if (_board.getCurrentPlayer() == Player::HUMAN) {
+    _turnAnimTimer += df;
+
+    float sinVal = std::sin(_turnAnimTimer * 5.0f);
+    std::uint8_t alpha = static_cast<std::uint8_t>(190 + 65 * sinVal);
+
+    sf::Color color = _turnNotification.getFillColor();
+    color.a = alpha;
+    _turnNotification.setFillColor(color);
+  }
 }
 
 void GameScene::onResize(const sf::Vector2u& windowSize) {
@@ -144,6 +164,8 @@ void GameScene::onResize(const sf::Vector2u& windowSize) {
 
   this->_countWhiteCaptures.setPosition({w / 4.f, h / 9.5f});
   this->_countBlackCaptures.setPosition({w * 3 / 4.f, h / 9.5f});
+
+  _turnNotification.setPosition({w / 2.f, 50.f});
 }
 
 void GameScene::setOnGameOver(std::function<void(const std::string& winner)> callback) {
