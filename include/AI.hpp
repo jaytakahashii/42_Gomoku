@@ -20,7 +20,7 @@ class AI {
   AI() = default;
 
   // 制限時間内に最善手を計算して返す
-  Move getBestMove(Board board, Color color);
+  Move getBestMove(Board board, Color color, AILevel level);
 
  private:
   // --- 定数定義 ---

@@ -166,11 +166,13 @@ void GameScene::update(float df) {
         AI ai;
         Color turnColor = this->_board.getCurrentTurn();
         Board boardCopy = this->_board;
+        AILevel level = this->_aiLevel;
 
         this->_aiClock.restart();
-        this->_aiFuture = std::async(std::launch::async, [ai, boardCopy, turnColor]() mutable {
-          return ai.getBestMove(boardCopy, turnColor);
-        });
+        this->_aiFuture =
+            std::async(std::launch::async, [ai, boardCopy, turnColor, level]() mutable {
+              return ai.getBestMove(boardCopy, turnColor, level);
+            });
       }
     } else {
       float elapsed = this->_aiClock.getElapsedTime().asSeconds();

@@ -6,7 +6,7 @@
 // 公開メソッド (Public Methods)
 // -------------------------------------------------------------------------
 
-Move AI::getBestMove(Board board, Color color) {
+Move AI::getBestMove(Board board, Color color, AILevel level) {
   _aiPlayer = color;
   _startTime = std::chrono::high_resolution_clock::now();
   _timeOut = false;
