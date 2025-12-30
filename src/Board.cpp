@@ -5,7 +5,7 @@
 Board::Board()
     : _blackStones(0),
       _whiteStones(0),
-      _currentTurn(Player::BLACK),
+      _currentTurn(Color::BLACK),
       _blackCaptures(0),
       _whiteCaptures(0),
       _doubleThreeStatus(false) {
@@ -26,7 +26,7 @@ bool Board::makeMove(int x, int y) {
       return false;
   }
 
-  if (_currentTurn == Player::BLACK) {
+  if (_currentTurn == Color::BLACK) {
     _blackStones.set(index);
   } else {
     _whiteStones.set(index);
@@ -36,13 +36,13 @@ bool Board::makeMove(int x, int y) {
 }
 
 void Board::changeTurn() {
-  _currentTurn = (_currentTurn == Player::BLACK) ? Player::WHITE : Player::BLACK;
+  _currentTurn = (_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
 }
 
 bool Board::checkWin() {
-  const BoardType& myStones = (_currentTurn == Player::WHITE) ? _whiteStones : _blackStones;
-  const BoardType& oppStones = (_currentTurn == Player::WHITE) ? _blackStones : _whiteStones;
-  int captures = (_currentTurn == Player::WHITE) ? _whiteCaptures : _blackCaptures;
+  const BoardType& myStones = (_currentTurn == Color::WHITE) ? _whiteStones : _blackStones;
+  const BoardType& oppStones = (_currentTurn == Color::WHITE) ? _blackStones : _whiteStones;
+  int captures = (_currentTurn == Color::WHITE) ? _whiteCaptures : _blackCaptures;
 
   // 1. 捕獲勝ち
   if (captures >= 10)
@@ -86,17 +86,25 @@ bool Board::checkWin() {
 
 // --- Getters ---
 
-Player Board::getStoneAt(int x, int y) const {
+Color Board::getStoneAt(int x, int y) const {
   int index = _getIndex(x, y);
   if (_blackStones.test(index))
-    return Player::BLACK;
+    return Color::BLACK;
   if (_whiteStones.test(index))
-    return Player::WHITE;
-  return Player::NONE;
+    return Color::WHITE;
+  return Color::NONE;
 }
 
-Player Board::getCurrentTurn() const {
+Color Board::getCurrentTurn() const {
   return _currentTurn;
+}
+
+Player Board::getCurrentPlayer() const {
+  auto it = this->_colorToPlayer.find(_currentTurn);
+  if (it == this->_colorToPlayer.end()) {
+    return Player::NONE;
+  }
+  return it->second;
 }
 
 int Board::getBlackCaptures() const {
@@ -119,6 +127,17 @@ void Board::setDoubleThreeStatus(bool status) {
   _doubleThreeStatus = status;
 }
 
+void Board::setupPlayers(TurnOrder order) {
+  this->_colorToPlayer.clear();
+  if (order == TurnOrder::AIFirst) {
+    this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::AI));
+    this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::HUMAN));
+  } else if (order == TurnOrder::HumanFirst) {
+    this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::HUMAN));
+    this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::AI));
+  }
+}
+
 // --- Private Helpers ---
 
 int Board::_getIndex(int x, int y) const {
@@ -126,9 +145,9 @@ int Board::_getIndex(int x, int y) const {
 }
 
 bool Board::_checkAndProcessCapture(int index) {
-  BoardType& myStones = (_currentTurn == Player::BLACK) ? _blackStones : _whiteStones;
-  BoardType& oppStones = (_currentTurn == Player::BLACK) ? _whiteStones : _blackStones;
-  int& myScore = (_currentTurn == Player::BLACK) ? _blackCaptures : _whiteCaptures;
+  BoardType& myStones = (_currentTurn == Color::BLACK) ? _blackStones : _whiteStones;
+  BoardType& oppStones = (_currentTurn == Color::BLACK) ? _whiteStones : _blackStones;
+  int& myScore = (_currentTurn == Color::BLACK) ? _blackCaptures : _whiteCaptures;
   bool captured = false;
 
   for (int d : ALL_DIRS) {
@@ -158,7 +177,7 @@ bool Board::_checkAndProcessCapture(int index) {
         captured = true;
 
         // TODO: Debug output
-        std::cout << "Capture! Player " << ((_currentTurn == Player::BLACK) ? "BLACK" : "WHITE")
+        std::cout << "Capture! Player " << ((_currentTurn == Color::BLACK) ? "BLACK" : "WHITE")
                   << "\n"
                   << "Total captures - BLACK: " << _blackCaptures << ", WHITE: " << _whiteCaptures
                   << std::endl;
@@ -226,8 +245,8 @@ bool Board::_isStoneCapturable(int index, const BoardType& myStones,
 }
 
 bool Board::_isDoubleThree(int x, int y) {
-  const BoardType& myStones = (_currentTurn == Player::BLACK) ? _blackStones : _whiteStones;
-  const BoardType& oppStones = (_currentTurn == Player::BLACK) ? _whiteStones : _blackStones;
+  const BoardType& myStones = (_currentTurn == Color::BLACK) ? _blackStones : _whiteStones;
+  const BoardType& oppStones = (_currentTurn == Color::BLACK) ? _whiteStones : _blackStones;
 
   int freeThreeCount = 0;
 
