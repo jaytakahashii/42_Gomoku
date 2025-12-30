@@ -34,7 +34,7 @@ class MenuScene : public Scene {
   sf::Text _firstText;
   sf::Text _secondText;
   sf::Text _startButtonText;
-  TurnOrder _turnOrder = TurnOrder::PlayerFirst;
+  TurnOrder _turnOrder = TurnOrder::HumanFirst;
   AILevel _aiLevel = AILevel::Medium;
   std::function<void(TurnOrder turnOrder, AILevel& level)> _onStartGame;
 };
