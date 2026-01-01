@@ -6,7 +6,7 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
       _countBlackCaptures(font, "Black Captured: 0"),
       _turnNotification(font, "Your Turn"),
       _aiInfoText(font, "AI Time: 0.00s"),
-      _backText(font, "Back") {
+      _undoText(font, "Undo") {
   this->_countWhiteCaptures.setCharacterSize(Theme::FontSize::Text);
   this->_countWhiteCaptures.setFillColor(Theme::Color::Text);
   this->_countWhiteCaptures.setOrigin(this->_countWhiteCaptures.getGlobalBounds().getCenter());
@@ -22,13 +22,13 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_aiInfoText.setCharacterSize(Theme::FontSize::Text);
   this->_aiInfoText.setFillColor(Theme::Color::Text);
 
-  this->_backText.setCharacterSize(Theme::FontSize::Button);
-  this->_backText.setFillColor(sf::Color::Black);
-  this->_backText.setOrigin(_backText.getLocalBounds().getCenter());
+  this->_undoText.setCharacterSize(Theme::FontSize::Button);
+  this->_undoText.setFillColor(sf::Color::Black);
+  this->_undoText.setOrigin(_undoText.getLocalBounds().getCenter());
 
-  this->_backButton.setSize(Theme::Size::Button);
-  this->_backButton.setFillColor(Theme::Color::ButtonActive);
-  this->_backButton.setOrigin(this->_backButton.getSize() / 2.f);
+  this->_undoButton.setSize(Theme::Size::Button);
+  this->_undoButton.setFillColor(Theme::Color::ButtonActive);
+  this->_undoButton.setOrigin(this->_undoButton.getSize() / 2.f);
 
   onResize(initalSize);
 }
@@ -41,8 +41,8 @@ void GameScene::handleEvents(const EventList& events) {
       if (mousePtr->button == sf::Mouse::Button::Left) {
         sf::Vector2f mousePos(static_cast<float>(mousePtr->position.x),
                               static_cast<float>(mousePtr->position.y));
-        if (this->_backButton.getGlobalBounds().contains(mousePos)) {
-          _onBack();
+        if (this->_undoButton.getGlobalBounds().contains(mousePos)) {
+          _onUndo();
         } else
           handleClick(mousePos.x, mousePos.y);
       }
@@ -131,8 +131,8 @@ void GameScene::render(sf::RenderWindow& window) {
 
   window.draw(this->_aiInfoText);
 
-  window.draw(this->_backButton);
-  window.draw(this->_backText);
+  window.draw(this->_undoButton);
+  window.draw(this->_undoText);
 }
 
 void GameScene::update(float df) {
@@ -254,8 +254,8 @@ void GameScene::onResize(const sf::Vector2u& windowSize) {
 
   this->_aiInfoText.setPosition({20.f, h - 50.f});
 
-  this->_backButton.setPosition({w * 3 / 4, h - 50.f});
-  this->_backText.setPosition(_backButton.getPosition());
+  this->_undoButton.setPosition({w * 3 / 4, h - 50.f});
+  this->_undoText.setPosition(_undoButton.getPosition());
 }
 
 void GameScene::setOnGameOver(std::function<void(const std::string& winner)> callback) {
@@ -289,7 +289,7 @@ GameScene::FloatingMessage::FloatingMessage(const sf::Font& font, const std::str
   text.setFillColor(color);
 }
 
-void GameScene::_onBack() {
+void GameScene::_onUndo() {
   if (_isAIThinking)
     return;
 

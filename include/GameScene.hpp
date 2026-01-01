@@ -61,9 +61,9 @@ class GameScene : public Scene {
   sf::Text _aiInfoText;
   sf::Clock _aiClock;
 
-  sf::RectangleShape _backButton;
-  sf::Text _backText;
-  void _onBack();
+  sf::RectangleShape _undoButton;
+  sf::Text _undoText;
+  void _onUndo();
   void _updateCaptures();
 };
 
