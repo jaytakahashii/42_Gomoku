@@ -20,6 +20,7 @@ bool Board::makeMove(int x, int y) {
   if (_blackStones.test(index) || _whiteStones.test(index))
     return false;
 
+  saveState();
   this->_capturedStatus = _checkAndProcessCapture(index);
   if (!_capturedStatus) {
     if (_isDoubleThree(x, y))
@@ -355,4 +356,26 @@ bool Board::_checkFreeThree(int x, int y, int dx, int dy, const BoardType& mySto
   }
 
   return false;
+}
+
+void Board::saveState() {
+  this->_history.push_back(
+      {_blackStones, _whiteStones, _blackCaptures, _whiteCaptures, _currentTurn});
+}
+
+bool Board::undo() {
+  if (_history.empty())
+    return false;
+  BoardState s = this->_history.back();
+  this->_history.pop_back();
+  _applyState(s);
+  return true;
+}
+
+void Board::_applyState(BoardState state) {
+  this->_blackStones = state.blackStones;
+  this->_whiteStones = state.whiteStones;
+  this->_blackCaptures = state.blackCaptures;
+  this->_whiteCaptures = state.whiteCaptures;
+  this->_currentTurn = state.currentTurn;
 }

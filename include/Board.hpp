@@ -21,6 +21,14 @@ struct Direction {
   int dy;
 };
 
+struct BoardState {
+  BoardType blackStones;
+  BoardType whiteStones;
+  int blackCaptures;
+  int whiteCaptures;
+  Color currentTurn;
+};
+
 class Board {
  public:
   Board();
@@ -44,6 +52,9 @@ class Board {
   void setDoubleThreeStatus(bool status);
   void setupPlayers(TurnOrder order);
 
+  void saveState();
+  bool undo();
+
  private:
   BoardType _blackStones;
   BoardType _whiteStones;
@@ -54,6 +65,7 @@ class Board {
   bool _capturedStatus;
 
   std::map<Color, Player> _colorToPlayer;
+  std::vector<BoardState> _history;
 
   // 方向定数
   static constexpr int SHIFT_H = 1;                 // 横
@@ -76,6 +88,7 @@ class Board {
   bool _checkFreeThree(int x, int y, int dir_x, int dir_y, const BoardType& myStones,
                        const BoardType& oppStones) const;
   bool _isDoubleThree(int x, int y);
+  void _applyState(BoardState state);
 };
 
 #endif
