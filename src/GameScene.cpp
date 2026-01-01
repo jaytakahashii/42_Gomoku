@@ -4,7 +4,8 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
     : _font(font),
       _countWhiteCaptures(font, "White Captured: 0"),
       _countBlackCaptures(font, "Black Captured: 0"),
-      _turnNotification(font, "Your Turn") {
+      _turnNotification(font, "Your Turn"),
+      _aiInfoText(font, "AI Time: 0.00s") {
   this->_countWhiteCaptures.setCharacterSize(Theme::FontSize::Text);
   this->_countWhiteCaptures.setFillColor(Theme::Color::Text);
   this->_countWhiteCaptures.setOrigin(this->_countWhiteCaptures.getGlobalBounds().getCenter());
@@ -17,10 +18,15 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_turnNotification.setFillColor(Theme::Color::AlertText);
   this->_turnNotification.setOrigin(this->_turnNotification.getGlobalBounds().getCenter());
 
+  this->_aiInfoText.setCharacterSize(Theme::FontSize::Text);
+  this->_aiInfoText.setFillColor(Theme::Color::Text);
+
   onResize(initalSize);
 }
 
 void GameScene::handleEvents(const EventList& events) {
+  if (this->_board.getCurrentPlayer() == Player::AI)
+    return;
   for (const auto e : events) {
     if (const auto* mousePtr = e->getIf<sf::Event::MouseButtonPressed>()) {
       if (mousePtr->button == sf::Mouse::Button::Left) {
@@ -54,9 +60,8 @@ void GameScene::handleClick(int x, int y) {
       this->_countWhiteCaptures.setString("White Captured: " + std::to_string(whiteCaptures));
       this->_countBlackCaptures.setString("Black Captured: " + std::to_string(blackCaptures));
       if (_board.checkWin()) {
-        std::string winner = _board.getCurrentPlayer() == Player::HUMAN ? "You" : "AI";
         if (_onGameOver)
-          _onGameOver(winner);
+          _onGameOver("You");
       }
       _board.changeTurn();
     }
@@ -91,7 +96,7 @@ void GameScene::render(sf::RenderWindow& window) {
 
   for (unsigned int y = 0; y < _boardSize; ++y) {
     for (unsigned int x = 0; x < _boardSize; ++x) {
-      Color p = _board.getStoneAt(x, y);
+      Color p = _board.getColorAt(x, y);
 
       if (p != Color::NONE) {
         float posX = _boardOffset.x + static_cast<float>(x * _cellSize);
@@ -109,9 +114,11 @@ void GameScene::render(sf::RenderWindow& window) {
   window.draw(this->_countWhiteCaptures);
   window.draw(this->_countBlackCaptures);
 
-  if (_board.getCurrentPlayer() == Player::HUMAN) {
-    window.draw(_turnNotification);
+  if (this->_board.getCurrentPlayer() == Player::HUMAN) {
+    window.draw(this->_turnNotification);
   }
+
+  window.draw(this->_aiInfoText);
 }
 
 void GameScene::update(float df) {
@@ -137,16 +144,80 @@ void GameScene::update(float df) {
       ++it;
     }
   }
-  if (_board.getCurrentPlayer() == Player::HUMAN) {
-    _turnAnimTimer += df;
+  if (this->_board.getCurrentPlayer() == Player::HUMAN) {
+    this->_turnAnimTimer += df;
 
-    float sinVal = std::sin(_turnAnimTimer * 5.0f);
+    float sinVal = std::sin(this->_turnAnimTimer * 5.0f);
     std::uint8_t alpha = static_cast<std::uint8_t>(190 + 65 * sinVal);
 
-    sf::Color color = _turnNotification.getFillColor();
+    sf::Color color = this->_turnNotification.getFillColor();
     color.a = alpha;
-    _turnNotification.setFillColor(color);
+    this->_turnNotification.setFillColor(color);
   }
+
+  if (this->_board.getCurrentPlayer() == Player::AI) {
+    if (!this->_isAIThinking) {
+      this->_aiMoveTimer += df;
+
+      if (this->_aiMoveTimer >= 0.5f) {
+        this->_isAIThinking = true;
+        this->_aiMoveTimer = 0.0f;
+
+        AI ai;
+        Color turnColor = this->_board.getCurrentTurn();
+        Board boardCopy = this->_board;
+        AILevel level = this->_aiLevel;
+
+        this->_aiClock.restart();
+        this->_aiFuture =
+            std::async(std::launch::async, [ai, boardCopy, turnColor, level]() mutable {
+              return ai.getBestMove(boardCopy, turnColor, level);
+            });
+      }
+    } else {
+      float elapsed = this->_aiClock.getElapsedTime().asSeconds();
+
+      std::stringstream ss;
+      ss << "AI Thinking... " << std::fixed << std::setprecision(2) << elapsed << "s";
+      this->_aiInfoText.setString(ss.str());
+      if (this->_aiFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        Move bestMove = this->_aiFuture.get();
+        float finalTime = this->_aiClock.getElapsedTime().asSeconds();
+        std::stringstream ssFinal;
+        ssFinal << "AI Time: " << std::fixed << std::setprecision(2) << finalTime << "s";
+        this->_aiInfoText.setString(ssFinal.str());
+        _applyAIMove(bestMove);
+        this->_isAIThinking = false;
+      }
+    }
+  } else {
+    this->_aiMoveTimer = 0.0f;
+    this->_isAIThinking = false;
+  }
+}
+
+void GameScene::_applyAIMove(Move move) {
+  this->_board.makeMove(move.x, move.y);
+
+  float posX = _boardOffset.x + static_cast<float>(move.x * _cellSize);
+  float posY = _boardOffset.y + static_cast<float>(move.y * _cellSize);
+
+  if (this->_board.getCapturedStatus()) {
+    displayTimedMessage("Capture", {posX, posY});
+  }
+
+  int whiteCaptures = this->_board.getWhiteCaptures();
+  int blackCaptures = this->_board.getBlackCaptures();
+  this->_countWhiteCaptures.setString("White Captured: " + std::to_string(whiteCaptures));
+  this->_countBlackCaptures.setString("Black Captured: " + std::to_string(blackCaptures));
+
+  if (this->_board.checkWin()) {
+    if (this->_onGameOver)
+      this->_onGameOver("AI");
+    return;
+  }
+
+  _board.changeTurn();
 }
 
 void GameScene::onResize(const sf::Vector2u& windowSize) {
@@ -165,7 +236,9 @@ void GameScene::onResize(const sf::Vector2u& windowSize) {
   this->_countWhiteCaptures.setPosition({w / 4.f, h / 9.5f});
   this->_countBlackCaptures.setPosition({w * 3 / 4.f, h / 9.5f});
 
-  _turnNotification.setPosition({w / 2.f, 50.f});
+  this->_turnNotification.setPosition({w / 2.f, 50.f});
+
+  this->_aiInfoText.setPosition({20.f, h - 50.f});
 }
 
 void GameScene::setOnGameOver(std::function<void(const std::string& winner)> callback) {

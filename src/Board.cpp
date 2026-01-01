@@ -68,7 +68,6 @@ bool Board::checkWin() {
           if (_isStoneCapturable(stoneIdx, myStones, oppStones)) {
             // 一つでも捕獲される石があれば、このラインでの勝利は成立しない
             lineIsSafe = false;
-            std::cout << "Capturable!!" << std::endl;  // TODO: デバッグ用
             break;
           }
         }
@@ -84,15 +83,28 @@ bool Board::checkWin() {
   return false;
 }
 
-// --- Getters ---
+// --- Getters / Setters ---
 
-Color Board::getStoneAt(int x, int y) const {
+Color Board::getColorAt(int x, int y) const {
   int index = _getIndex(x, y);
   if (_blackStones.test(index))
     return Color::BLACK;
   if (_whiteStones.test(index))
     return Color::WHITE;
   return Color::NONE;
+}
+
+Player Board::getPlayerAt(int x, int y) const {
+  int index = _getIndex(x, y);
+  std::map<Color, Player>::const_iterator it = this->_colorToPlayer.end();
+  if (_blackStones.test(index))
+    it = this->_colorToPlayer.find(Color::BLACK);
+  if (_whiteStones.test(index))
+    it = this->_colorToPlayer.find(Color::WHITE);
+  if (it != this->_colorToPlayer.end()) {
+    return it->second;
+  }
+  return Player::NONE;
 }
 
 Color Board::getCurrentTurn() const {
@@ -136,6 +148,14 @@ void Board::setupPlayers(TurnOrder order) {
     this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::HUMAN));
     this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::AI));
   }
+}
+
+const BoardType& Board::getBlackStones() const {
+  return _blackStones;
+}
+
+const BoardType& Board::getWhiteStones() const {
+  return _whiteStones;
 }
 
 // --- Private Helpers ---
@@ -187,7 +207,7 @@ bool Board::_checkAndProcessCapture(int index) {
   return captured;
 }
 
-Board::BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) const {
+BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) const {
   BoardType temp = stones;
 
   // 1回ずらしてAND = 2連

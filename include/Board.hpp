@@ -14,6 +14,8 @@ constexpr int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
 enum class Color { NONE, BLACK, WHITE };
 enum class Player { NONE, AI, HUMAN };
 
+using BoardType = std::bitset<MAX_CELLS>;
+
 struct Direction {
   int dx;
   int dy;
@@ -29,19 +31,20 @@ class Board {
   bool checkWin();
 
   // 状態取得用
-  Color getStoneAt(int x, int y) const;
+  Color getColorAt(int x, int y) const;
+  Player getPlayerAt(int x, int y) const;
   Color getCurrentTurn() const;
   Player getCurrentPlayer() const;
   int getBlackCaptures() const;
   int getWhiteCaptures() const;
   bool getDoubleThreeStatus() const;
   bool getCapturedStatus() const;
+  const BoardType& getBlackStones() const;
+  const BoardType& getWhiteStones() const;
   void setDoubleThreeStatus(bool status);
   void setupPlayers(TurnOrder order);
 
  private:
-  using BoardType = std::bitset<MAX_CELLS>;
-
   BoardType _blackStones;
   BoardType _whiteStones;
   Color _currentTurn;

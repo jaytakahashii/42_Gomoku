@@ -6,7 +6,13 @@
 #include <Scene.hpp>
 #include <Theme.hpp>
 #include <functional>
+#include <future>
+#include <iomanip>
 #include <list>
+#include <sstream>
+#include <thread>
+
+#include "AI.hpp"
 
 const unsigned int CELL_SIZE = 40;
 const float OFFSET = 20.0f;
@@ -48,6 +54,12 @@ class GameScene : public Scene {
   sf::Text _countBlackCaptures;
   sf::Text _turnNotification;
   float _turnAnimTimer = 0.0f;
+  float _aiMoveTimer = 0.0f;
+  std::future<Move> _aiFuture;
+  bool _isAIThinking = false;
+  void _applyAIMove(Move move);
+  sf::Text _aiInfoText;
+  sf::Clock _aiClock;
 };
 
 #endif
