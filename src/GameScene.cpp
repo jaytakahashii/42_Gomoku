@@ -199,6 +199,13 @@ void GameScene::update(float df) {
 void GameScene::_applyAIMove(Move move) {
   this->_board.makeMove(move.x, move.y);
 
+  float posX = _boardOffset.x + static_cast<float>(move.x * _cellSize);
+  float posY = _boardOffset.y + static_cast<float>(move.y * _cellSize);
+
+  if (this->_board.getCapturedStatus()) {
+    displayTimedMessage("Capture", {posX, posY});
+  }
+
   int whiteCaptures = this->_board.getWhiteCaptures();
   int blackCaptures = this->_board.getBlackCaptures();
   this->_countWhiteCaptures.setString("White Captured: " + std::to_string(whiteCaptures));
