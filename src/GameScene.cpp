@@ -6,7 +6,8 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
       _countBlackCaptures(font, "Black Captured: 0"),
       _turnNotification(font, "Your Turn"),
       _aiInfoText(font, "AI Time: 0.00s"),
-      _undoText(font, "Undo") {
+      _undoText(font, "Undo"),
+      _aiAssistText(font, "AI Assist") {
   this->_countWhiteCaptures.setCharacterSize(Theme::FontSize::Text);
   this->_countWhiteCaptures.setFillColor(Theme::Color::Text);
   this->_countWhiteCaptures.setOrigin(this->_countWhiteCaptures.getGlobalBounds().getCenter());
@@ -30,6 +31,14 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_undoButton.setFillColor(Theme::Color::ButtonActive);
   this->_undoButton.setOrigin(this->_undoButton.getSize() / 2.f);
 
+  this->_aiAssistText.setCharacterSize(Theme::FontSize::Button);
+  this->_aiAssistText.setFillColor(sf::Color::Black);
+  this->_aiAssistText.setOrigin(_aiAssistText.getLocalBounds().getCenter());
+
+  this->_aiAssistButton.setSize(Theme::Size::Button);
+  this->_aiAssistButton.setFillColor(Theme::Color::ButtonActive);
+  this->_aiAssistButton.setOrigin(this->_aiAssistButton.getSize() / 2.f);
+
   onResize(initalSize);
 }
 
@@ -43,6 +52,8 @@ void GameScene::handleEvents(const EventList& events) {
                               static_cast<float>(mousePtr->position.y));
         if (this->_undoButton.getGlobalBounds().contains(mousePos)) {
           _onUndo();
+        } else if (this->_aiAssistButton.getGlobalBounds().contains(mousePos)) {
+          _onAIAssist();
         } else
           handleClick(mousePos.x, mousePos.y);
       }
@@ -64,6 +75,8 @@ void GameScene::handleClick(int x, int y) {
     float posX = _boardOffset.x + static_cast<float>(col * _cellSize);
     float posY = _boardOffset.y + static_cast<float>(row * _cellSize);
     if (_board.makeMove(col, row)) {
+      this->_hintMove = {-1, -1};
+
       if (_board.getCapturedStatus()) {
         displayTimedMessage("Capture", {posX, posY});
       }
@@ -129,85 +142,26 @@ void GameScene::render(sf::RenderWindow& window) {
     window.draw(this->_turnNotification);
   }
 
+  if (this->_hintMove.x != -1 && this->_hintMove.y != -1)
+    window.draw(_makeHintCircle());
+
   window.draw(this->_aiInfoText);
 
   window.draw(this->_undoButton);
   window.draw(this->_undoText);
+
+  window.draw(this->_aiAssistButton);
+  window.draw(this->_aiAssistText);
 }
 
 void GameScene::update(float df) {
-  auto it = this->_activeMessages.begin();
-  while (it != this->_activeMessages.end()) {
-    it->timer -= df;
+  _handleMessage(df);
 
-    if (it->timer <= 0.0f) {
-      it = this->_activeMessages.erase(it);
-    } else {
-      float alphaProgress = std::min(1.0f, it->timer / 0.5f);
-      std::uint8_t alpha = static_cast<std::uint8_t>(255 * alphaProgress);
+  _notifyPlayerTurn(df);
 
-      sf::Color color = it->text.getFillColor();
-      color.a = alpha;
-      it->text.setFillColor(color);
+  _handleHint();
 
-      sf::Color outColor = it->text.getOutlineColor();
-      outColor.a = alpha;
-      it->text.setOutlineColor(outColor);
-
-      it->text.move({0.f, -40.f * df});
-      ++it;
-    }
-  }
-  if (this->_board.getCurrentPlayer() == Player::HUMAN) {
-    this->_turnAnimTimer += df;
-
-    float sinVal = std::sin(this->_turnAnimTimer * 5.0f);
-    std::uint8_t alpha = static_cast<std::uint8_t>(190 + 65 * sinVal);
-
-    sf::Color color = this->_turnNotification.getFillColor();
-    color.a = alpha;
-    this->_turnNotification.setFillColor(color);
-  }
-
-  if (this->_board.getCurrentPlayer() == Player::AI) {
-    if (!this->_isAIThinking) {
-      this->_aiMoveTimer += df;
-
-      if (this->_aiMoveTimer >= 0.5f) {
-        this->_isAIThinking = true;
-        this->_aiMoveTimer = 0.0f;
-
-        AI ai;
-        Color turnColor = this->_board.getCurrentTurn();
-        Board boardCopy = this->_board;
-        AILevel level = this->_aiLevel;
-
-        this->_aiClock.restart();
-        this->_aiFuture =
-            std::async(std::launch::async, [ai, boardCopy, turnColor, level]() mutable {
-              return ai.getBestMove(boardCopy, turnColor, level);
-            });
-      }
-    } else {
-      float elapsed = this->_aiClock.getElapsedTime().asSeconds();
-
-      std::stringstream ss;
-      ss << "AI Thinking... " << std::fixed << std::setprecision(2) << elapsed << "s";
-      this->_aiInfoText.setString(ss.str());
-      if (this->_aiFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-        Move bestMove = this->_aiFuture.get();
-        float finalTime = this->_aiClock.getElapsedTime().asSeconds();
-        std::stringstream ssFinal;
-        ssFinal << "AI Time: " << std::fixed << std::setprecision(2) << finalTime << "s";
-        this->_aiInfoText.setString(ssFinal.str());
-        _applyAIMove(bestMove);
-        this->_isAIThinking = false;
-      }
-    }
-  } else {
-    this->_aiMoveTimer = 0.0f;
-    this->_isAIThinking = false;
-  }
+  _handleAIProcess(df);
 }
 
 void GameScene::_applyAIMove(Move move) {
@@ -256,6 +210,9 @@ void GameScene::onResize(const sf::Vector2u& windowSize) {
 
   this->_undoButton.setPosition({w * 3 / 4, h - 50.f});
   this->_undoText.setPosition(_undoButton.getPosition());
+
+  this->_aiAssistButton.setPosition({w * 2 / 4, h - 50.f});
+  this->_aiAssistText.setPosition(_aiAssistButton.getPosition());
 }
 
 void GameScene::setOnGameOver(std::function<void(const std::string& winner)> callback) {
@@ -290,13 +247,13 @@ GameScene::FloatingMessage::FloatingMessage(const sf::Font& font, const std::str
 }
 
 void GameScene::_onUndo() {
-  if (_isAIThinking)
+  if (_isAIThinking || _isCalculatingHint)
     return;
 
   if (this->_board.undo()) {
     this->_board.undo();
   }
-
+  _hintMove = {-1, -1};
   _updateCaptures();
 }
 
@@ -305,4 +262,131 @@ void GameScene::_updateCaptures() {
   int blackCaptures = this->_board.getBlackCaptures();
   this->_countWhiteCaptures.setString("White Captured: " + std::to_string(whiteCaptures));
   this->_countBlackCaptures.setString("Black Captured: " + std::to_string(blackCaptures));
+}
+
+void GameScene::_onAIAssist() {
+  if (this->_isAIThinking || this->_isCalculatingHint ||
+      this->_board.getCurrentPlayer() != Player::HUMAN) {
+    return;
+  }
+
+  this->_isCalculatingHint = true;
+  this->_hintMove = {-1, -1};
+
+  AI ai;
+  Board boardCopy = this->_board;
+  Color turnColor = this->_board.getCurrentTurn();
+  AILevel level = AILevel::Hard;
+
+  this->_hintFuture = std::async(std::launch::async, [ai, boardCopy, turnColor, level]() mutable {
+    return ai.getBestMove(boardCopy, turnColor, level);
+  });
+}
+
+void GameScene::_handleMessage(float df) {
+  auto it = this->_activeMessages.begin();
+  while (it != this->_activeMessages.end()) {
+    it->timer -= df;
+
+    if (it->timer <= 0.0f) {
+      it = this->_activeMessages.erase(it);
+    } else {
+      float alphaProgress = std::min(1.0f, it->timer / 0.5f);
+      std::uint8_t alpha = static_cast<std::uint8_t>(255 * alphaProgress);
+
+      sf::Color color = it->text.getFillColor();
+      color.a = alpha;
+      it->text.setFillColor(color);
+
+      sf::Color outColor = it->text.getOutlineColor();
+      outColor.a = alpha;
+      it->text.setOutlineColor(outColor);
+
+      it->text.move({0.f, -40.f * df});
+      ++it;
+    }
+  }
+}
+
+void GameScene::_notifyPlayerTurn(float df) {
+  if (this->_board.getCurrentPlayer() == Player::HUMAN) {
+    this->_turnAnimTimer += df;
+
+    float sinVal = std::sin(this->_turnAnimTimer * 5.0f);
+    std::uint8_t alpha = static_cast<std::uint8_t>(190 + 65 * sinVal);
+
+    sf::Color color = this->_turnNotification.getFillColor();
+    color.a = alpha;
+    this->_turnNotification.setFillColor(color);
+  }
+}
+
+void GameScene::_handleHint() {
+  if (this->_isCalculatingHint) {
+    if (this->_hintFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+      Move bestMove = this->_hintFuture.get();
+      this->_hintMove = {bestMove.x, bestMove.y};
+      this->_isCalculatingHint = false;
+    }
+  }
+}
+
+void GameScene::_handleAIProcess(float df) {
+  if (this->_board.getCurrentPlayer() == Player::AI) {
+    if (!this->_isAIThinking) {
+      this->_aiMoveTimer += df;
+
+      if (this->_aiMoveTimer >= 0.5f) {
+        this->_isAIThinking = true;
+        this->_aiMoveTimer = 0.0f;
+
+        AI ai;
+        Color turnColor = this->_board.getCurrentTurn();
+        Board boardCopy = this->_board;
+        AILevel level = this->_aiLevel;
+
+        this->_aiClock.restart();
+        this->_aiFuture =
+            std::async(std::launch::async, [ai, boardCopy, turnColor, level]() mutable {
+              return ai.getBestMove(boardCopy, turnColor, level);
+            });
+      }
+    } else {
+      float elapsed = this->_aiClock.getElapsedTime().asSeconds();
+
+      std::stringstream ss;
+      ss << "AI Thinking... " << std::fixed << std::setprecision(2) << elapsed << "s";
+      this->_aiInfoText.setString(ss.str());
+      if (this->_aiFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        Move bestMove = this->_aiFuture.get();
+        float finalTime = this->_aiClock.getElapsedTime().asSeconds();
+        std::stringstream ssFinal;
+        ssFinal << "AI Time: " << std::fixed << std::setprecision(2) << finalTime << "s";
+        this->_aiInfoText.setString(ssFinal.str());
+        _applyAIMove(bestMove);
+        this->_isAIThinking = false;
+      }
+    }
+  } else {
+    this->_aiMoveTimer = 0.0f;
+    this->_isAIThinking = false;
+  }
+}
+
+sf::CircleShape GameScene::_makeHintCircle() const {
+  float posX = this->_boardOffset.x + static_cast<float>(this->_hintMove.x * this->_cellSize);
+  float posY = this->_boardOffset.y + static_cast<float>(this->_hintMove.y * this->_cellSize);
+
+  sf::CircleShape hintShape(10.f);
+  hintShape.setOrigin({10.f, 10.f});
+  hintShape.setPosition({posX, posY});
+
+  float sinVal = std::sin(this->_turnAnimTimer * 8.0f);
+  std::uint8_t alpha = static_cast<std::uint8_t>(150 + 100 * sinVal);
+
+  hintShape.setFillColor(sf::Color(0, 255, 0, alpha));
+  hintShape.setOutlineColor(sf::Color(255, 255, 255, alpha));
+  hintShape.setOutlineThickness(2.f);
+
+  return hintShape;
 }

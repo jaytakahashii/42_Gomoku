@@ -49,22 +49,35 @@ class GameScene : public Scene {
   Board _board;
   void handleClick(int x, int y);
   void displayTimedMessage(const std::string& message, sf::Vector2f pos);
+  void _handleMessage(float df);
   std::function<void(const std::string& winner)> _onGameOver;
   sf::Text _countWhiteCaptures;
   sf::Text _countBlackCaptures;
   sf::Text _turnNotification;
   float _turnAnimTimer = 0.0f;
+  void _notifyPlayerTurn(float df);
+
   float _aiMoveTimer = 0.0f;
   std::future<Move> _aiFuture;
   bool _isAIThinking = false;
   void _applyAIMove(Move move);
   sf::Text _aiInfoText;
   sf::Clock _aiClock;
+  void _handleAIProcess(float df);
 
   sf::RectangleShape _undoButton;
   sf::Text _undoText;
   void _onUndo();
   void _updateCaptures();
+
+  sf::RectangleShape _aiAssistButton;
+  sf::Text _aiAssistText;
+  std::future<Move> _hintFuture;
+  bool _isCalculatingHint = false;
+  sf::Vector2i _hintMove = {-1, -1};
+  void _onAIAssist();
+  void _handleHint();
+  sf::CircleShape _makeHintCircle() const;
 };
 
 #endif
