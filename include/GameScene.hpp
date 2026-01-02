@@ -1,5 +1,4 @@
-#ifndef GAMESCENE_HPP
-#define GAMESCENE_HPP
+#pragma once
 
 #include <Board.hpp>
 #include <Enums.hpp>
@@ -87,5 +86,3 @@ class GameScene : public Scene {
 
   OpeningRule _openingRule;
 };
-
-#endif

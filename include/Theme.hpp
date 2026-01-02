@@ -1,5 +1,4 @@
-#ifndef THEME_HPP
-#define THEME_HPP
+#pragma once
 
 #include <SFML/Graphics.hpp>
 
@@ -26,5 +25,3 @@ namespace Size {
 const sf::Vector2f Button = {250.f, 60.f};
 }
 }  // namespace Theme
-
-#endif

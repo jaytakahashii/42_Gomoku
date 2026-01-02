@@ -1,6 +1,4 @@
-#ifndef RESULTSCENE_HPP
-#define RESULTSCENE_HPP
-
+#pragma once
 #include <Scene.hpp>
 #include <Theme.hpp>
 
@@ -26,5 +24,3 @@ class ResultScene : public Scene {
   sf::Text _backButtonText;
   std::function<void()> _onBack;
 };
-
-#endif
