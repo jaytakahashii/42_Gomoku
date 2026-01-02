@@ -20,7 +20,7 @@ class AI {
   AI() = default;
 
   // 制限時間内に最善手を計算して返す
-  Move getBestMove(Board board, Color color, AILevel level);
+  Move getBestMove(Board& board, Color color, AILevel level);
 
  private:
   // --- 定数定義 ---
@@ -48,7 +48,7 @@ class AI {
   bool _isTimeUp();
 
   // Minimax法（Alpha-Beta法）による再帰探索
-  int _minimax(Board board, int depth, int alpha, int beta, bool maximizingPlayer);
+  int _minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer);
 
   // --- 手の生成・順序付け ---
 

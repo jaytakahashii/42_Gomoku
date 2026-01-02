@@ -1,4 +1,4 @@
-#include <GameScene.hpp>
+#include "GameScene.hpp"
 
 GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
     : _font(font),
@@ -281,12 +281,12 @@ void GameScene::_onAIAssist() {
   this->_hintMove = {-1, -1};
 
   AI ai;
-  Board boardCopy = this->_board;
+  Board& board = this->_board;
   Color turnColor = this->_board.getCurrentTurn();
   AILevel level = AILevel::Hard;
 
-  this->_hintFuture = std::async(std::launch::async, [ai, boardCopy, turnColor, level]() mutable {
-    return ai.getBestMove(boardCopy, turnColor, level);
+  this->_hintFuture = std::async(std::launch::async, [ai, board, turnColor, level]() mutable {
+    return ai.getBestMove(board, turnColor, level);
   });
 }
 

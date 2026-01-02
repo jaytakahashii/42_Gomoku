@@ -6,7 +6,7 @@
 // 公開メソッド (Public Methods)
 // -------------------------------------------------------------------------
 
-Move AI::getBestMove(Board board, Color color, AILevel level) {
+Move AI::getBestMove(Board& board, Color color, AILevel level) {
   _aiPlayer = color;
   _startTime = std::chrono::high_resolution_clock::now();
   _timeOut = false;
@@ -29,13 +29,16 @@ Move AI::getBestMove(Board board, Color color, AILevel level) {
 
     // ルートでの探索ループ
     for (const Move& m : moves) {
-      Board nextBoard = board;
-      if (!nextBoard.makeMove(m.x, m.y)) {
+      if (!board.makeMove(m.x, m.y)) {
         continue;
       }
 
       // 次の手番は相手（Min層）なので maximizingPlayer=false
-      int score = _minimax(nextBoard, depth - 1, alpha, beta, false);
+      int score = _minimax(board, depth - 1, alpha, beta, false);
+
+      if (!board.undo()) {
+        continue;
+      }
 
       // 探索中に時間が切れた場合、この深さの結果は不完全なので破棄する
       if (_timeOut) {
@@ -85,7 +88,7 @@ bool AI::_isTimeUp() {
   return duration >= (TIME_LIMIT_MS - 50);
 }
 
-int AI::_minimax(Board board, int depth, int alpha, int beta, bool maximizingPlayer) {
+int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer) {
   // 時間切れチェック（重くなりすぎないよう、このチェックは重要）
   if (_timeOut || _isTimeUp()) {
     _timeOut = true;
@@ -115,11 +118,13 @@ int AI::_minimax(Board board, int depth, int alpha, int beta, bool maximizingPla
   if (maximizingPlayer) {
     int maxEval = -std::numeric_limits<int>::max();
     for (const Move& m : moves) {
-      Board nextBoard = board;
-      if (!nextBoard.makeMove(m.x, m.y))
+      if (!board.makeMove(m.x, m.y))
         continue;
 
-      int eval = _minimax(nextBoard, depth - 1, alpha, beta, false);
+      int eval = _minimax(board, depth - 1, alpha, beta, false);
+
+      if (!board.undo())
+        continue;
 
       // 時間切れならループを抜ける
       if (_timeOut)
@@ -137,11 +142,13 @@ int AI::_minimax(Board board, int depth, int alpha, int beta, bool maximizingPla
   } else {
     int minEval = std::numeric_limits<int>::max();
     for (const Move& m : moves) {
-      Board nextBoard = board;
-      if (!nextBoard.makeMove(m.x, m.y))
+      if (!board.makeMove(m.x, m.y))
         continue;
 
-      int eval = _minimax(nextBoard, depth - 1, alpha, beta, true);
+      int eval = _minimax(board, depth - 1, alpha, beta, true);
+
+      if (!board.undo())
+        continue;
 
       if (_timeOut)
         return 0;
