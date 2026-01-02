@@ -4,13 +4,17 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
     : _font(font),
       _titleText(font, "Gomoku"),
       _startButtonText(font, "START GAME"),
-      _orderText(font, "You can choose: first or second?"),
+      _orderText(font, "Select: first or second?"),
       _firstText(font, "Go first"),
       _secondText(font, "Go second"),
       _easyText(font, "Easy"),
       _mediumText(font, "Medium"),
       _hardText(font, "Hard"),
-      _levelText(font, "You can select the AI level.") {
+      _levelText(font, "Select the AI level."),
+      _openingRuleText(font, "Select starting condition."),
+      _standardText(font, "Standard"),
+      _proText(font, "Pro"),
+      _longProText(font, "Long Pro") {
   this->_titleText.setCharacterSize(Theme::FontSize::Title);
   this->_titleText.setFillColor(Theme::Color::Text);
   this->_titleText.setStyle(sf::Text::Bold);
@@ -76,10 +80,42 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_hardText.setStyle(sf::Text::Bold);
   this->_hardText.setOrigin(_hardText.getLocalBounds().getCenter());
 
+  this->_openingRuleText.setCharacterSize(Theme::FontSize::Button);
+  this->_openingRuleText.setFillColor(sf::Color::Black);
+  this->_openingRuleText.setStyle(sf::Text::Bold);
+  this->_openingRuleText.setOrigin(_openingRuleText.getLocalBounds().getCenter());
+
   this->_startButtonText.setCharacterSize(30);
   this->_startButtonText.setFillColor(sf::Color::White);
   sf::FloatRect btnTextBounds = this->_startButtonText.getLocalBounds();
   this->_startButtonText.setOrigin(btnTextBounds.getCenter());
+
+  this->_standardButton.setSize(Theme::Size::Button);
+  this->_standardButton.setFillColor(Theme::Color::ButtonIdle);
+  this->_standardButton.setOrigin(this->_standardButton.getSize() / 2.f);
+
+  this->_standardText.setCharacterSize(Theme::FontSize::Button);
+  this->_standardText.setFillColor(sf::Color::Black);
+  this->_standardText.setStyle(sf::Text::Bold);
+  this->_standardText.setOrigin(_standardText.getLocalBounds().getCenter());
+
+  this->_proButton.setSize(Theme::Size::Button);
+  this->_proButton.setFillColor(Theme::Color::ButtonIdle);
+  this->_proButton.setOrigin(this->_proButton.getSize() / 2.f);
+
+  this->_proText.setCharacterSize(Theme::FontSize::Button);
+  this->_proText.setFillColor(sf::Color::Black);
+  this->_proText.setStyle(sf::Text::Bold);
+  this->_proText.setOrigin(_proText.getLocalBounds().getCenter());
+
+  this->_longProButton.setSize(Theme::Size::Button);
+  this->_longProButton.setFillColor(Theme::Color::ButtonIdle);
+  this->_longProButton.setOrigin(this->_proButton.getSize() / 2.f);
+
+  this->_longProText.setCharacterSize(Theme::FontSize::Button);
+  this->_longProText.setFillColor(sf::Color::Black);
+  this->_longProText.setStyle(sf::Text::Bold);
+  this->_longProText.setOrigin(_longProText.getLocalBounds().getCenter());
 
   onResize(initalSize);
 }
@@ -92,7 +128,7 @@ void MenuScene::handleEvents(const EventList& events) {
                               static_cast<float>(mousePtr->position.y));
         if (this->_startButton.getGlobalBounds().contains(mousePos)) {
           if (this->_onStartGame)
-            this->_onStartGame(this->_turnOrder, this->_aiLevel);
+            this->_onStartGame(this->_turnOrder, this->_aiLevel, this->_openingRule);
         }
 
         if (this->_firstButton.getGlobalBounds().contains(mousePos)) {
@@ -108,33 +144,34 @@ void MenuScene::handleEvents(const EventList& events) {
         } else if (this->_hardButton.getGlobalBounds().contains(mousePos)) {
           this->_aiLevel = AILevel::Hard;
         }
+
+        if (this->_standardButton.getGlobalBounds().contains(mousePos)) {
+          this->_openingRule = OpeningRule::Standard;
+        } else if (this->_proButton.getGlobalBounds().contains(mousePos)) {
+          this->_openingRule = OpeningRule::Pro;
+        } else if (this->_longProButton.getGlobalBounds().contains(mousePos)) {
+          this->_openingRule = OpeningRule::LongPro;
+        }
       }
     }
   }
 }
 
 void MenuScene::update(float dt) {
-  if (this->_turnOrder == TurnOrder::HumanFirst) {
-    this->_firstButton.setFillColor(Theme::Color::ButtonActive);
-    this->_secondButton.setFillColor(Theme::Color::ButtonIdle);
-  } else {
-    this->_firstButton.setFillColor(Theme::Color::ButtonIdle);
-    this->_secondButton.setFillColor(Theme::Color::ButtonActive);
-  }
+  _updateButtonStatus(this->_firstButton, _turnOrder == TurnOrder::HumanFirst);
+  _updateButtonStatus(this->_secondButton, _turnOrder == TurnOrder::AIFirst);
 
-  if (this->_aiLevel == AILevel::Easy) {
-    this->_easyButton.setFillColor(Theme::Color::ButtonActive);
-    this->_mediumButton.setFillColor(Theme::Color::ButtonIdle);
-    this->_hardButton.setFillColor(Theme::Color::ButtonIdle);
-  } else if (this->_aiLevel == AILevel::Medium) {
-    this->_easyButton.setFillColor(Theme::Color::ButtonIdle);
-    this->_mediumButton.setFillColor(Theme::Color::ButtonActive);
-    this->_hardButton.setFillColor(Theme::Color::ButtonIdle);
-  } else if (this->_aiLevel == AILevel::Hard) {
-    this->_easyButton.setFillColor(Theme::Color::ButtonIdle);
-    this->_mediumButton.setFillColor(Theme::Color::ButtonIdle);
-    this->_hardButton.setFillColor(Theme::Color::ButtonActive);
-  }
+  _updateButtonStatus(this->_easyButton, _aiLevel == AILevel::Easy);
+  _updateButtonStatus(this->_mediumButton, _aiLevel == AILevel::Medium);
+  _updateButtonStatus(this->_hardButton, _aiLevel == AILevel::Hard);
+
+  _updateButtonStatus(this->_standardButton, _openingRule == OpeningRule::Standard);
+  _updateButtonStatus(this->_proButton, _openingRule == OpeningRule::Pro);
+  _updateButtonStatus(this->_longProButton, _openingRule == OpeningRule::LongPro);
+}
+
+void MenuScene::_updateButtonStatus(sf::RectangleShape& button, bool isActive) {
+  button.setFillColor(isActive ? Theme::Color::ButtonActive : Theme::Color::ButtonIdle);
 }
 
 void MenuScene::render(sf::RenderWindow& window) {
@@ -154,6 +191,13 @@ void MenuScene::render(sf::RenderWindow& window) {
   window.draw(this->_mediumText);
   window.draw(this->_hardButton);
   window.draw(this->_hardText);
+  window.draw(this->_openingRuleText);
+  window.draw(this->_standardButton);
+  window.draw(this->_standardText);
+  window.draw(this->_proButton);
+  window.draw(this->_proText);
+  window.draw(this->_longProButton);
+  window.draw(this->_longProText);
 }
 
 void MenuScene::onResize(const sf::Vector2u& windowSize) {
@@ -178,8 +222,16 @@ void MenuScene::onResize(const sf::Vector2u& windowSize) {
   this->_mediumText.setPosition(_mediumButton.getPosition());
   this->_hardButton.setPosition({(w / 4.f) * 3.f, _levelText.getPosition().y + 50});
   this->_hardText.setPosition(_hardButton.getPosition());
+  this->_openingRuleText.setPosition({w / 2.f, _mediumButton.getPosition().y + 80});
+  this->_standardButton.setPosition({w / 4.f, _openingRuleText.getPosition().y + 50});
+  this->_standardText.setPosition(_standardButton.getPosition());
+  this->_proButton.setPosition({w / 2.f, _openingRuleText.getPosition().y + 50});
+  this->_proText.setPosition(_proButton.getPosition());
+  this->_longProButton.setPosition({(w / 4.f) * 3, _openingRuleText.getPosition().y + 50});
+  this->_longProText.setPosition(_longProButton.getPosition());
 }
 
-void MenuScene::setOnStartGame(std::function<void(TurnOrder turnOrder, AILevel& level)> callback) {
+void MenuScene::setOnStartGame(
+    std::function<void(TurnOrder& turnOrder, AILevel& level, OpeningRule& rule)> callback) {
   this->_onStartGame = callback;
 }
