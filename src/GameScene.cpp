@@ -5,7 +5,8 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
       _countWhiteCaptures(font, "White Captured: 0"),
       _countBlackCaptures(font, "Black Captured: 0"),
       _turnNotification(font, "Your Turn"),
-      _aiInfoText(font, "AI Time: 0.00s") {
+      _aiInfoText(font, "AI Time: 0.00s"),
+      _undoText(font, "Undo") {
   this->_countWhiteCaptures.setCharacterSize(Theme::FontSize::Text);
   this->_countWhiteCaptures.setFillColor(Theme::Color::Text);
   this->_countWhiteCaptures.setOrigin(this->_countWhiteCaptures.getGlobalBounds().getCenter());
@@ -21,6 +22,14 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_aiInfoText.setCharacterSize(Theme::FontSize::Text);
   this->_aiInfoText.setFillColor(Theme::Color::Text);
 
+  this->_undoText.setCharacterSize(Theme::FontSize::Button);
+  this->_undoText.setFillColor(sf::Color::Black);
+  this->_undoText.setOrigin(_undoText.getLocalBounds().getCenter());
+
+  this->_undoButton.setSize(Theme::Size::Button);
+  this->_undoButton.setFillColor(Theme::Color::ButtonActive);
+  this->_undoButton.setOrigin(this->_undoButton.getSize() / 2.f);
+
   onResize(initalSize);
 }
 
@@ -32,7 +41,10 @@ void GameScene::handleEvents(const EventList& events) {
       if (mousePtr->button == sf::Mouse::Button::Left) {
         sf::Vector2f mousePos(static_cast<float>(mousePtr->position.x),
                               static_cast<float>(mousePtr->position.y));
-        handleClick(mousePos.x, mousePos.y);
+        if (this->_undoButton.getGlobalBounds().contains(mousePos)) {
+          _onUndo();
+        } else
+          handleClick(mousePos.x, mousePos.y);
       }
     }
   }
@@ -55,10 +67,9 @@ void GameScene::handleClick(int x, int y) {
       if (_board.getCapturedStatus()) {
         displayTimedMessage("Capture", {posX, posY});
       }
-      int whiteCaptures = this->_board.getWhiteCaptures();
-      int blackCaptures = this->_board.getBlackCaptures();
-      this->_countWhiteCaptures.setString("White Captured: " + std::to_string(whiteCaptures));
-      this->_countBlackCaptures.setString("Black Captured: " + std::to_string(blackCaptures));
+
+      _updateCaptures();
+
       if (_board.checkWin()) {
         if (_onGameOver)
           _onGameOver("You");
@@ -119,6 +130,9 @@ void GameScene::render(sf::RenderWindow& window) {
   }
 
   window.draw(this->_aiInfoText);
+
+  window.draw(this->_undoButton);
+  window.draw(this->_undoText);
 }
 
 void GameScene::update(float df) {
@@ -239,6 +253,9 @@ void GameScene::onResize(const sf::Vector2u& windowSize) {
   this->_turnNotification.setPosition({w / 2.f, 50.f});
 
   this->_aiInfoText.setPosition({20.f, h - 50.f});
+
+  this->_undoButton.setPosition({w * 3 / 4, h - 50.f});
+  this->_undoText.setPosition(_undoButton.getPosition());
 }
 
 void GameScene::setOnGameOver(std::function<void(const std::string& winner)> callback) {
@@ -270,4 +287,22 @@ GameScene::FloatingMessage::FloatingMessage(const sf::Font& font, const std::str
   sf::Color color = text.getFillColor();
   color.a = 255;
   text.setFillColor(color);
+}
+
+void GameScene::_onUndo() {
+  if (_isAIThinking)
+    return;
+
+  if (this->_board.undo()) {
+    this->_board.undo();
+  }
+
+  _updateCaptures();
+}
+
+void GameScene::_updateCaptures() {
+  int whiteCaptures = this->_board.getWhiteCaptures();
+  int blackCaptures = this->_board.getBlackCaptures();
+  this->_countWhiteCaptures.setString("White Captured: " + std::to_string(whiteCaptures));
+  this->_countBlackCaptures.setString("Black Captured: " + std::to_string(blackCaptures));
 }

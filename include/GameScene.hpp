@@ -60,6 +60,11 @@ class GameScene : public Scene {
   void _applyAIMove(Move move);
   sf::Text _aiInfoText;
   sf::Clock _aiClock;
+
+  sf::RectangleShape _undoButton;
+  sf::Text _undoText;
+  void _onUndo();
+  void _updateCaptures();
 };
 
 #endif
