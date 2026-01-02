@@ -30,7 +30,7 @@ bool Board::makeMove(int x, int y) {
   if (_currentTurn == Color::BLACK) {
     _blackStones.set(index);
   } else {
-    _whiteStones.set(index);
+    this->_whiteStones.set(index);
   }
 
   return true;
