@@ -15,10 +15,13 @@ Gomoku::Gomoku() : _window(sf::VideoMode({1080, 1000}), "Gomoku"), font() {
     changeScene(this->_gameScene.get());
   });
   this->_gameScene->setOnGameOver([this](const std::string& winner) { initOnGameOver(winner); });
+  this->_gameScene->setOnEsc([this]() {
+    changeScene(this->_menuScene.get());
+    this->_gameScene->reset();
+  });
   this->_resultScene->setOnBack([this] {
     changeScene(this->_menuScene.get());
-    this->_gameScene = std::make_unique<GameScene>(font, this->_window.getSize());
-    this->_gameScene->setOnGameOver([this](const std::string& winner) { initOnGameOver(winner); });
+    this->_gameScene->reset();
   });
 }
 void Gomoku::initOnGameOver(const std::string& winner) {

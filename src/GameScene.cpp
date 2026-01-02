@@ -46,6 +46,13 @@ void GameScene::handleEvents(const EventList& events) {
   if (this->_board.getCurrentPlayer() == Player::AI)
     return;
   for (const auto e : events) {
+    if (const auto* keyPtr = e->getIf<sf::Event::KeyPressed>()) {
+      if (keyPtr->code == sf::Keyboard::Key::Escape) {
+        if (this->_onEsc) {
+          _onEsc();
+        }
+      }
+    }
     if (const auto* mousePtr = e->getIf<sf::Event::MouseButtonPressed>()) {
       if (mousePtr->button == sf::Mouse::Button::Left) {
         sf::Vector2f mousePos(static_cast<float>(mousePtr->position.x),
@@ -389,4 +396,23 @@ sf::CircleShape GameScene::_makeHintCircle() const {
   hintShape.setOutlineThickness(2.f);
 
   return hintShape;
+}
+
+void GameScene::setOnEsc(std::function<void()> callback) {
+  this->_onEsc = callback;
+}
+
+void GameScene::reset() {
+  this->_board = Board();
+
+  this->_activeMessages.clear();
+  this->_isAIThinking = false;
+  this->_aiMoveTimer = 0.0f;
+  this->_turnAnimTimer = 0.0f;
+
+  this->_isCalculatingHint = false;
+  this->_hintMove = {-1, -1};
+
+  this->_aiInfoText.setString("AI Time: 0.00s");
+  _updateCaptures();
 }

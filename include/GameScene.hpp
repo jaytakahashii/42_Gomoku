@@ -30,6 +30,9 @@ class GameScene : public Scene {
   void setOnGameOver(std::function<void(const std::string& winner)> callback);
   void setAILevel(AILevel& level);
   void setTurnOrder(TurnOrder turnOrder);
+  void setOnEsc(std::function<void()> callback);
+
+  void reset();
 
  private:
   struct FloatingMessage {
@@ -78,6 +81,8 @@ class GameScene : public Scene {
   void _onAIAssist();
   void _handleHint();
   sf::CircleShape _makeHintCircle() const;
+
+  std::function<void()> _onEsc;
 };
 
 #endif
