@@ -49,6 +49,8 @@ class Board {
   bool getCapturedStatus() const;
   const BoardType& getBlackStones() const;
   const BoardType& getWhiteStones() const;
+  BoardType getEmptyStones() const;
+  BoardType getOccupiedStones() const;
   void setDoubleThreeStatus(bool status);
   void setupPlayers(TurnOrder order);
 
