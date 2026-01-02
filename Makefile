@@ -62,7 +62,8 @@ SRC_FILES          = main.cpp \
 					 GameScene.cpp \
 					 ResultScene.cpp \
 					 Board.cpp \
-					 AI.cpp
+					 AI.cpp \
+					 Evaluator.cpp \
 
 IFLAGS            += -Iinclude
 SRCS               = $(addprefix $(SRC_DIR), $(SRC_FILES))
