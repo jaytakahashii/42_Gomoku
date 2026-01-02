@@ -98,7 +98,7 @@ void GameScene::handleClick(int x, int y) {
     }
     if (this->_board.getDoubleThreeStatus()) {
       displayTimedMessage("DoubleThree", {posX, posY});
-      this->_board.setDoubleThreeStatus(false);  // リセット
+      this->_board.setDoubleThreeStatus(false);
     }
   }
 }
