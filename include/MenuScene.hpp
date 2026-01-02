@@ -1,5 +1,4 @@
-#ifndef MENUSCENE_HPP
-#define MENUSCENE_HPP
+#pragma once
 
 #include <Enums.hpp>
 #include <Scene.hpp>
@@ -51,5 +50,3 @@ class MenuScene : public Scene {
 
   void _updateButtonStatus(sf::RectangleShape& button, bool isActive);
 };
-
-#endif

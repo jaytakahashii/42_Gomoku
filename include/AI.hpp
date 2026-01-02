@@ -1,5 +1,4 @@
-#ifndef AI_HPP
-#define AI_HPP
+#pragma once
 
 #include <algorithm>
 #include <chrono>
@@ -67,5 +66,3 @@ class AI {
   // 特定のパターンの個数を数えてスコア化するヘルパー
   int _countPatterns(const BoardType& stones, const BoardType& empty);
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef SCENE_HPP
-#define SCENE_HPP
+#pragma once
 
 #include <SFML/Graphics.hpp>
 #include <functional>
@@ -19,5 +18,3 @@ class Scene {
   virtual void render(sf::RenderWindow& window) = 0;
   virtual void onResize(const sf::Vector2u& windowSize) = 0;
 };
-
-#endif
