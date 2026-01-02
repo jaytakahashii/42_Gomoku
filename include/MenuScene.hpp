@@ -15,7 +15,8 @@ class MenuScene : public Scene {
   void render(sf::RenderWindow& window);
   void onResize(const sf::Vector2u& windowSize);
 
-  void setOnStartGame(std::function<void(TurnOrder turnOrder, AILevel& level)> callback);
+  void setOnStartGame(
+      std::function<void(TurnOrder& turnOrder, AILevel& level, OpeningRule& rule)> callback);
 
  private:
   sf::Font& _font;
@@ -36,7 +37,19 @@ class MenuScene : public Scene {
   sf::Text _startButtonText;
   TurnOrder _turnOrder = TurnOrder::HumanFirst;
   AILevel _aiLevel = AILevel::Medium;
-  std::function<void(TurnOrder turnOrder, AILevel& level)> _onStartGame;
+  std::function<void(TurnOrder& turnOrder, AILevel& level, OpeningRule& rule)> _onStartGame;
+
+  OpeningRule _openingRule = OpeningRule::Standard;
+  sf::Text _openingRuleText;
+
+  sf::RectangleShape _standardButton;
+  sf::Text _standardText;
+  sf::RectangleShape _proButton;
+  sf::Text _proText;
+  sf::RectangleShape _longProButton;
+  sf::Text _longProText;
+
+  void _updateButtonStatus(sf::RectangleShape& button, bool isActive);
 };
 
 #endif

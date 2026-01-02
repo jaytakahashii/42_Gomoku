@@ -29,7 +29,8 @@ class GameScene : public Scene {
 
   void setOnGameOver(std::function<void(const std::string& winner)> callback);
   void setAILevel(AILevel& level);
-  void setTurnOrder(TurnOrder turnOrder);
+  void setTurnOrder(TurnOrder& turnOrder);
+  void setOpeningRule(OpeningRule& rule);
   void setOnEsc(std::function<void()> callback);
 
   void reset();
@@ -83,6 +84,8 @@ class GameScene : public Scene {
   sf::CircleShape _makeHintCircle() const;
 
   std::function<void()> _onEsc;
+
+  OpeningRule _openingRule;
 };
 
 #endif

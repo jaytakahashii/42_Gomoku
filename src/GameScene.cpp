@@ -230,8 +230,12 @@ void GameScene::setAILevel(AILevel& level) {
   this->_aiLevel = level;
 }
 
-void GameScene::setTurnOrder(TurnOrder turnOrder) {
+void GameScene::setTurnOrder(TurnOrder& turnOrder) {
   this->_board.setupPlayers(turnOrder);
+}
+
+void GameScene::setOpeningRule(OpeningRule& rule) {
+  this->_openingRule = rule;
 }
 
 GameScene::FloatingMessage::FloatingMessage(const sf::Font& font, const std::string& str,
