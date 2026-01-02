@@ -6,7 +6,8 @@
 // 公開メソッド (Public Methods)
 // -------------------------------------------------------------------------
 
-Move AI::getBestMove(Board& board, Color color, AILevel level) {
+Move AI::getBestMove(const Board& board, Color color, AILevel level) {
+  Board clone = board;  // 盤面のコピー
   _aiPlayer = color;
   _startTime = std::chrono::high_resolution_clock::now();
   _timeOut = false;
@@ -22,21 +23,21 @@ Move AI::getBestMove(Board& board, Color color, AILevel level) {
     int beta = std::numeric_limits<int>::max();
     Move currentDepthBest = {-1, -1, -std::numeric_limits<int>::max()};
 
-    std::vector<Move> moves = _generateMoves(board);
+    std::vector<Move> moves = _generateMoves(clone);
     if (moves.empty()) {
       break;
     }
 
     // ルートでの探索ループ
     for (const Move& m : moves) {
-      if (!board.makeMove(m.x, m.y)) {
+      if (!clone.makeMove(m.x, m.y)) {
         continue;
       }
 
       // 次の手番は相手（Min層）なので maximizingPlayer=false
-      int score = _minimax(board, depth - 1, alpha, beta, false);
+      int score = _minimax(clone, depth - 1, alpha, beta, false);
 
-      if (!board.undo()) {
+      if (!clone.undo()) {
         continue;
       }
 
@@ -64,10 +65,10 @@ Move AI::getBestMove(Board& board, Color color, AILevel level) {
     bestMove = currentDepthBest;
     std::cout << "Depth " << depth << " finished. Best Score: " << bestMove.score << std::endl;
 
-    // 必勝が見つかったらこれ以上深く読む必要はない
-    if (bestMove.score >= _SCORE_WIN - 100) {
-      break;
-    }
+    // // 必勝が見つかったらこれ以上深く読む必要はない
+    // if (bestMove.score >= _SCORE_WIN - 100) {
+    //   break;
+    // }
   }
 
   return bestMove;

@@ -20,7 +20,7 @@ class AI {
   AI() = default;
 
   // 制限時間内に最善手を計算して返す
-  Move getBestMove(Board& board, Color color, AILevel level);
+  Move getBestMove(const Board& board, Color color, AILevel level);
 
  private:
   // --- 定数定義 ---
@@ -33,8 +33,8 @@ class AI {
   static constexpr int _SCORE_OPEN_THREE = 100000;   // 次にOpenFourになる形
 
   // 探索設定
-  static constexpr int TIME_LIMIT_MS = 1000;  // 思考時間（ミリ秒）
-  static constexpr int MAX_DEPTH = 20;        // 反復深化の最大深さ
+  static constexpr int TIME_LIMIT_MS = 480;  // 思考時間（ミリ秒）
+  static constexpr int MAX_DEPTH = 20;       // 反復深化の最大深さ
 
   // --- メンバ変数 ---
 

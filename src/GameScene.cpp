@@ -285,7 +285,7 @@ void GameScene::_onAIAssist() {
   this->_hintMove = {-1, -1};
 
   AI ai;
-  Board& board = this->_board;
+  const Board& board = this->_board;
   Color turnColor = this->_board.getCurrentTurn();
   AILevel level = AILevel::Hard;
 
