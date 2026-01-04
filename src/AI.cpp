@@ -19,6 +19,10 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
     return {-1, -1, 0};
   }
 
+  if (moves.size() == 1) {
+    return moves[0];
+  }
+
   Move bestMove = {-1, -1, -std::numeric_limits<int>::max()};
   int alpha = -std::numeric_limits<int>::max();
   int beta = std::numeric_limits<int>::max();
