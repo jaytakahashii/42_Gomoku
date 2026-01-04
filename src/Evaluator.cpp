@@ -13,7 +13,7 @@ int Evaluator::evaluate(const Board& board, Color aiColor) {
       (aiColor == Color::BLACK) ? board.getWhiteStones() : board.getBlackStones();
 
   // 空きマス（簡易的に、両者の石がない場所）
-  BoardType empty = ~(myStones | oppStones);
+  BoardType empty = board.getEmptyStones();
 
   int myScore = 0;
   int oppScore = 0;
