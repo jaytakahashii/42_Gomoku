@@ -121,61 +121,88 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
 std::vector<Move> AI::_generateMoves(const Board& board) {
   std::vector<Move> moves;
 
-  // Boardクラスに追加した getEmptyStones() を活用
   BoardType empty = board.getEmptyStones();
   BoardType occupied = board.getOccupiedStones();
 
+  // 1. 初手（中央）
   if (occupied.none()) {
     moves.push_back({BOARD_SIZE / 2, BOARD_SIZE / 2, 0});
     return moves;
   }
 
-  // 石がある場所の周囲2マスを候補とする (ビット演算による高速化)
+  // 2. 探索範囲の決定（石の周囲2マス）
   BoardType candidates;
   const int W = BOARD_WIDTH;
-
-  // シフト方向 (上下左右 + 斜め)
   const int shifts[] = {1, -1, W, -W, W + 1, -(W + 1), W - 1, -(W - 1)};
 
   BoardType mask = occupied;
-  // Radius 1 & 2
   for (int s : shifts) {
     BoardType s1 = (s > 0) ? (occupied << s) : (occupied >> -s);
     BoardType s2 = (s > 0) ? (occupied << (s * 2)) : (occupied >> (-s * 2));
     mask |= s1 | s2;
   }
-
-  // 「石の近く」かつ「空いている」場所
   candidates = mask & empty;
 
-  // 候補をMoveリストに変換
+  // 3. 候補手の評価とリスト化
+  bool urgentMoveFound = false;  // 負け確定を防ぐ手があるか
+
   for (int i = 0; i < MAX_CELLS; ++i) {
     if (candidates.test(i)) {
       int y = i / W;
       int x = i % W;
       if (x >= BOARD_SIZE)
-        continue;  // 番兵チェック
+        continue;
 
-      // 優先度評価
       int priority = Evaluator::evaluateMovePriority(board, x, y, board.getCurrentTurn());
+
+      // ★修正ポイント1: 緊急事態の検知
+      // PRIORITY_WIN_BLOCK (50,000,000) 以上のスコアは「相手の4」を防ぐ手
+      if (priority >= ScoreConfig::PRIORITY_WIN_BLOCK) {
+        urgentMoveFound = true;
+      }
+
       moves.push_back({x, y, priority});
     }
   }
 
-  // Move Ordering (非常に重要)
-  // 良い手から先に探索することでAlpha-Beta枝刈りが効率的に働く
-  if (moves.size() > 1) {
-    std::sort(moves.begin(), moves.end(),
-              [](const Move& a, const Move& b) { return a.score > b.score; });
+  // 4. ソート (スコアが高い順)
+  if (moves.empty())
+    return moves;
 
-    // 上位N手のみ採用 (Beam Search)
-    // 深さ20を読むなら、ここの絞り込みは必須です
-    if (moves.size() > 20) {
-      moves.resize(20);
+  std::sort(moves.begin(), moves.end(),
+            [](const Move& a, const Move& b) { return a.score > b.score; });
+
+  // ★修正ポイント2: 必殺の「緊急手フィルタリング」
+  // もし「これを打たないと負ける」という手があるなら、それ以外の手は探索するだけ時間の無駄なので全て捨てる。
+  // これにより、読みの深さが実質無限大になり、絶対に見落とさなくなる。
+  if (urgentMoveFound) {
+    std::vector<Move> urgentMoves;
+    for (const auto& m : moves) {
+      if (m.score >= ScoreConfig::PRIORITY_WIN_BLOCK) {
+        urgentMoves.push_back(m);
+      }
+    }
+    return urgentMoves;  // 4連止めのみを返す
+  }
+
+  // ★修正ポイント3: ビームサーチの改良
+  // 上位N手に絞るが、「相手の3連を防ぐ手」などの準・緊急手は、
+  // たとえ20位以下であっても絶対に捨ててはいけない。
+
+  std::vector<Move> finalMoves;
+  int count = 0;
+  // 相手の3連を防ぐレベルのスコア閾値 (Evaluatorに合わせて調整)
+  const int SEMI_URGENT_THRESHOLD = ScoreConfig::PRIORITY_FOUR_BLOCK;
+
+  for (const auto& m : moves) {
+    // 上位20手以内、または「準・緊急手（相手の3を止める）」なら採用
+    if (count < 20 || m.score >= SEMI_URGENT_THRESHOLD) {
+      finalMoves.push_back(m);
+      count++;
     }
   }
 
-  return moves;
+  return finalMoves;
 }
 
 int AI::_getDepthFromLevel(AILevel level) {
