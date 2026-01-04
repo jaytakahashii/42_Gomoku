@@ -170,8 +170,8 @@ std::vector<Move> AI::_generateMoves(const Board& board) {
 
     // 上位N手のみ採用 (Beam Search)
     // 深さ20を読むなら、ここの絞り込みは必須です
-    if (moves.size() > 15) {
-      moves.resize(15);
+    if (moves.size() > 20) {
+      moves.resize(20);
     }
   }
 
