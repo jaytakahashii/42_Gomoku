@@ -81,9 +81,10 @@ int Evaluator::evaluateMovePriority(const Board& board, int x, int y, Color colo
     else if (countMy == 2)
       score += ScoreConfig::PRIORITY_TWO;
 
-    // 敵の近くは防御価値あり
-    if (countOpp > 0)
-      score += 50;
+    if (countOpp == 4)
+      score += ScoreConfig::PRIORITY_FOUR * 2;  // 相手の4は絶対に止める
+    if (countOpp == 3)
+      score += ScoreConfig::PRIORITY_THREE * 1.5;
   }
 
   // 戦術的価値：中央に近いほど少し加点
@@ -108,7 +109,7 @@ int Evaluator::_countPatterns(const BoardType& stones, const BoardType& empty) {
     // 空きマスチェック用
     BoardType e0 = empty;             // 左端
     BoardType e4 = empty >> (4 * s);  // 4つ右
-    BoardType e5 = s4 >> s;           // 5つ右
+    BoardType e5 = empty >> (5 * s);
 
     // --- Open Four ( .XXXX. ) ---
     BoardType openFour = e0 & s1 & s2 & s3 & s4 & e5;

@@ -64,9 +64,8 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
 int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer) {
   // 1. 終局判定
   if (board.checkWin()) {
-    // 勝ち: プラス, 負け: マイナス
-    // 深い階層（時間がかかる勝ち）より、浅い階層（早い勝ち）を優先するため depth を加算/減算
-    return maximizingPlayer ? -ScoreConfig::WIN + depth : ScoreConfig::WIN - depth;
+    // 自分が勝ったなら高得点。残り深さが大きい（早い勝ち）ほど高得点。
+    return maximizingPlayer ? -(ScoreConfig::WIN + depth) : (ScoreConfig::WIN + depth);
   }
 
   // 2. 葉ノード（指定深さに到達）

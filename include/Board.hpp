@@ -8,7 +8,7 @@
 #include <vector>
 
 constexpr int BOARD_SIZE = 19;
-constexpr int BOARD_WIDTH = 20;  // 19 + 1 sentinel
+constexpr int BOARD_WIDTH = 32;  // 19 + 1 sentinel
 constexpr int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
 
 enum class Color { NONE, BLACK, WHITE };
