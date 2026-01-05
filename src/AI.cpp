@@ -2,6 +2,11 @@
 
 #include <iostream>
 
+/**
+ * Arguments:
+ * - board: 現在の盤面状態 (参照渡し)
+ * - level: AIの難易度
+ */
 Move AI::getBestMove(const Board& board, Color color, AILevel level) {
   // 1. セットアップ
   Board clone = board;  // 盤面のクローンを作成 (1回のみ)
@@ -27,9 +32,8 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
   int beta = std::numeric_limits<int>::max();
 
   // 3. ルートノード探索 (Minimaxの開始点)
-  // 反復深化のループは削除し、いきなり maxDepth で探索します
   for (const Move& m : moves) {
-    // 手を打つ
+    // 手を打つ (クローン上で)
     if (!clone.makeMove(m.x, m.y))
       continue;
 
@@ -51,15 +55,24 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
     // Alpha値の更新
     alpha = std::max(alpha, score);
 
-    // // ルートノードでのBetaカット（理論上は発生しないが、必勝手が見つかったら打ち切るなど）
-    // if (score >= ScoreConfig::WIN - 1000) {
-    //   break;  // 勝ち確定ならこれ以上探さない
-    // }
+    // ルートノードでのBetaカット（理論上は発生しないが、必勝手が見つかったら打ち切るなど）
+    if (score >= ScoreConfig::WIN - 1000) {
+      std::cout << "WINNNNN" << std::endl;  // TODO: デバッグ用
+      break;                                // 勝ち確定ならこれ以上探さない
+    }
   }
 
   return bestMove;
 }
 
+/**
+ * Arguments:
+ * - board: 現在の盤面状態（変更されるのでコピーを渡すこと）
+ * - depth: 残りの探索深さ
+ * - alpha: Alpha値（最良の選択肢の下限）
+ * - beta: Beta値（最良の選択肢の上限）
+ * - maximizingPlayer: 現在のプレイヤーが最大化を目指しているかどうか
+ */
 int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer) {
   // 1. 終局判定
   if (board.checkWin()) {

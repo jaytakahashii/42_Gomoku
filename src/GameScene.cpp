@@ -286,11 +286,11 @@ void GameScene::_onAIAssist() {
 
   AI ai;
   const Board& board = this->_board;
-  Color turnColor = this->_board.getCurrentTurn();
-  AILevel level = this->_aiLevel;
+  Color turn = this->_board.getCurrentTurn();
+  AILevel level = AILevel::Hard;
 
-  this->_hintFuture = std::async(std::launch::async, [ai, board, turnColor, level]() mutable {
-    return ai.getBestMove(board, turnColor, level);
+  this->_hintFuture = std::async(std::launch::async, [ai, board, turn, level]() mutable {
+    return ai.getBestMove(board, turn, level);
   });
 }
 
@@ -352,15 +352,14 @@ void GameScene::_handleAIProcess(float df) {
         this->_aiMoveTimer = 0.0f;
 
         AI ai;
-        Color turnColor = this->_board.getCurrentTurn();
         Board boardCopy = this->_board;
+        Color turn = this->_board.getCurrentTurn();
         AILevel level = this->_aiLevel;
 
         this->_aiClock.restart();
-        this->_aiFuture =
-            std::async(std::launch::async, [ai, boardCopy, turnColor, level]() mutable {
-              return ai.getBestMove(boardCopy, turnColor, level);
-            });
+        this->_aiFuture = std::async(std::launch::async, [ai, boardCopy, turn, level]() mutable {
+          return ai.getBestMove(boardCopy, turn, level);
+        });
       }
     } else {
       float elapsed = this->_aiClock.getElapsedTime().asSeconds();
