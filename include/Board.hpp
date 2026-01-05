@@ -7,12 +7,11 @@
 #include <map>
 #include <vector>
 
+#include "Enums.hpp"
+
 constexpr int BOARD_SIZE = 19;
 constexpr int BOARD_WIDTH = 32;  // 19 + 1 sentinel
 constexpr int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
-
-enum class Color { NONE, BLACK, WHITE };
-enum class Player { NONE, AI, HUMAN };
 
 using BoardType = std::bitset<MAX_CELLS>;
 
