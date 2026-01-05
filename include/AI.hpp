@@ -25,7 +25,7 @@ class AI {
   // --- 設定 ---
 
   // 各レベルの探索深さを定義
-  static constexpr int DEPTH_EASY = 5;
+  static constexpr int DEPTH_EASY = 6;
   static constexpr int DEPTH_NORMAL = 10;
   static constexpr int DEPTH_HARD = 20;
 
