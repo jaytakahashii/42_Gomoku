@@ -5,6 +5,7 @@
 /**
  * Arguments:
  * - board: 現在の盤面状態 (参照渡し)
+ * - color: AIの色
  * - level: AIの難易度
  */
 Move AI::getBestMove(const Board& board, Color color, AILevel level) {
@@ -47,15 +48,12 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
     if (score > bestMove.score) {
       bestMove = m;
       bestMove.score = score;
-
-      // デバッグ表示（現在の一番良い手）
-      // std::cout << "Candidate: (" << m.x << "," << m.y << ") Score: " << score << std::endl;
     }
 
     // Alpha値の更新
     alpha = std::max(alpha, score);
+    std::cout << "alpha: " << alpha << ", beta: " << beta << std::endl;  // TODO: デバッグ用
 
-    // ルートノードでのBetaカット（理論上は発生しないが、必勝手が見つかったら打ち切るなど）
     if (score >= ScoreConfig::WIN - 1000) {
       std::cout << "WINNNNN" << std::endl;  // TODO: デバッグ用
       break;                                // 勝ち確定ならこれ以上探さない
