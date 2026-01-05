@@ -10,7 +10,7 @@
 #include "Enums.hpp"
 
 constexpr int BOARD_SIZE = 19;
-constexpr int BOARD_WIDTH = 32;  // 19 + 1 sentinel
+constexpr int BOARD_WIDTH = 32;  // 19 + sentinel
 constexpr int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
 
 using BoardType = std::bitset<MAX_CELLS>;
