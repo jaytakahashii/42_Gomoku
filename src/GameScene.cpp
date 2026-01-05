@@ -287,7 +287,7 @@ void GameScene::_onAIAssist() {
   AI ai;
   const Board& board = this->_board;
   Color turnColor = this->_board.getCurrentTurn();
-  AILevel level = AILevel::Hard;
+  AILevel level = this->_aiLevel;
 
   this->_hintFuture = std::async(std::launch::async, [ai, board, turnColor, level]() mutable {
     return ai.getBestMove(board, turnColor, level);

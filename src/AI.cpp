@@ -4,10 +4,9 @@
 
 Move AI::getBestMove(const Board& board, Color color, AILevel level) {
   // 1. セットアップ
-  Board clone = board;
+  Board clone = board;  // 盤面のクローンを作成 (1回のみ)
   _aiPlayer = color;
-  // int maxDepth = _getDepthFromLevel(level);
-  int maxDepth = DEPTH_HARD;  // TODO: 一時的に固定
+  int maxDepth = _getDepthFromLevel(level);
 
   std::cout << "AI Thinking... (Depth: " << maxDepth << ")" << std::endl;
 
@@ -52,10 +51,10 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
     // Alpha値の更新
     alpha = std::max(alpha, score);
 
-    // ルートノードでのBetaカット（理論上は発生しないが、必勝手が見つかったら打ち切るなど）
-    if (score >= ScoreConfig::WIN - 1000) {
-      break;  // 勝ち確定ならこれ以上探さない
-    }
+    // // ルートノードでのBetaカット（理論上は発生しないが、必勝手が見つかったら打ち切るなど）
+    // if (score >= ScoreConfig::WIN - 1000) {
+    //   break;  // 勝ち確定ならこれ以上探さない
+    // }
   }
 
   return bestMove;
