@@ -22,8 +22,8 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
     return moves[0];
   }
 
-  Move bestMove = {-1, -1, -std::numeric_limits<int>::max()};
-  int alpha = -std::numeric_limits<int>::max();
+  Move bestMove = {-1, -1, std::numeric_limits<int>::min()};
+  int alpha = std::numeric_limits<int>::min();
   int beta = std::numeric_limits<int>::max();
 
   // 3. ルートノード探索 (Minimaxの開始点)
@@ -79,7 +79,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
 
   // 4. 再帰探索
   if (maximizingPlayer) {
-    int maxEval = -std::numeric_limits<int>::max();
+    int maxEval = std::numeric_limits<int>::min();
     for (const Move& m : moves) {
       if (!board.makeMove(m.x, m.y))
         continue;
