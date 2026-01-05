@@ -13,6 +13,7 @@
 #include <thread>
 
 #include "AI.hpp"
+#include "Enums.hpp"
 
 const unsigned int CELL_SIZE = 40;
 const float OFFSET = 20.0f;
