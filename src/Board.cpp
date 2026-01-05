@@ -33,6 +33,8 @@ bool Board::makeMove(int x, int y) {
     this->_whiteStones.set(index);
   }
 
+  changeTurn();
+
   return true;
 }
 
@@ -40,10 +42,14 @@ void Board::changeTurn() {
   _currentTurn = (_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
 }
 
+/**
+ * 勝利条件のチェック
+ * チェンジターン後に呼び出すことを想定
+ */
 bool Board::checkWin() {
-  const BoardType& myStones = (_currentTurn == Color::WHITE) ? _whiteStones : _blackStones;
-  const BoardType& oppStones = (_currentTurn == Color::WHITE) ? _blackStones : _whiteStones;
-  int captures = (_currentTurn == Color::WHITE) ? _whiteCaptures : _blackCaptures;
+  const BoardType& myStones = (_currentTurn == Color::WHITE) ? _blackStones : _whiteStones;
+  const BoardType& oppStones = (_currentTurn == Color::WHITE) ? _whiteStones : _blackStones;
+  int captures = (_currentTurn == Color::WHITE) ? _blackCaptures : _whiteCaptures;
 
   // 1. 捕獲勝ち
   if (captures >= 10)

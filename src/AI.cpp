@@ -166,7 +166,6 @@ std::vector<Move> AI::_generateMoves(const Board& board) {
       int priority = Evaluator::evaluateMovePriority(board, x, y, board.getCurrentTurn());
 
       // ★修正ポイント1: 緊急事態の検知
-      // PRIORITY_WIN_BLOCK (50,000,000) 以上のスコアは「相手の4」を防ぐ手
       if (priority >= ScoreConfig::PRIORITY_WIN_BLOCK) {
         urgentMoveFound = true;
       }
