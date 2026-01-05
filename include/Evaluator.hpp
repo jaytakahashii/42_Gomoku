@@ -8,7 +8,9 @@ struct ScoreConfig {
   static constexpr int WIN = 1'000'000'000;
 
   // --- 盤面評価用スコア ---
-  static constexpr int OPEN_FOUR = 30'000'000;
+  // Priority S
+  static constexpr int OPP_OPEN_FOUR = 500'000;
+
   static constexpr int CLOSED_FOUR = 15'000'000;
   static constexpr int OPEN_THREE = 1'000'000;
   static constexpr int BROKEN_THREE = 50'000;
@@ -21,15 +23,24 @@ struct ScoreConfig {
   static constexpr int CAPTURE = 10'000;
 
   // --- 探索順序用スコア (Move Ordering) ---
-  static constexpr int PRIORITY_WIN_BLOCK = 500'000;
-  static constexpr int PRIORITY_FIVE = 100'000;
-  static constexpr int PRIORITY_FOUR_BLOCK = 200'000;
-  static constexpr int PRIORITY_FOUR = 50'000;
 
-  // ★修正: 相手の「2」を防ぐ優先度を、自分の「2」を作るよりも高くする
-  static constexpr int PRIORITY_THREE_BLOCK = 20'000;  // 相手の2(次3になるやつ)を防ぐ
-  static constexpr int PRIORITY_THREE = 5'000;         // 自分の3を作る
-  static constexpr int PRIORITY_TWO = 1'000;
+  // [Priority S]
+  static constexpr int PRIORITY_MAYBE_OPP_WIN = 500'000;
+
+  // [Priority A+]
+  static constexpr int PRIORITY_OPP_OPEN_THREE = 250'000;
+
+  // [Priority A-]
+  static constexpr int PRIORITY_MAYBE_MY_WIN = 250'000;
+
+  // [Priority B]
+  static constexpr int PRIORITY_CAPTURE = 150'000;
+  static constexpr int PRIORITY_MY_OPEN_FOUR = 100'000;
+
+  // [Priority C]
+  static constexpr int PRIORITY_OPP_CLOSED_THREE = 75'000;
+  static constexpr int PRIORITY_MY_CLOSED_FOUR = 50'000;
+  static constexpr int PRIORITY_MY_OPEN_THREE = 50'000;
 };
 
 class Evaluator {
@@ -42,5 +53,12 @@ class Evaluator {
 
  private:
   // パターン認識ヘルパー
-  static int _countPatterns(const BoardType& stones, const BoardType& empty);
+  static constexpr int SHIFT_H = 1;                 // 横
+  static constexpr int SHIFT_V = BOARD_WIDTH;       // 縦 (20)
+  static constexpr int SHIFT_D1 = BOARD_WIDTH + 1;  // 右下 (21)
+  static constexpr int SHIFT_D2 = BOARD_WIDTH - 1;  // 左下 (19)
+  static constexpr std::array<int, 4> ALL_DIRS = {SHIFT_H, SHIFT_V, SHIFT_D1, SHIFT_D2};
+
+  static int _myCountPatterns(const BoardType& stones, const BoardType& empty);
+  static int _oppCountPatterns(const BoardType& stones, const BoardType& empty);
 };

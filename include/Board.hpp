@@ -36,6 +36,7 @@ class Board {
   bool makeMove(int x, int y);
   void changeTurn();
   bool checkWin();
+  bool checkWinWithFive() const;
 
   // 状態取得用
   Color getColorAt(int x, int y) const;

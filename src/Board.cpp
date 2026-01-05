@@ -90,6 +90,41 @@ bool Board::checkWin() {
   return false;
 }
 
+bool Board::checkWinWithFive() const {
+  const BoardType& myStones = (_currentTurn == Color::WHITE) ? _blackStones : _whiteStones;
+  const BoardType& oppStones = (_currentTurn == Color::WHITE) ? _whiteStones : _blackStones;
+
+  // 5連チェック (4方向)
+  for (int shift : ALL_DIRS) {
+    BoardType lines = _getFiveInARowBits(myStones, shift);
+    if (lines.none())
+      continue;
+
+    // 見つかった全ての5連ラインについて検証
+    for (int i = 0; i < MAX_CELLS; ++i) {
+      if (lines.test(i)) {
+        // インデックス i から始まる5連が見つかった
+        bool lineIsSafe = true;
+
+        // 5つの石すべてについて「捕獲される危険性」をチェック
+        for (int k = 0; k < 5; ++k) {
+          int stoneIdx = i + k * shift;
+          if (_isStoneCapturable(stoneIdx, myStones, oppStones)) {
+            lineIsSafe = false;
+            break;
+          }
+        }
+
+        if (lineIsSafe) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 // --- Getters / Setters ---
 
 Color Board::getColorAt(int x, int y) const {
