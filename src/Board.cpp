@@ -165,6 +165,14 @@ const BoardType& Board::getWhiteStones() const {
   return _whiteStones;
 }
 
+const BoardType& Board::getMyStones(Color myColor) const {
+  return (myColor == Color::BLACK) ? _blackStones : _whiteStones;
+}
+
+const BoardType& Board::getOppStones(Color myColor) const {
+  return (myColor == Color::BLACK) ? _whiteStones : _blackStones;
+}
+
 // 有効な盤面範囲（壁以外）を表すマスクを定義
 // static const にして一度だけ計算させる
 static const BoardType VALID_MASK = []() {

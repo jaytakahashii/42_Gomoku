@@ -48,6 +48,8 @@ class Board {
   bool getCapturedStatus() const;
   const BoardType& getBlackStones() const;
   const BoardType& getWhiteStones() const;
+  const BoardType& getMyStones(Color myColor) const;
+  const BoardType& getOppStones(Color myColor) const;
   BoardType getEmptyStones() const;
   BoardType getOccupiedStones() const;
   void setDoubleThreeStatus(bool status);
