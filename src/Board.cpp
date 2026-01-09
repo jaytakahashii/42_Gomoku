@@ -8,10 +8,12 @@ Board::Board()
       _currentTurn(Color::BLACK),
       _blackCaptures(0),
       _whiteCaptures(0),
+      _capturedStatus(false),
       _doubleThreeStatus(false) {
 }
 
 bool Board::makeMove(int x, int y) {
+  // 範囲外チェック
   if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE)
     return false;
 
@@ -20,20 +22,21 @@ bool Board::makeMove(int x, int y) {
   if (_blackStones.test(index) || _whiteStones.test(index))
     return false;
 
-  saveState();
-  this->_capturedStatus = _checkAndProcessCapture(index);
-  if (!_capturedStatus) {
-    if (_isDoubleThree(x, y))
+  saveState();  // 手を戻せるように状態を保存
+
+  _processCapture(index);
+  if (!this->_capturedStatus) {
+    if (_isDoubleThree(x, y)) {
+      undo();
       return false;
+    }
   }
 
   if (_currentTurn == Color::BLACK) {
-    _blackStones.set(index);
+    this->_blackStones.set(index);
   } else {
     this->_whiteStones.set(index);
   }
-
-  changeTurn();
 
   return true;
 }
@@ -44,12 +47,12 @@ void Board::changeTurn() {
 
 /**
  * 勝利条件のチェック
- * チェンジターン後に呼び出すことを想定
+ * changeTurnの前に呼び出すこと
  */
-bool Board::checkWin() {
-  const BoardType& myStones = (_currentTurn == Color::WHITE) ? _blackStones : _whiteStones;
-  const BoardType& oppStones = (_currentTurn == Color::WHITE) ? _whiteStones : _blackStones;
-  int captures = (_currentTurn == Color::WHITE) ? _blackCaptures : _whiteCaptures;
+bool Board::checkWin() const {
+  const BoardType& myStones = getMyStones(_currentTurn);
+  const BoardType& oppStones = getOppStones(_currentTurn);
+  int captures = (_currentTurn == Color::BLACK) ? _blackCaptures : _whiteCaptures;
 
   // 1. 捕獲勝ち
   if (captures >= 10)
@@ -90,13 +93,20 @@ bool Board::checkWin() {
   return false;
 }
 
-bool Board::checkWinWithFive() const {
-  const BoardType& myStones = (_currentTurn == Color::WHITE) ? _blackStones : _whiteStones;
-  const BoardType& oppStones = (_currentTurn == Color::WHITE) ? _whiteStones : _blackStones;
+bool Board::checkWinColor(Color color) const {
+  const BoardType& myStones = (color == Color::WHITE) ? _whiteStones : _blackStones;
+  const BoardType& oppStones = (color == Color::WHITE) ? _blackStones : _whiteStones;
+  int captures = (color == Color::WHITE) ? _whiteCaptures : _blackCaptures;
 
-  // 5連チェック (4方向)
+  // 1. 捕獲勝ち
+  if (captures >= 10)
+    return true;
+
+  // 2. 5連チェック (4方向)
   for (int shift : ALL_DIRS) {
+    // 5連の始点ビット列を取得
     BoardType lines = _getFiveInARowBits(myStones, shift);
+
     if (lines.none())
       continue;
 
@@ -110,11 +120,13 @@ bool Board::checkWinWithFive() const {
         for (int k = 0; k < 5; ++k) {
           int stoneIdx = i + k * shift;
           if (_isStoneCapturable(stoneIdx, myStones, oppStones)) {
+            // 一つでも捕獲される石があれば、このラインでの勝利は成立しない
             lineIsSafe = false;
             break;
           }
         }
 
+        // 一つでも「安全な5連」があれば勝利確定
         if (lineIsSafe) {
           return true;
         }
@@ -234,11 +246,11 @@ int Board::_getIndex(int x, int y) const {
   return y * BOARD_WIDTH + x;
 }
 
-bool Board::_checkAndProcessCapture(int index) {
+void Board::_processCapture(int index) {
   BoardType& myStones = (_currentTurn == Color::BLACK) ? _blackStones : _whiteStones;
   BoardType& oppStones = (_currentTurn == Color::BLACK) ? _whiteStones : _blackStones;
   int& myScore = (_currentTurn == Color::BLACK) ? _blackCaptures : _whiteCaptures;
-  bool captured = false;
+  this->_capturedStatus = false;
 
   for (int d : ALL_DIRS) {
     const int directions[] = {d, -d};
@@ -264,11 +276,10 @@ bool Board::_checkAndProcessCapture(int index) {
         // スコア加算
         myScore += 2;
 
-        captured = true;
+        this->_capturedStatus = true;
       }
     }
   }
-  return captured;
 }
 
 BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) const {
@@ -329,8 +340,8 @@ bool Board::_isStoneCapturable(int index, const BoardType& myStones,
 }
 
 bool Board::_isDoubleThree(int x, int y) {
-  const BoardType& myStones = (_currentTurn == Color::BLACK) ? _blackStones : _whiteStones;
-  const BoardType& oppStones = (_currentTurn == Color::BLACK) ? _whiteStones : _blackStones;
+  const BoardType& myStones = getMyStones(_currentTurn);
+  const BoardType& oppStones = getOppStones(_currentTurn);
 
   int freeThreeCount = 0;
 

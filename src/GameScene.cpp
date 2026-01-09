@@ -94,6 +94,7 @@ void GameScene::handleClick(int x, int y) {
         if (_onGameOver)
           _onGameOver("You");
       }
+      _board.changeTurn();
     }
     if (_board.getDoubleThreeStatus()) {
       displayTimedMessage("DoubleThree", {posX, posY});
@@ -190,6 +191,7 @@ void GameScene::_applyAIMove(Move move) {
       this->_onGameOver("AI");
     return;
   }
+  this->_board.changeTurn();
 }
 
 void GameScene::onResize(const sf::Vector2u& windowSize) {

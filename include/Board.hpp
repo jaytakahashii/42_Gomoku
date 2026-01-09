@@ -35,8 +35,8 @@ class Board {
   // ゲーム進行用
   bool makeMove(int x, int y);
   void changeTurn();
-  bool checkWin();
-  bool checkWinWithFive() const;
+  bool checkWin() const;
+  bool checkWinColor(Color color) const;
 
   // 状態取得用
   Color getColorAt(int x, int y) const;
@@ -86,7 +86,7 @@ class Board {
   }};
 
   int _getIndex(int x, int y) const;
-  bool _checkAndProcessCapture(int index);
+  void _processCapture(int index);
   BoardType _getFiveInARowBits(const BoardType& stones, int shift_amount) const;
   bool _isStoneCapturable(int index, const BoardType& myStones, const BoardType& oppStones) const;
   bool _checkFreeThree(int x, int y, int dir_x, int dir_y, const BoardType& myStones,
