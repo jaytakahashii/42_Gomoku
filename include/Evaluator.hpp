@@ -8,19 +8,21 @@ struct ScoreConfig {
   static constexpr int WIN = 1'000'000'000;
 
   // --- 盤面評価用スコア ---
+  // Priority S+
+  static constexpr int OPEN_FOUR = 100'000;
+
   // Priority S
-  static constexpr int OPP_OPEN_FOUR = 500'000;
+  static constexpr int CLOSED_FOUR = 50'000;
 
-  static constexpr int CLOSED_FOUR = 15'000'000;
-  static constexpr int OPEN_THREE = 1'000'000;
-  static constexpr int BROKEN_THREE = 50'000;
-  static constexpr int CLOSED_THREE = 10'000;
+  // Priority A
+  static constexpr int OPEN_THREE = 2'500;
 
-  // ★追加・強化: 二連の評価
-  // これを高めることで「相手の二連」を見つけたときに「これを放置すると相手のスコアが爆増するぞ！」とAIが危機感を持ちます。
-  static constexpr int OPEN_TWO = 300'000;
+  // Priority B
+  static constexpr int OPEN_TWO = 500;
+  static constexpr int CAPTURE = 500;
 
-  static constexpr int CAPTURE = 10'000;
+  // Priority C
+  static constexpr int CAPTURE_COUNT = 10;
 
   // --- 探索順序用スコア (Move Ordering) ---
 
@@ -59,6 +61,6 @@ class Evaluator {
   static constexpr int SHIFT_D2 = BOARD_WIDTH - 1;  // 左下 (19)
   static constexpr std::array<int, 4> ALL_DIRS = {SHIFT_H, SHIFT_V, SHIFT_D1, SHIFT_D2};
 
-  static int _myCountPatterns(const BoardType& stones, const BoardType& empty);
-  static int _oppCountPatterns(const BoardType& stones, const BoardType& empty);
+  static int _CountPatterns(const BoardType& myBoard, const BoardType& empty,
+                            const BoardType& oppBoard);
 };

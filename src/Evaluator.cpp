@@ -1,10 +1,13 @@
 #include "Evaluator.hpp"
 
 #include <cmath>
+#include <iostream>
 
 int Evaluator::evaluate(const Board& board, Color aiColor) {
-  if (board.checkWinWithFive())
+  if (board.checkWinColor(aiColor)) {
     return ScoreConfig::WIN;
+  }
+
   const BoardType& myStones = board.getMyStones(aiColor);
   const BoardType& oppStones = board.getOppStones(aiColor);
   BoardType empty = board.getEmptyStones();
@@ -14,8 +17,8 @@ int Evaluator::evaluate(const Board& board, Color aiColor) {
 
   // 1. 形（並び）の評価
   // 敵と自分でそれぞれ別の関数を使う
-  myScore += _myCountPatterns(myStones, empty);
-  oppScore += _oppCountPatterns(oppStones, empty);
+  myScore += _CountPatterns(myStones, empty, oppStones);
+  oppScore += _CountPatterns(oppStones, empty, myStones);
 
   // 2. 捕獲数の評価
   int myCaptures = (aiColor == Color::BLACK) ? board.getBlackCaptures() : board.getWhiteCaptures();
@@ -24,9 +27,9 @@ int Evaluator::evaluate(const Board& board, Color aiColor) {
   myScore += myCaptures * ScoreConfig::CAPTURE;
   oppScore += oppCaptures * ScoreConfig::CAPTURE;
 
-  // ★重要: 相手の攻撃に対する評価係数を 1.2 -> 5.0 に引き上げ
+  // 相手の攻撃に対する評価係数を引き上げ
   // これにより「自分の良手」よりも「相手の妨害」を最優先するようになる
-  return static_cast<int>(myScore - (oppScore * 5));
+  return static_cast<int>(myScore - (oppScore * 1.5));
 }
 
 /**
@@ -75,7 +78,7 @@ int checkPatternScore(const Board& board, int x, int y, Color myColor) {
       }
     }
 
-    // --- 2. パターンチェック (優先順位順) ---
+    // --- 2. Patternチェック (優先順位順) ---
 
     // [Priority S+] 相手の4連
     int leftOpp = 0, rightOpp = 0;
@@ -188,177 +191,99 @@ int Evaluator::evaluateMovePriority(const Board& board, int x, int y, Color colo
   return score;
 }
 
-int Evaluator::_myCountPatterns(const BoardType& stones, const BoardType& empty) {
+int Evaluator::_CountPatterns(const BoardType& myBoard, const BoardType& empty,
+                              const BoardType& oppBoard) {
   int score = 0;
 
   for (int s : ALL_DIRS) {
-    // シフトしたビットボードを作成
-    BoardType s1 = stones >> s;
-    BoardType s2 = stones >> (2 * s);
-    BoardType s3 = stones >> (3 * s);
-    BoardType s4 = stones >> (4 * s);
+    // 自分の石のシフト（s1は1つ先、s2は2つ先...）
+    BoardType s1 = myBoard >> s;
+    BoardType s2 = myBoard >> (2 * s);
+    BoardType s3 = myBoard >> (3 * s);
+    BoardType s4 = myBoard >> (4 * s);
 
+    // 空点のシフト
+    BoardType e0 = empty;
     BoardType e1 = empty >> s;
     BoardType e2 = empty >> (2 * s);
     BoardType e3 = empty >> (3 * s);
     BoardType e4 = empty >> (4 * s);
-
-    // 左端の空き
-    BoardType e0 = empty;
-    // 右端の空き (5つ先)
     BoardType e5 = empty >> (5 * s);
 
+    // 敵の石のシフト（Capture判定用）
+    BoardType o1 = oppBoard >> s;
+    BoardType o2 = oppBoard >> (2 * s);
+
     // ---------------------------------------------------------
-    // 1. Open Four (.XXXX.)
+    // 1. Priority S+: Open Four (.XXXX.)
     // ---------------------------------------------------------
-    // パターン: [空] [石] [石] [石] [石] [空]
-    BoardType openFour = e0 & stones & s1 & s2 & s3 & e4;
+    // Pattern: .XXXX.
+    BoardType openFour = e0 & s1 & s2 & s3 & s4 & e5;
     if (openFour.any())
-      score += (int)openFour.count() * ScoreConfig::OPP_OPEN_FOUR;
+      score += (int)openFour.count() * ScoreConfig::OPEN_FOUR;
 
     // ---------------------------------------------------------
-    // 3. Closed Four / Broken Four (飛び四含む)
+    // 3. Priority S Closed Four / Broken Four
     // ---------------------------------------------------------
-    // パターンA: XXXX. または .XXXX (端が空いていない)
-    BoardType closedFour = (stones & s1 & s2 & s3) & (e0 | e4);  // 簡易判定
+    // Pattern: X X X X .  (基準は最初のX)
+    // 条件: myBoard(X) & s1(X) & s2(X) & s3(X) & e4(.)
+    // ※ e0は含めない（自分自身がいるのでe0はfalseになる）
+    BoardType closedFour1 = myBoard & s1 & s2 & s3 & e4;
 
-    // パターンB: Split Four (X.XXX, XX.XX, XXX.X)
-    //  - X.XXX (石 空 石 石 石)
-    BoardType splitFour1 = stones & e1 & s2 & s3 & s4;
-    //  - XX.XX (石 石 空 石 石)
-    BoardType splitFour2 = stones & s1 & e2 & s3 & s4;
-    //  - XXX.X (石 石 石 空 石)
-    BoardType splitFour3 = stones & s1 & s2 & e3 & s4;
+    // Pattern: . X X X X (基準は最初の.)
+    // e0 & s1 & s2 & s3 & s4
+    // ※ openFour で数えたものは除外したいが、簡易的には重複しても良い（スコア調整でカバー）
+    BoardType closedFour2 = e0 & s1 & s2 & s3 & s4;
 
-    int cfCount =
-        (int)(closedFour.count() + splitFour1.count() + splitFour2.count() + splitFour3.count());
-    // OpenFourと重複している分は引く（厳密な計算より速度優先）
+    // Pattern: Split Four (飛び四)
+    // X . X X X (基準: X)
+    BoardType splitFour1 = myBoard & e1 & s2 & s3 & s4;
+    // X X . X X (基準: X)
+    BoardType splitFour2 = myBoard & s1 & e2 & s3 & s4;
+    // X X X . X (基準: X)
+    BoardType splitFour3 = myBoard & s1 & s2 & e3 & s4;
+
+    int cfCount = (int)(closedFour1.count() + closedFour2.count() + splitFour1.count() +
+                        splitFour2.count() + splitFour3.count());
+
+    // OpenFourの分を引く（簡易処理：OpenFourは closedFour2 にもマッチしてしまうため）
+    if (openFour.any()) {
+      cfCount -= (int)openFour.count();
+    }
+
     if (cfCount > 0) {
       score += cfCount * ScoreConfig::CLOSED_FOUR;
     }
 
     // ---------------------------------------------------------
-    // 4. Open Three (.XXX.)
+    // 4. Priority A: Open Three (.XXX.)
     // ---------------------------------------------------------
-    // パターン: .XXX.
-    BoardType openThree = e0 & stones & s1 & s2 & e3;
+    // Pattern: . X X X . (基準: 左の.)
+    BoardType openThree = e0 & s1 & s2 & s3 & e4;
+
+    // Pattern: . X . X X . (飛び三 A)
+    BoardType brokenThree1 = e0 & s1 & e2 & s3 & s4 & e5;
+
+    // Pattern: . X X . X . (飛び三 B)
+    BoardType brokenThree2 = e0 & s1 & s2 & e3 & s4 & e5;
+
     if (openThree.any())
       score += (int)openThree.count() * ScoreConfig::OPEN_THREE;
-
-    // ---------------------------------------------------------
-    // 5. Broken Three (.X.XX. / .XX.X.) - 飛び三
-    // ---------------------------------------------------------
-    // パターン: .X.XX.
-    BoardType brokenThree1 = e0 & stones & e1 & s2 & s3 & e4;
-    // パターン: .XX.X.
-    BoardType brokenThree2 = e0 & stones & s1 & e2 & s3 & e4;
-
     if (brokenThree1.any())
-      score += (int)brokenThree1.count() * ScoreConfig::OPEN_THREE;  // OpenThreeと同等の価値
+      score += (int)brokenThree1.count() * ScoreConfig::OPEN_THREE;
     if (brokenThree2.any())
       score += (int)brokenThree2.count() * ScoreConfig::OPEN_THREE;
 
     // ---------------------------------------------------------
-    // 6. Open Two (.XX.)
+    // 5. Priority B: Open Two (.XX.)
     // ---------------------------------------------------------
-    // パターン: .XX.
-    BoardType openTwo = e0 & stones & s1 & e2;
+    // Pattern: .XX.
+    BoardType openTwo = e0 & myBoard & s1 & e2;
+    // Pattern: .X.X.
+    BoardType gapTwo = e0 & myBoard & e1 & s2 & e3;
+
     if (openTwo.any())
       score += (int)openTwo.count() * ScoreConfig::OPEN_TWO;
-
-    // ---------------------------------------------------------
-    // 7. Broken Two / Gap Two (.X.X.)
-    // ---------------------------------------------------------
-    BoardType gapTwo = e0 & stones & e1 & s2 & e3;
-    if (gapTwo.any())
-      score += (int)gapTwo.count() * ScoreConfig::OPEN_TWO;
-  }
-
-  return score;
-}
-
-int Evaluator::_oppCountPatterns(const BoardType& stones, const BoardType& empty) {
-  int score = 0;
-
-  for (int s : ALL_DIRS) {
-    // シフトしたビットボードを作成
-    BoardType s1 = stones >> s;
-    BoardType s2 = stones >> (2 * s);
-    BoardType s3 = stones >> (3 * s);
-    BoardType s4 = stones >> (4 * s);
-
-    BoardType e1 = empty >> s;
-    BoardType e2 = empty >> (2 * s);
-    BoardType e3 = empty >> (3 * s);
-    BoardType e4 = empty >> (4 * s);
-
-    // 左端の空き
-    BoardType e0 = empty;
-    // 右端の空き (5つ先)
-    BoardType e5 = empty >> (5 * s);
-
-    // ---------------------------------------------------------
-    // 1. Open Four (.XXXX.)
-    // ---------------------------------------------------------
-    // パターン: [空] [石] [石] [石] [石] [空]
-    BoardType openFour = e0 & stones & s1 & s2 & s3 & e4;
-    if (openFour.any())
-      score += (int)openFour.count() * ScoreConfig::OPP_OPEN_FOUR;
-
-    // ---------------------------------------------------------
-    // 3. Closed Four / Broken Four (飛び四含む)
-    // ---------------------------------------------------------
-    // パターンA: XXXX. または .XXXX (端が空いていない)
-    BoardType closedFour = (stones & s1 & s2 & s3) & (e0 | e4);  // 簡易判定
-
-    // パターンB: Split Four (X.XXX, XX.XX, XXX.X)
-    //  - X.XXX (石 空 石 石 石)
-    BoardType splitFour1 = stones & e1 & s2 & s3 & s4;
-    //  - XX.XX (石 石 空 石 石)
-    BoardType splitFour2 = stones & s1 & e2 & s3 & s4;
-    //  - XXX.X (石 石 石 空 石)
-    BoardType splitFour3 = stones & s1 & s2 & e3 & s4;
-
-    int cfCount =
-        (int)(closedFour.count() + splitFour1.count() + splitFour2.count() + splitFour3.count());
-    // OpenFourと重複している分は引く（厳密な計算より速度優先）
-    if (cfCount > 0) {
-      score += cfCount * ScoreConfig::CLOSED_FOUR;
-    }
-
-    // ---------------------------------------------------------
-    // 4. Open Three (.XXX.)
-    // ---------------------------------------------------------
-    // パターン: .XXX.
-    BoardType openThree = e0 & stones & s1 & s2 & e3;
-    if (openThree.any())
-      score += (int)openThree.count() * ScoreConfig::OPEN_THREE;
-
-    // ---------------------------------------------------------
-    // 5. Broken Three (.X.XX. / .XX.X.) - 飛び三
-    // ---------------------------------------------------------
-    // パターン: .X.XX.
-    BoardType brokenThree1 = e0 & stones & e1 & s2 & s3 & e4;
-    // パターン: .XX.X.
-    BoardType brokenThree2 = e0 & stones & s1 & e2 & s3 & e4;
-
-    if (brokenThree1.any())
-      score += (int)brokenThree1.count() * ScoreConfig::OPEN_THREE;  // OpenThreeと同等の価値
-    if (brokenThree2.any())
-      score += (int)brokenThree2.count() * ScoreConfig::OPEN_THREE;
-
-    // ---------------------------------------------------------
-    // 6. Open Two (.XX.)
-    // ---------------------------------------------------------
-    // パターン: .XX.
-    BoardType openTwo = e0 & stones & s1 & e2;
-    if (openTwo.any())
-      score += (int)openTwo.count() * ScoreConfig::OPEN_TWO;
-
-    // ---------------------------------------------------------
-    // 7. Broken Two / Gap Two (.X.X.)
-    // ---------------------------------------------------------
-    BoardType gapTwo = e0 & stones & e1 & s2 & e3;
     if (gapTwo.any())
       score += (int)gapTwo.count() * ScoreConfig::OPEN_TWO;
   }
