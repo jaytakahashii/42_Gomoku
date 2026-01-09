@@ -28,7 +28,9 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
     return moves[0];
   }
 
-  Move bestMove = {-1, -1, std::numeric_limits<int>::min()};
+  Move bestMove = moves[0];
+  bestMove.score = std::numeric_limits<int>::min();
+
   int alpha = std::numeric_limits<int>::min();
   int beta = std::numeric_limits<int>::max();
 
@@ -38,7 +40,9 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
     if (!clone.makeMove(m.x, m.y))
       continue;
 
-    // 次は相手の番なので maximizingPlayer = false, 深さは -1
+    clone.changeTurn();
+
+    // 再帰呼び出し (次は相手のターンなのでfalse)
     int score = _minimax(clone, maxDepth - 1, alpha, beta, false);
 
     // 手を戻す
@@ -52,11 +56,9 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
 
     // Alpha値の更新
     alpha = std::max(alpha, score);
-    std::cout << "alpha: " << alpha << ", beta: " << beta << std::endl;  // TODO: デバッグ用
 
     if (score >= ScoreConfig::WIN - 1000) {
-      std::cout << "WINNNNN" << std::endl;  // TODO: デバッグ用
-      break;                                // 勝ち確定ならこれ以上探さない
+      break;  // 勝ち確定ならこれ以上探さない
     }
   }
 
@@ -74,7 +76,6 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
 int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer) {
   // 1. 終局判定
   if (board.checkWin()) {
-    // 自分が勝ったなら高得点。残り深さが大きい（早い勝ち）ほど高得点。
     return maximizingPlayer ? -(ScoreConfig::WIN + depth) : (ScoreConfig::WIN + depth);
   }
 
@@ -95,6 +96,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       if (!board.makeMove(m.x, m.y))
         continue;
 
+      board.changeTurn();
       int eval = _minimax(board, depth - 1, alpha, beta, false);
 
       board.undo();
@@ -113,6 +115,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       if (!board.makeMove(m.x, m.y))
         continue;
 
+      board.changeTurn();
       int eval = _minimax(board, depth - 1, alpha, beta, true);
 
       board.undo();
@@ -171,6 +174,10 @@ std::vector<Move> AI::_generateMoves(const Board& board) {
 
   std::sort(moves.begin(), moves.end(),
             [](const Move& a, const Move& b) { return a.score > b.score; });
+
+  if (moves.size() > 10) {
+    moves.resize(10);
+  }
 
   return moves;
 }
