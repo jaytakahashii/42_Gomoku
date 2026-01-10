@@ -14,12 +14,12 @@ ResultScene::ResultScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_winnerText.setCharacterSize(Theme::FontSize::Header);
   this->_winnerText.setFillColor(sf::Color::White);
   this->_winnerText.setStyle(sf::Text::Bold);
-  this->_winnerText.setOrigin(_winnerText.getLocalBounds().getCenter());
+  this->_winnerText.setOrigin(this->_winnerText.getLocalBounds().getCenter());
 
   this->_backButtonText.setCharacterSize(Theme::FontSize::Button);
   this->_backButtonText.setFillColor(sf::Color::Black);
   this->_backButtonText.setStyle(sf::Text::Bold);
-  this->_backButtonText.setOrigin(_backButtonText.getLocalBounds().getCenter());
+  this->_backButtonText.setOrigin(this->_backButtonText.getLocalBounds().getCenter());
 
   this->_backButton.setSize(Theme::Size::Button);
   this->_backButton.setFillColor(Theme::Color::ButtonActive);
@@ -36,7 +36,7 @@ void ResultScene::handleEvents(const EventList& events) {
                               static_cast<float>(mousePtr->position.y));
         if (this->_backButton.getGlobalBounds().contains(mousePos)) {
           if (this->_onBack) {
-            this->_onBack();
+            _onBack();
           }
         }
       }
@@ -50,13 +50,13 @@ void ResultScene::update(float dt) {
 void ResultScene::render(sf::RenderWindow& window) {
   window.clear(Theme::Color::BoardDarkened);
 
-  if (_backgroundSprite) {
+  if (this->_backgroundSprite) {
     window.draw(*_backgroundSprite);
   }
-  window.draw(_titleText);
-  window.draw(_winnerText);
-  window.draw(_backButton);
-  window.draw(_backButtonText);
+  window.draw(this->_titleText);
+  window.draw(this->_winnerText);
+  window.draw(this->_backButton);
+  window.draw(this->_backButtonText);
 }
 
 void ResultScene::onResize(const sf::Vector2u& windowSize) {
@@ -83,22 +83,22 @@ void ResultScene::onResize(const sf::Vector2u& windowSize) {
     }
   }
   this->_backButton.setPosition({w / 2.f, h * 0.95f});
-  this->_backButtonText.setPosition(_backButton.getPosition());
+  this->_backButtonText.setPosition(this->_backButton.getPosition());
 }
 
 void ResultScene::setBackground(const sf::Window& window) {
   if (this->_backgroundTexture.resize(window.getSize())) {
-    _backgroundTexture.update(window);
+    this->_backgroundTexture.update(window);
 
-    _backgroundSprite = std::make_unique<sf::Sprite>(_backgroundTexture);
+    this->_backgroundSprite = std::make_unique<sf::Sprite>(this->_backgroundTexture);
 
-    _backgroundSprite->setColor(Theme::Color::Background);
+    this->_backgroundSprite->setColor(Theme::Color::Background);
   }
 }
 
 void ResultScene::setWinner(const std::string& winner) {
   this->_winnerText.setString(winner + " wins!");
-  this->_winnerText.setOrigin(_winnerText.getLocalBounds().getCenter());
+  this->_winnerText.setOrigin(this->_winnerText.getLocalBounds().getCenter());
 }
 
 void ResultScene::setOnBack(std::function<void()> func) {

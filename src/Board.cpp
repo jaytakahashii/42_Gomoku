@@ -19,7 +19,7 @@ bool Board::makeMove(int x, int y) {
 
   int index = _getIndex(x, y);
 
-  if (_blackStones.test(index) || _whiteStones.test(index))
+  if (this->_blackStones.test(index) || this->_whiteStones.test(index))
     return false;
 
   saveState();  // 手を戻せるように状態を保存
@@ -32,7 +32,7 @@ bool Board::makeMove(int x, int y) {
     }
   }
 
-  if (_currentTurn == Color::BLACK) {
+  if (this->_currentTurn == Color::BLACK) {
     this->_blackStones.set(index);
   } else {
     this->_whiteStones.set(index);
@@ -42,7 +42,7 @@ bool Board::makeMove(int x, int y) {
 }
 
 void Board::changeTurn() {
-  _currentTurn = (_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
+  this->_currentTurn = (this->_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
 }
 
 /**
@@ -101,9 +101,9 @@ bool Board::checkWin(Color color) const {
 
 Color Board::getColorAt(int x, int y) const {
   int index = _getIndex(x, y);
-  if (_blackStones.test(index))
+  if (this->_blackStones.test(index))
     return Color::BLACK;
-  if (_whiteStones.test(index))
+  if (this->_whiteStones.test(index))
     return Color::WHITE;
   return Color::NONE;
 }
@@ -111,9 +111,9 @@ Color Board::getColorAt(int x, int y) const {
 Player Board::getPlayerAt(int x, int y) const {
   int index = _getIndex(x, y);
   std::map<Color, Player>::const_iterator it = this->_colorToPlayer.end();
-  if (_blackStones.test(index))
+  if (this->_blackStones.test(index))
     it = this->_colorToPlayer.find(Color::BLACK);
-  if (_whiteStones.test(index))
+  if (this->_whiteStones.test(index))
     it = this->_colorToPlayer.find(Color::WHITE);
   if (it != this->_colorToPlayer.end()) {
     return it->second;
@@ -122,11 +122,11 @@ Player Board::getPlayerAt(int x, int y) const {
 }
 
 Color Board::getCurrentTurn() const {
-  return _currentTurn;
+  return this->_currentTurn;
 }
 
 Player Board::getCurrentPlayer() const {
-  auto it = this->_colorToPlayer.find(_currentTurn);
+  auto it = this->_colorToPlayer.find(this->_currentTurn);
   if (it == this->_colorToPlayer.end()) {
     return Player::NONE;
   }
@@ -134,15 +134,15 @@ Player Board::getCurrentPlayer() const {
 }
 
 int Board::getBlackCaptures() const {
-  return _blackCaptures;
+  return this->_blackCaptures;
 }
 
 int Board::getWhiteCaptures() const {
-  return _whiteCaptures;
+  return this->_whiteCaptures;
 }
 
 bool Board::getDoubleThreeStatus() const {
-  return _doubleThreeStatus;
+  return this->_doubleThreeStatus;
 }
 
 bool Board::getCapturedStatus() const {
@@ -150,7 +150,7 @@ bool Board::getCapturedStatus() const {
 }
 
 void Board::setDoubleThreeStatus(bool status) {
-  _doubleThreeStatus = status;
+  this->_doubleThreeStatus = status;
 }
 
 void Board::setupPlayers(TurnOrder order) {
@@ -165,11 +165,11 @@ void Board::setupPlayers(TurnOrder order) {
 }
 
 const BoardType& Board::getBlackStones() const {
-  return _blackStones;
+  return this->_blackStones;
 }
 
 const BoardType& Board::getWhiteStones() const {
-  return _whiteStones;
+  return this->_whiteStones;
 }
 
 const BoardType& Board::getMyStones(Color myColor) const {
@@ -326,7 +326,7 @@ bool Board::_isDoubleThree(int x, int y) {
     if (_checkFreeThree(x, y, dir.dx, dir.dy, myStones, oppStones))
       freeThreeCount++;
     if (freeThreeCount >= 2) {
-      _doubleThreeStatus = true;
+      this->_doubleThreeStatus = true;
       break;
     }
   }
@@ -409,12 +409,12 @@ bool Board::_checkFreeThree(int x, int y, int dx, int dy, const BoardType& mySto
 }
 
 void Board::saveState() {
-  this->_history.push_back(
-      {_blackStones, _whiteStones, _blackCaptures, _whiteCaptures, _currentTurn});
+  this->_history.push_back({this->_blackStones, this->_whiteStones, this->_blackCaptures,
+                            this->_whiteCaptures, this->_currentTurn});
 }
 
 bool Board::undo() {
-  if (_history.empty())
+  if (this->_history.empty())
     return false;
   BoardState s = this->_history.back();
   this->_history.pop_back();
