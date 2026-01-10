@@ -1,5 +1,4 @@
-#ifndef ENUMS_HPP
-#define ENUMS_HPP
+#pragma once
 
 enum class AILevel { Easy, Medium, Hard };
 
@@ -10,5 +9,3 @@ enum class OpeningRule { Standard, Pro, LongPro };
 enum class Color { NONE, BLACK, WHITE };
 
 enum class Player { NONE, AI, HUMAN };
-
-#endif

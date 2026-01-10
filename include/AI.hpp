@@ -1,5 +1,4 @@
-#ifndef AI_HPP
-#define AI_HPP
+#pragma once
 
 #include <limits>
 #include <vector>
@@ -42,5 +41,3 @@ class AI {
   // レベルから深さを取得するヘルパー
   int _getDepthFromLevel(AILevel level);
 };
-
-#endif

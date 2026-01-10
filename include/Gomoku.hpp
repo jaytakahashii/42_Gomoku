@@ -1,5 +1,4 @@
-#ifndef GOMOKU_HPP
-#define GOMOKU_HPP
+#pragma once
 
 #include <GameScene.hpp>
 #include <MenuScene.hpp>
@@ -34,5 +33,3 @@ class Gomoku {
   void changeScene(Scene* nextScene);
   void initOnGameOver(const std::string& winner);
 };
-
-#endif

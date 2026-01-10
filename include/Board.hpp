@@ -1,5 +1,4 @@
-#ifndef BOARD_HPP
-#define BOARD_HPP
+#pragma once
 
 #include <Enums.hpp>
 #include <array>
@@ -95,5 +94,3 @@ class Board {
   bool _isDoubleThree(int x, int y);
   void _applyState(BoardState state);
 };
-
-#endif
