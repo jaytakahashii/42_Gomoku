@@ -65,8 +65,8 @@ class Board {
   Color _currentTurn;
   int _blackCaptures;
   int _whiteCaptures;
-  bool _doubleThreeStatus;
   bool _capturedStatus;
+  bool _doubleThreeStatus;
 
   std::map<Color, Player> _colorToPlayer;
   std::vector<BoardState> _history;
