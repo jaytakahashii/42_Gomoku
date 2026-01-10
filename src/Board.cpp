@@ -14,6 +14,8 @@ Board::Board()
       _whiteCaptures(0),
       _capturedStatus(false),
       _doubleThreeStatus(false) {
+  this->_colorToPlayer.clear();
+  this->_history.clear();
 }
 
 void Board::setupPlayers(TurnOrder order) {
