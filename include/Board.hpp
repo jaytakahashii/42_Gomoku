@@ -199,8 +199,8 @@ class Board {
 
   // Game State
   Color _currentTurn;
-  int _blackCaptures;
-  int _whiteCaptures;
+  int8_t _blackCaptures;
+  int8_t _whiteCaptures;
 
   // Flags for the last move (for UI or logic checks)
   bool _capturedStatus;
