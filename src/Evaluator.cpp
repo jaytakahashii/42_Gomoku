@@ -6,10 +6,10 @@
 int Evaluator::evaluate(const Board& board, Color aiColor) {
   // 1. 勝利確定盤面のチェック
   // checkWinは「直前に打った人」の勝利判定なので、ここではcheckWinColorを使用
-  if (board.checkWinColor(aiColor))
+  if (board.checkWin(aiColor))
     return ScoreConfig::WIN;
   Color oppColor = (aiColor == Color::BLACK) ? Color::WHITE : Color::BLACK;
-  if (board.checkWinColor(oppColor))
+  if (board.checkWin(oppColor))
     return -ScoreConfig::WIN;
 
   const BoardType& myStones = board.getMyStones(aiColor);

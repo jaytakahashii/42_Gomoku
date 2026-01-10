@@ -50,50 +50,10 @@ void Board::changeTurn() {
  * changeTurnの前に呼び出すこと
  */
 bool Board::checkWin() const {
-  const BoardType& myStones = getMyStones(_currentTurn);
-  const BoardType& oppStones = getOppStones(_currentTurn);
-  int captures = (_currentTurn == Color::BLACK) ? _blackCaptures : _whiteCaptures;
-
-  // 1. 捕獲勝ち
-  if (captures >= 10)
-    return true;
-
-  // 2. 5連チェック (4方向)
-  for (int shift : ALL_DIRS) {
-    // 5連の始点ビット列を取得
-    BoardType lines = _getFiveInARowBits(myStones, shift);
-
-    if (lines.none())
-      continue;
-
-    // 見つかった全ての5連ラインについて検証
-    for (int i = 0; i < MAX_CELLS; ++i) {
-      if (lines.test(i)) {
-        // インデックス i から始まる5連が見つかった
-        bool lineIsSafe = true;
-
-        // 5つの石すべてについて「捕獲される危険性」をチェック
-        for (int k = 0; k < 5; ++k) {
-          int stoneIdx = i + k * shift;
-          if (_isStoneCapturable(stoneIdx, myStones, oppStones)) {
-            // 一つでも捕獲される石があれば、このラインでの勝利は成立しない
-            lineIsSafe = false;
-            break;
-          }
-        }
-
-        // 一つでも「安全な5連」があれば勝利確定
-        if (lineIsSafe) {
-          return true;
-        }
-      }
-    }
-  }
-
-  return false;
+  return checkWin(_currentTurn);
 }
 
-bool Board::checkWinColor(Color color) const {
+bool Board::checkWin(Color color) const {
   const BoardType& myStones = (color == Color::WHITE) ? _whiteStones : _blackStones;
   const BoardType& oppStones = (color == Color::WHITE) ? _blackStones : _whiteStones;
   int captures = (color == Color::WHITE) ? _whiteCaptures : _blackCaptures;
