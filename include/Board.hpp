@@ -144,6 +144,8 @@ class Board {
   // Internal Helper Methods
   // ----------------------------------------------------------------
 
+  // -- State Management --
+
   /**
    * Restores the board to a given state.
    */

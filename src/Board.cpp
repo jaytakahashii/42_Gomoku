@@ -2,6 +2,10 @@
 
 #include <iostream>  // TODO: デバッグ用
 
+// ----------------------------------------------------------------
+// Lifecycle & Setup
+// ----------------------------------------------------------------
+
 Board::Board()
     : _blackStones(0),
       _whiteStones(0),
@@ -11,6 +15,21 @@ Board::Board()
       _capturedStatus(false),
       _doubleThreeStatus(false) {
 }
+
+void Board::setupPlayers(TurnOrder order) {
+  this->_colorToPlayer.clear();
+  if (order == TurnOrder::AIFirst) {
+    this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::AI));
+    this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::HUMAN));
+  } else if (order == TurnOrder::HumanFirst) {
+    this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::HUMAN));
+    this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::AI));
+  }
+}
+
+// ----------------------------------------------------------------
+// Core Gameplay Logic (Mutators)
+// ----------------------------------------------------------------
 
 bool Board::makeMove(int x, int y) {
   // 範囲外チェック
@@ -45,10 +64,24 @@ void Board::changeTurn() {
   this->_currentTurn = (this->_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
 }
 
-/**
- * 勝利条件のチェック
- * changeTurnの前に呼び出すこと
- */
+bool Board::undo() {
+  if (this->_history.empty())
+    return false;
+  BoardState s = this->_history.back();
+  this->_history.pop_back();
+  _applyState(s);
+  return true;
+}
+
+void Board::saveState() {
+  this->_history.push_back({this->_blackStones, this->_whiteStones, this->_blackCaptures,
+                            this->_whiteCaptures, this->_currentTurn});
+}
+
+// ----------------------------------------------------------------
+// Game Status & Win Conditions
+// ----------------------------------------------------------------
+
 bool Board::checkWin() const {
   return checkWin(_currentTurn);
 }
@@ -97,7 +130,11 @@ bool Board::checkWin(Color color) const {
   return false;
 }
 
-// --- Getters / Setters ---
+// ----------------------------------------------------------------
+// State Queries (Getters / Setters)
+// ----------------------------------------------------------------
+
+// -- Board Information --
 
 Color Board::getColorAt(int x, int y) const {
   int index = _getIndex(x, y);
@@ -121,48 +158,7 @@ Player Board::getPlayerAt(int x, int y) const {
   return Player::NONE;
 }
 
-Color Board::getCurrentTurn() const {
-  return this->_currentTurn;
-}
-
-Player Board::getCurrentPlayer() const {
-  auto it = this->_colorToPlayer.find(this->_currentTurn);
-  if (it == this->_colorToPlayer.end()) {
-    return Player::NONE;
-  }
-  return it->second;
-}
-
-int Board::getBlackCaptures() const {
-  return this->_blackCaptures;
-}
-
-int Board::getWhiteCaptures() const {
-  return this->_whiteCaptures;
-}
-
-bool Board::getDoubleThreeStatus() const {
-  return this->_doubleThreeStatus;
-}
-
-bool Board::getCapturedStatus() const {
-  return this->_capturedStatus;
-}
-
-void Board::setDoubleThreeStatus(bool status) {
-  this->_doubleThreeStatus = status;
-}
-
-void Board::setupPlayers(TurnOrder order) {
-  this->_colorToPlayer.clear();
-  if (order == TurnOrder::AIFirst) {
-    this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::AI));
-    this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::HUMAN));
-  } else if (order == TurnOrder::HumanFirst) {
-    this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::HUMAN));
-    this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::AI));
-  }
-}
+// -- Stone Bitsets --
 
 const BoardType& Board::getBlackStones() const {
   return this->_blackStones;
@@ -179,6 +175,8 @@ const BoardType& Board::getMyStones(Color myColor) const {
 const BoardType& Board::getOppStones(Color myColor) const {
   return (myColor == Color::BLACK) ? _whiteStones : _blackStones;
 }
+
+// -- Computed Bitsets --
 
 // 有効な盤面範囲（壁以外）を表すマスクを定義
 // static const にして一度だけ計算させる
@@ -200,6 +198,44 @@ BoardType Board::getOccupiedStones() const {
   return _blackStones | _whiteStones;
 }
 
+// -- Game State --
+
+Color Board::getCurrentTurn() const {
+  return this->_currentTurn;
+}
+
+Player Board::getCurrentPlayer() const {
+  auto it = this->_colorToPlayer.find(this->_currentTurn);
+  if (it == this->_colorToPlayer.end()) {
+    return Player::NONE;
+  }
+  return it->second;
+}
+
+int Board::getBlackCaptures() const {
+  return this->_blackCaptures;
+}
+
+int Board::getWhiteCaptures() const {
+  return this->_whiteCaptures;
+}
+
+// -- Special Rule Flags --
+
+bool Board::getDoubleThreeStatus() const {
+  return this->_doubleThreeStatus;
+}
+
+void Board::setDoubleThreeStatus(bool status) {
+  this->_doubleThreeStatus = status;
+}
+
+bool Board::getCapturedStatus() const {
+  return this->_capturedStatus;
+}
+
+// -- AI Helpers --
+
 BoardType Board::getCapturableStones(Color myColor) const {
   const BoardType& myStones = getMyStones(myColor);
   const BoardType& oppStones = getOppStones(myColor);
@@ -216,16 +252,32 @@ BoardType Board::getCapturableStones(Color myColor) const {
   return capturable;
 }
 
-// --- Private Helpers ---
+// ----------------------------------------------------------------
+// Internal Helper Methods
+// ----------------------------------------------------------------
+
+// -- State Management --
+
+void Board::_applyState(const BoardState& state) {
+  this->_blackStones = state.blackStones;
+  this->_whiteStones = state.whiteStones;
+  this->_blackCaptures = state.blackCaptures;
+  this->_whiteCaptures = state.whiteCaptures;
+  this->_currentTurn = state.currentTurn;
+}
+
+// -- Coordinate / Bit Utils --
 
 int Board::_getIndex(int x, int y) const {
   return y * BOARD_WIDTH + x;
 }
 
+// -- Rule Implementations --
+
 void Board::_processCapture(int index) {
   BoardType& myStones = (_currentTurn == Color::BLACK) ? _blackStones : _whiteStones;
   BoardType& oppStones = (_currentTurn == Color::BLACK) ? _whiteStones : _blackStones;
-  int& myScore = (_currentTurn == Color::BLACK) ? _blackCaptures : _whiteCaptures;
+  int8_t& myScore = (_currentTurn == Color::BLACK) ? _blackCaptures : _whiteCaptures;
   this->_capturedStatus = false;
 
   for (int d : ALL_SHIFTS) {
@@ -256,63 +308,6 @@ void Board::_processCapture(int index) {
       }
     }
   }
-}
-
-BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) const {
-  BoardType temp = stones;
-
-  // 1回ずらしてAND = 2連
-  temp &= (temp >> shift_amount);
-  temp &= (temp >> shift_amount);  // 3連
-  temp &= (temp >> shift_amount);  // 4連
-  temp &= (temp >> shift_amount);  // 5連
-
-  return temp;
-}
-
-bool Board::_isStoneCapturable(int index, const BoardType& myStones,
-                               const BoardType& oppStones) const {
-  // 全方向(4軸)をチェック
-  for (int dir : ALL_SHIFTS) {
-    // インデックスを中心とした両側 (+dir, -dir) をチェック
-    const int sides[] = {dir, -dir};
-
-    for (int d : sides) {
-      int p_partner = index + d;
-
-      // 1. 配列範囲チェック
-      if (p_partner < 0 || p_partner >= MAX_CELLS)
-        continue;
-
-      // 2. 隣が自分の石(=ペア成立)かチェック
-      if (myStones.test(p_partner)) {
-        // ペア: [index] [p_partner]
-        // このペアの両外側: (index - d) と (p_partner + d)
-        int p_outer_self = index - d;
-        int p_outer_partner = p_partner + d;
-
-        // 範囲外チェック
-        if (p_outer_self < 0 || p_outer_self >= MAX_CELLS)
-          continue;
-        if (p_outer_partner < 0 || p_outer_partner >= MAX_CELLS)
-          continue;
-
-        // 状態取得
-        // 捕獲条件: (敵, ペア, 空) または (空, ペア, 敵)
-        bool self_side_enemy = oppStones.test(p_outer_self);
-        bool partner_side_enemy = oppStones.test(p_outer_partner);
-
-        // 敵でなく、かつ自分の石でもなければ「空」
-        bool self_side_empty = !self_side_enemy && !myStones.test(p_outer_self);
-        bool partner_side_empty = !partner_side_enemy && !myStones.test(p_outer_partner);
-
-        if ((self_side_enemy && partner_side_empty) || (self_side_empty && partner_side_enemy)) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
 }
 
 bool Board::_isDoubleThree(int x, int y) {
@@ -408,24 +403,58 @@ bool Board::_checkFreeThree(int x, int y, int dx, int dy, const BoardType& mySto
   return false;
 }
 
-void Board::saveState() {
-  this->_history.push_back({this->_blackStones, this->_whiteStones, this->_blackCaptures,
-                            this->_whiteCaptures, this->_currentTurn});
-}
+bool Board::_isStoneCapturable(int index, const BoardType& myStones,
+                               const BoardType& oppStones) const {
+  // 全方向(4軸)をチェック
+  for (int dir : ALL_SHIFTS) {
+    // インデックスを中心とした両側 (+dir, -dir) をチェック
+    const int sides[] = {dir, -dir};
 
-bool Board::undo() {
-  if (this->_history.empty())
-    return false;
-  BoardState s = this->_history.back();
-  this->_history.pop_back();
-  _applyState(s);
-  return true;
-}
+    for (int d : sides) {
+      int p_partner = index + d;
 
-void Board::_applyState(const BoardState& state) {
-  this->_blackStones = state.blackStones;
-  this->_whiteStones = state.whiteStones;
-  this->_blackCaptures = state.blackCaptures;
-  this->_whiteCaptures = state.whiteCaptures;
-  this->_currentTurn = state.currentTurn;
+      // 1. 配列範囲チェック
+      if (p_partner < 0 || p_partner >= MAX_CELLS)
+        continue;
+
+      // 2. 隣が自分の石(=ペア成立)かチェック
+      if (myStones.test(p_partner)) {
+        // ペア: [index] [p_partner]
+        // このペアの両外側: (index - d) と (p_partner + d)
+        int p_outer_self = index - d;
+        int p_outer_partner = p_partner + d;
+
+        // 範囲外チェック
+        if (p_outer_self < 0 || p_outer_self >= MAX_CELLS)
+          continue;
+        if (p_outer_partner < 0 || p_outer_partner >= MAX_CELLS)
+          continue;
+
+        // 状態取得
+        // 捕獲条件: (敵, ペア, 空) または (空, ペア, 敵)
+        bool self_side_enemy = oppStones.test(p_outer_self);
+        bool partner_side_enemy = oppStones.test(p_outer_partner);
+
+        // 敵でなく、かつ自分の石でもなければ「空」
+        bool self_side_empty = !self_side_enemy && !myStones.test(p_outer_self);
+        bool partner_side_empty = !partner_side_enemy && !myStones.test(p_outer_partner);
+
+        if ((self_side_enemy && partner_side_empty) || (self_side_empty && partner_side_enemy)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) const {
+  BoardType temp = stones;
+
+  // 1回ずらしてAND = 2連
+  temp &= (temp >> shift_amount);
+  temp &= (temp >> shift_amount);  // 3連
+  temp &= (temp >> shift_amount);  // 4連
+  temp &= (temp >> shift_amount);  // 5連
+
+  return temp;
 }
