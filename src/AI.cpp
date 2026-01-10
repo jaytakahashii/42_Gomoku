@@ -14,8 +14,6 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
   _aiPlayer = color;
   int maxDepth = _getDepthFromLevel(level);
 
-  std::cout << "AI Thinking... (Depth: " << maxDepth << ")" << std::endl;
-
   // 2. 手の生成（1回のみ実行）
   std::vector<Move> moves = _generateMoves(clone);
 
