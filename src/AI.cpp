@@ -72,11 +72,6 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
  * - maximizingPlayer: 現在のプレイヤーが最大化を目指しているかどうか
  */
 int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer) {
-  // 1. 終局判定
-  if (board.checkWin()) {
-    return maximizingPlayer ? -(ScoreConfig::WIN + depth) : (ScoreConfig::WIN + depth);
-  }
-
   // 2. 葉ノード（指定深さに到達）
   if (depth == 0) {
     return Evaluator::evaluate(board, _aiPlayer);
@@ -93,6 +88,12 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
     for (const Move& m : moves) {
       if (!board.makeMove(m.x, m.y))
         continue;
+
+      // 終局判定
+      if (board.checkWin()) {
+        board.undo();
+        return ScoreConfig::WIN + depth;  // 早く勝つほど高得点
+      }
 
       board.changeTurn();
       int eval = _minimax(board, depth - 1, alpha, beta, false);
@@ -112,6 +113,12 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
     for (const Move& m : moves) {
       if (!board.makeMove(m.x, m.y))
         continue;
+
+      // 終局判定
+      if (board.checkWin()) {
+        board.undo();
+        return -(ScoreConfig::WIN + depth);  // 早く負けるほど低得点
+      }
 
       board.changeTurn();
       int eval = _minimax(board, depth - 1, alpha, beta, true);
