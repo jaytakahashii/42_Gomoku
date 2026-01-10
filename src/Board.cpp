@@ -200,6 +200,22 @@ BoardType Board::getOccupiedStones() const {
   return _blackStones | _whiteStones;
 }
 
+BoardType Board::getCapturableStones(Color myColor) const {
+  const BoardType& myStones = getMyStones(myColor);
+  const BoardType& oppStones = getOppStones(myColor);
+  BoardType capturable;
+
+  for (int i = 0; i < MAX_CELLS; ++i) {
+    if (oppStones.test(i)) {
+      if (_isStoneCapturable(i, myStones, oppStones)) {
+        capturable.set(i);
+      }
+    }
+  }
+
+  return capturable;
+}
+
 // --- Private Helpers ---
 
 int Board::_getIndex(int x, int y) const {

@@ -53,6 +53,7 @@ class Board {
   const BoardType& getOppStones(Color myColor) const;
   BoardType getEmptyStones() const;
   BoardType getOccupiedStones() const;
+  BoardType getCapturableStones(Color myColor) const;
   void setDoubleThreeStatus(bool status);
   void setupPlayers(TurnOrder order);
 

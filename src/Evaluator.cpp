@@ -16,12 +16,18 @@ int Evaluator::evaluate(const Board& board, Color aiColor) {
   const BoardType& oppStones = board.getOppStones(aiColor);
   BoardType empty = board.getEmptyStones();
 
+  BoardType myDeadStones = board.getCapturableStones(aiColor);
+  BoardType oppDeadStones = board.getCapturableStones(oppColor);
+
+  BoardType mySafeStones = myStones & ~myDeadStones;
+  BoardType oppSafeStones = oppStones & ~oppDeadStones;
+
   long long myScore = 0;
   long long oppScore = 0;
 
   // 2. パターン評価 (自分の形 vs 敵の形)
-  myScore += _CountPatterns(myStones, empty);
-  oppScore += _CountPatterns(oppStones, empty);
+  myScore += _CountPatterns(mySafeStones, empty);
+  oppScore += _CountPatterns(oppSafeStones, empty);
 
   // 3. 捕獲状態の評価
   // あと少しで勝てる（9捕獲など）場合はスコアを跳ね上げる
@@ -36,6 +42,23 @@ int Evaluator::evaluate(const Board& board, Color aiColor) {
     myScore += ScoreConfig::OPEN_FOUR;
   if (oppCaptures >= 8)
     oppScore += ScoreConfig::OPEN_FOUR;
+
+  // 4. 捕獲脅威（Threat）の評価
+  // 「次に取れる/取られる」ペアの数に基づく加点・減点
+  // 1ペア取られる = 2石失う + 相手に点が入る。非常に痛い。
+  // count() は石の数なので、ペア数にするには / 2 する
+  if (myDeadStones.any()) {
+    // 自分の石が狙われている -> 大幅減点（防がせるため）
+    // OPEN_THREE以上のペナルティを与えて、防御を優先させる
+    myScore -=
+        (myDeadStones.count() / 2) * (ScoreConfig::CAPTURE_SCORE * 2 + ScoreConfig::OPEN_THREE);
+  }
+
+  if (oppDeadStones.any()) {
+    // 相手の石を狙える -> 加点（攻撃のチャンス）
+    // ただし、「勝てる手(5連)」より優先しないよう控えめに
+    myScore += (oppDeadStones.count() / 2) * (ScoreConfig::CAPTURE_SCORE + ScoreConfig::OPEN_TWO);
+  }
 
   // 相手のスコアを少し重く見る（防御的AI）
   return static_cast<int>(myScore - (oppScore * 1.2));
@@ -64,7 +87,7 @@ int Evaluator::_CountPatterns(const BoardType& stones, const BoardType& empty) {
 
     // --- Priority S+: Five (XXXXX) ---
 
-    BoardType five = e0 & s1 & s2 & s3 & s4 & s5;
+    BoardType five = s1 & s2 & s3 & s4 & s5;
 
     if (five.any()) {
       score += (int)five.count() * ScoreConfig::FIVE;
@@ -129,8 +152,8 @@ int Evaluator::evaluateMovePriority(const Board& board, int x, int y, Color myCo
   Color oppColor = (myColor == Color::BLACK) ? Color::WHITE : Color::BLACK;
 
   // 中央に近いほど加点（基本戦術）
-  int centerDist = std::abs(x - 9) + std::abs(y - 9);
-  score += (10 - centerDist) * 10;
+  // int centerDist = std::abs(x - 9) + std::abs(y - 9);
+  // score += (10 - centerDist) * 10;
 
   // 捕獲手のボーナス (Capture is usually good)
   // ここで実装するには「この手を打つと捕獲が発生するか」のチェックが必要
@@ -160,7 +183,7 @@ int Evaluator::_CheckLineScore(const Board& board, int x, int y, int dx, int dy,
 
   // --- 自分の攻撃力チェック ---
   // 正方向
-  for (int k = 1; k <= 4; ++k) {
+  for (int k = 1; k <= 5; ++k) {
     int nx = x + dx * k, ny = y + dy * k;
     if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE)
       break;
@@ -174,7 +197,7 @@ int Evaluator::_CheckLineScore(const Board& board, int x, int y, int dx, int dy,
     }
   }
   // 逆方向
-  for (int k = 1; k <= 4; ++k) {
+  for (int k = 1; k <= 5; ++k) {
     int nx = x - dx * k, ny = y - dy * k;
     if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE)
       break;
@@ -191,7 +214,7 @@ int Evaluator::_CheckLineScore(const Board& board, int x, int y, int dx, int dy,
   // --- 相手の攻撃阻止チェック ---
   // もしここが相手の石だったら、何連になっていたか？
   // 正方向
-  for (int k = 1; k <= 4; ++k) {
+  for (int k = 1; k <= 5; ++k) {
     int nx = x + dx * k, ny = y + dy * k;
     if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE)
       break;
@@ -205,7 +228,7 @@ int Evaluator::_CheckLineScore(const Board& board, int x, int y, int dx, int dy,
     }
   }
   // 逆方向
-  for (int k = 1; k <= 4; ++k) {
+  for (int k = 1; k <= 5; ++k) {
     int nx = x - dx * k, ny = y - dy * k;
     if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE)
       break;
