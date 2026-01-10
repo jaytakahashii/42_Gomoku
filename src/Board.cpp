@@ -63,7 +63,7 @@ bool Board::checkWin(Color color) const {
     return true;
 
   // 2. 5連チェック (4方向)
-  for (int shift : ALL_DIRS) {
+  for (int shift : ALL_SHIFTS) {
     // 5連の始点ビット列を取得
     BoardType lines = _getFiveInARowBits(myStones, shift);
 
@@ -228,7 +228,7 @@ void Board::_processCapture(int index) {
   int& myScore = (_currentTurn == Color::BLACK) ? _blackCaptures : _whiteCaptures;
   this->_capturedStatus = false;
 
-  for (int d : ALL_DIRS) {
+  for (int d : ALL_SHIFTS) {
     const int directions[] = {d, -d};
 
     for (int dir : directions) {
@@ -273,7 +273,7 @@ BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) c
 bool Board::_isStoneCapturable(int index, const BoardType& myStones,
                                const BoardType& oppStones) const {
   // 全方向(4軸)をチェック
-  for (int dir : ALL_DIRS) {
+  for (int dir : ALL_SHIFTS) {
     // インデックスを中心とした両側 (+dir, -dir) をチェック
     const int sides[] = {dir, -dir};
 
@@ -422,7 +422,7 @@ bool Board::undo() {
   return true;
 }
 
-void Board::_applyState(BoardState state) {
+void Board::_applyState(const BoardState& state) {
   this->_blackStones = state.blackStones;
   this->_whiteStones = state.whiteStones;
   this->_blackCaptures = state.blackCaptures;
