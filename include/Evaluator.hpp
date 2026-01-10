@@ -11,7 +11,8 @@ struct ScoreConfig {
   // --- 盤面評価用 (Static Evaluation) ---
   // 基本的に (Open > Closed) かつ (Length N > Length N-1)
 
-  static constexpr int OPEN_FOUR = 100'000;   // 次に5連にできる (Win確約)
+  static constexpr int FIVE = 1'000'000;      // 5連
+  static constexpr int OPEN_FOUR = 100'000;   // 次に5連にできる
   static constexpr int CLOSED_FOUR = 10'000;  // 相手が防がなければ勝てる
   static constexpr int OPEN_THREE = 8'000;    // 次にOpenFourにできる (非常に強い)
   static constexpr int CLOSED_THREE = 500;    // 弱い攻撃

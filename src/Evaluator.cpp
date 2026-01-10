@@ -52,6 +52,7 @@ int Evaluator::_CountPatterns(const BoardType& stones, const BoardType& empty) {
     BoardType s2 = stones >> (2 * s);
     BoardType s3 = stones >> (3 * s);
     BoardType s4 = stones >> (4 * s);
+    BoardType s5 = stones >> (5 * s);
 
     // 空点シフト
     BoardType e0 = empty;  // 現在地
@@ -60,6 +61,14 @@ int Evaluator::_CountPatterns(const BoardType& stones, const BoardType& empty) {
     BoardType e3 = empty >> (3 * s);
     BoardType e4 = empty >> (4 * s);
     BoardType e5 = empty >> (5 * s);
+
+    // --- Priority S+: Five (XXXXX) ---
+
+    BoardType five = e0 & s1 & s2 & s3 & s4 & s5;
+
+    if (five.any()) {
+      score += (int)five.count() * ScoreConfig::FIVE;
+    }
 
     // --- Priority S: Open Four (.XXXX.) ---
     // パターン: e0 & X & X & X & X & e5
