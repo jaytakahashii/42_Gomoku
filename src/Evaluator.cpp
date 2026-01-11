@@ -68,20 +68,119 @@ int Evaluator::evaluateMovePriority(const Board& board, int x, int y, Color myCo
   int score = 0;
   Color oppColor = (myColor == Color::BLACK) ? Color::WHITE : Color::BLACK;
 
-  // 中央に近いほど加点（基本戦術）
-  // int centerDist = std::abs(x - 9) + std::abs(y - 9);
-  // score += (10 - centerDist) * 10;
+  // 1. Centrality Bonus (Optional but recommended)
+  // Encourages play in the center early game.
+  int centerDist = std::abs(x - BOARD_SIZE / 2) + std::abs(y - BOARD_SIZE / 2);
+  score += (10 - centerDist);  // Small bonus (0-10 points)
 
-  // 捕獲手のボーナス (Capture is usually good)
-  // ここで実装するには「この手を打つと捕獲が発生するか」のチェックが必要
-  // 重くなるのでAIクラスでのgenerateMoves時にフラグを渡すか、簡易的なら省略
+  // 2. Capture Heuristic (Crucial for Ninuki-Renju)
+  // If this move captures something, give it a HUGE bonus.
+  // It's worth checking even if slightly expensive because captures alter the board state
+  // significantly. (Assuming _CheckCapture is a lightweight helper you might add, or rely on line
+  // checks) For now, we stick to line checks as requested.
 
-  // 4方向チェック
+  // 3. Line Analysis
   // [1,0], [0,1], [1,1], [1,-1]
+  // Unrolling the loop manually for performance as you did is good.
   score += _CheckLineScore(board, x, y, 1, 0, myColor, oppColor);
   score += _CheckLineScore(board, x, y, 0, 1, myColor, oppColor);
   score += _CheckLineScore(board, x, y, 1, 1, myColor, oppColor);
   score += _CheckLineScore(board, x, y, 1, -1, myColor, oppColor);
+
+  return score;
+}
+
+int Evaluator::_CheckLineScore(const Board& board, int x, int y, int dx, int dy, Color myColor,
+                               Color oppColor) {
+  int score = 0;
+
+  // We need to count consecutive stones in both directions
+  // 0: My stones, 1: Opponent stones
+  int consecutive[2] = {0, 0};
+  int openEnds[2] = {0, 0};
+
+  // Helper lambda to scan a direction
+  auto scan = [&](int k_start, int k_end, int sign) {
+    bool myBlocked = false;
+    bool oppBlocked = false;
+
+    for (int k = k_start; k <= k_end; ++k) {
+      int nx = x + (dx * k * sign);
+      int ny = y + (dy * k * sign);
+
+      if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) {
+        // Board edge counts as blocked
+        return;
+      }
+
+      Color c = board.getColorAt(nx, ny);
+
+      // --- Check My Stones ---
+      if (!myBlocked) {
+        if (c == myColor) {
+          consecutive[0]++;
+        } else {
+          if (c == Color::NONE)
+            openEnds[0]++;
+          myBlocked = true;  // Stop counting my consecutive
+        }
+      }
+
+      // --- Check Opponent Stones ---
+      // We are checking: "If I hadn't played here, how many would opp have?"
+      if (!oppBlocked) {
+        if (c == oppColor) {
+          consecutive[1]++;
+        } else {
+          if (c == Color::NONE)
+            openEnds[1]++;
+          oppBlocked = true;
+        }
+      }
+
+      if (myBlocked && oppBlocked)
+        break;
+    }
+  };
+
+  // Scan Forward and Backward
+  scan(1, 4, 1);   // Forward (Limit 4 is enough to detect 5)
+  scan(1, 4, -1);  // Backward
+
+  // --- Scoring Logic ---
+
+  // 1. My Offense (Trying to build lines)
+  // +1 because we are placing a stone at (x,y)
+  int myTotal = consecutive[0] + 1;
+
+  if (myTotal >= 5) {
+    score += ScoreConfig::PRIORITY_WIN;  // 5連
+  } else if (myTotal == 4) {
+    if (openEnds[0] >= 2)
+      score += ScoreConfig::PRIORITY_OPEN_FOUR;  // .XXXX.
+    else if (openEnds[0] >= 1)
+      score += ScoreConfig::PRIORITY_OPEN_THREE;  // Closed 4 (still strong)
+  } else if (myTotal == 3) {
+    if (openEnds[0] >= 2)
+      score += ScoreConfig::PRIORITY_OPEN_THREE;  // .XXX.
+  }
+
+  // 2. Opponent Defense (Blocking their lines)
+  // +1 because if we don't play here, they will play here and connect their lines
+  int oppTotal = consecutive[1] + 1;
+
+  if (oppTotal >= 5) {
+    score += ScoreConfig::PRIORITY_BLOCK_WIN;  // Block their 5
+  } else if (oppTotal == 4) {
+    // Blocking a 4 is critical. Even a closed 4 is deadly if not blocked.
+    if (openEnds[1] >= 2)
+      score += ScoreConfig::PRIORITY_BLOCK_OPEN_4;  // Block .XXXX.
+    else if (openEnds[1] >= 1)
+      score += ScoreConfig::PRIORITY_BLOCK_OPEN_4;  // Block X.XXX (Force block)
+  } else if (oppTotal == 3) {
+    if (openEnds[1] >= 2)
+      score += ScoreConfig::PRIORITY_BLOCK_OPEN_3;  // Block .XXX.
+  }
 
   return score;
 }
@@ -162,119 +261,5 @@ int Evaluator::_CountPatterns(const BoardType& stones, const BoardType& empty) {
     if (otCount > 0)
       score += otCount * ScoreConfig::OPEN_THREE;
   }
-  return score;
-}
-
-int Evaluator::_CheckLineScore(const Board& board, int x, int y, int dx, int dy, Color myColor,
-                               Color oppColor) {
-  int score = 0;
-
-  // 自分の石として置いた場合の並び
-  int myConsecutive = 1;
-  int myOpenEnds = 0;
-
-  // 相手の石が置いてあった場合の並び（＝相手の妨害）
-  int oppConsecutive = 0;
-  int oppOpenEnds = 0;
-
-  // --- 自分の攻撃力チェック ---
-  // 正方向
-  for (int k = 1; k <= 5; ++k) {
-    int nx = x + dx * k, ny = y + dy * k;
-    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE)
-      break;
-    Color c = board.getColorAt(nx, ny);
-    if (c == myColor)
-      myConsecutive++;
-    else {
-      if (c == Color::NONE)
-        myOpenEnds++;
-      break;
-    }
-  }
-  // 逆方向
-  for (int k = 1; k <= 5; ++k) {
-    int nx = x - dx * k, ny = y - dy * k;
-    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE)
-      break;
-    Color c = board.getColorAt(nx, ny);
-    if (c == myColor)
-      myConsecutive++;
-    else {
-      if (c == Color::NONE)
-        myOpenEnds++;
-      break;
-    }
-  }
-
-  // --- 相手の攻撃阻止チェック ---
-  // もしここが相手の石だったら、何連になっていたか？
-  // 正方向
-  for (int k = 1; k <= 5; ++k) {
-    int nx = x + dx * k, ny = y + dy * k;
-    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE)
-      break;
-    Color c = board.getColorAt(nx, ny);
-    if (c == oppColor)
-      oppConsecutive++;
-    else {
-      if (c == Color::NONE)
-        oppOpenEnds++;
-      break;
-    }
-  }
-  // 逆方向
-  for (int k = 1; k <= 5; ++k) {
-    int nx = x - dx * k, ny = y - dy * k;
-    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE)
-      break;
-    Color c = board.getColorAt(nx, ny);
-    if (c == oppColor)
-      oppConsecutive++;
-    else {
-      if (c == Color::NONE)
-        oppOpenEnds++;
-      break;
-    }
-  }
-  // (自分も相手も含めて)中心は1つなので +1 補正して考える必要があるが
-  // oppConsecutiveは「中心を除いた隣接数」としてカウントしているため、
-  // 「ここに打てば相手のN連を止めた」ことになる。
-  // 例: X . X -> 間に打つ -> left=1, right=1 -> oppConsecutive=2. Total 3.
-
-  // --- スコアリング ---
-
-  // 1. 自分の勝ち (5連)
-  if (myConsecutive >= 5)
-    score += ScoreConfig::PRIORITY_WIN;
-
-  // 2. 相手の勝ち阻止 (相手が既に4つ並んでいる、または飛び4)
-  // oppConsecutive が 4以上なら、既に5連ができているので遅い（ありえない状況だが）
-  // oppConsecutive == 3 (つまり . X X X . の真ん中や端) -> 次に4になるのを防ぐ
-  // ★重要: 五目並べでは「4連」を作られた時点でほぼ負け。
-  // 相手が「3連（飛び含む）」を持っていて、ここが「4つ目」になる場所なら、全力で阻止。
-  if (oppConsecutive >= 4)
-    score += ScoreConfig::PRIORITY_BLOCK_WIN;  // 相手の5連阻止
-
-  // 3. 自分のOpen 4
-  if (myConsecutive == 4) {
-    if (myOpenEnds >= 2)
-      score += ScoreConfig::PRIORITY_OPEN_FOUR;
-    else
-      score += ScoreConfig::PRIORITY_OPEN_THREE;  // Closed 4 is weaker but good
-  }
-
-  // 4. 相手のOpen 4 阻止 (相手が3連を持っていて、両端が空いている場所)
-  if (oppConsecutive == 3) {
-    if (oppOpenEnds >= 2)
-      score += ScoreConfig::PRIORITY_BLOCK_OPEN_4;  // 相手のOpen4阻止
-    else
-      score += ScoreConfig::PRIORITY_BLOCK_OPEN_3;
-  }
-
-  // 5. 自分のOpen 3
-  if (myConsecutive == 3 && myOpenEnds >= 2)
-    score += ScoreConfig::PRIORITY_OPEN_THREE;
-
   return score;
 }
