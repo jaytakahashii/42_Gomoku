@@ -180,7 +180,7 @@ const BoardType Board::_validMask = []() {
 }();
 
 BoardType Board::getEmptyStones() const {
-  return ~(_blackStones | _whiteStones) & VALID_MASK;
+  return ~(_blackStones | _whiteStones) & _validMask;
 }
 
 BoardType Board::getOccupiedStones() const {
