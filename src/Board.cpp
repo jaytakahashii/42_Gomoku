@@ -169,7 +169,7 @@ const BoardType& Board::getOppStones(Color myColor) const {
 
 // 有効な盤面範囲（壁以外）を表すマスクを定義
 // static const にして一度だけ計算させる
-static const BoardType VALID_MASK = []() {
+const BoardType Board::_validMask = []() {
   BoardType mask;
   for (int y = 0; y < BOARD_SIZE; ++y) {
     for (int x = 0; x < BOARD_SIZE; ++x) {
@@ -322,10 +322,10 @@ LineBits Board::_getLineBits(int x, int y, const Direction dir, const BoardType&
                              const BoardType& oppStones) const {
   LineBits line = {0, 0};
 
-  // 中心 (x, y) は必ず自分の石 (bit 5)
+  // Center bit (the placed stone)
   line.my |= (1 << 5);
 
-  // ±5マスを走査 (i=0 は処理済みなのでスキップ可能だが、分岐減らすためループに含めても良い)
+  // Check in both directions
   for (int i = -5; i <= 5; ++i) {
     if (i == 0)
       continue;
@@ -333,11 +333,11 @@ LineBits Board::_getLineBits(int x, int y, const Direction dir, const BoardType&
     int nx = x + i * dir.dx;
     int ny = y + i * dir.dy;
 
-    // 盤外は「敵の石（壁）」として扱う
+    // Treat out-of-bounds as "enemy stone (wall)"
     if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) {
       line.opp |= (1 << (i + 5));
     } else {
-      int idx = _getIndex(dir.dx, dir.dy);  // インライン化しても良いが、可読性優先
+      int idx = _getIndex(dir.dx, dir.dy);
       if (myStones.test(idx)) {
         line.my |= (1 << (i + 5));
       } else if (oppStones.test(idx)) {
@@ -348,32 +348,29 @@ LineBits Board::_getLineBits(int x, int y, const Direction dir, const BoardType&
   return line;
 }
 
-// 役割: ビット列が Free-Three のパターンに合致するか判定する
-// 座標計算やボードデータへの依存がなくなり、純粋な論理関数になります
 bool Board::_checkFreeThree(LineBits line) const {
-  // パターン定義: 1=石, 0=空 (bit 0 が左端)
-  // .XXX. (連三), .X.XX. (飛び三A), .XX.X. (飛び三B)
+  // Pattern definition: 1=stone, 0=empty (bit 0 is the leftmost)
+  // .XXX. (three in a row), .X.XX. (jumping three A), .XX.X. (jumping three B)
   static constexpr uint16_t patterns[] = {0b001110, 0b010110, 0b011010};
 
   for (const uint16_t p : patterns) {
-    // パターン (6bit) をウィンドウ (11bit) 内でスライド
+    // Slide the pattern (6bit) within the window (11bit)
     for (int i = 0; i <= 5; ++i) {
       uint16_t target = p << i;
       uint16_t mask = 0b111111 << i;
 
-      // 1. 今打った石 (bit 5) がこのパターンを構成する一部であるか？
-      // これがないと「遠くにある既存の三」を誤検知してしまう
+      // 1. Check if the recently placed stone (bit 5) is part of this pattern
       if (!(target & (1 << 5)))
         continue;
 
-      // 2. 自分の石の配置が一致するか？
+      // 2. Check if my stone's placement matches
       // (line.my & mask) == target
-      // -> パターンの '1' の場所に石があり、'0' の場所には自分の石がないこと
+      // -> There should be stones at '1' positions and no stones at '0' positions
       if ((line.my & mask) != target)
         continue;
 
-      // 3. 敵の石（または壁）による妨害がないか？
-      // マスク範囲内において、敵のビットが立っていてはならない
+      // 3. Check for interference from enemy stones (or walls)
+      // There should be no enemy bits within the mask range
       if ((line.opp & mask) != 0)
         continue;
 

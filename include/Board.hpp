@@ -258,4 +258,6 @@ class Board {
       {1, 1},  // Diagonal Down-Right
       {-1, 1}  // Diagonal Down-Left
   }};
+
+  static const BoardType _validMask;
 };
