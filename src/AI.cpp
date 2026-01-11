@@ -65,14 +65,6 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
   return bestMove;
 }
 
-/**
- * Arguments:
- * - board: 現在の盤面状態（変更されるのでコピーを渡すこと）
- * - depth: 残りの探索深さ
- * - alpha: Alpha値（最良の選択肢の下限）
- * - beta: Beta値（最良の選択肢の上限）
- * - maximizingPlayer: 現在のプレイヤーが最大化を目指しているかどうか
- */
 int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer) {
   // 2. 葉ノード（指定深さに到達）
   if (depth == 0) {
