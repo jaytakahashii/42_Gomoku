@@ -64,67 +64,86 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
 
   return bestMove;
 }
-
 int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer) {
-  // 2. 葉ノード（指定深さに到達）
+  // 1. Base Case: Leaf node reached
   if (depth == 0) {
     return Evaluator::evaluate(board, _aiPlayer);
   }
 
-  // 3. 手の生成
+  // 2. Move Generation
+  // Note: optimization (top 10 moves) is handled inside _generateMoves
   std::vector<Move> moves = _generateMoves(board);
-  if (moves.empty())
-    return 0;  // 引き分け
 
-  // 4. 再帰探索
+  // Handle Draw/Stalemate
+  if (moves.empty()) {
+    return 0;
+  }
+
+  // 3. Recursive Search
   if (maximizingPlayer) {
     int maxEval = std::numeric_limits<int>::min();
+
     for (const Move& m : moves) {
+      // Apply move
       if (!board.makeMove(m.x, m.y))
         continue;
 
-      // 終局判定
+      // Optimization: Check for immediate win BEFORE recursing
+      // If this move wins, we don't need to look deeper.
       if (board.checkWin()) {
         board.undo();
-        return ScoreConfig::WIN + depth;  // 早く勝つほど高得点
+        // Prefer winning sooner (higher depth remaining)
+        return ScoreConfig::WIN + depth;
       }
 
       board.changeTurn();
+
+      // Recurse
       int eval = _minimax(board, depth - 1, alpha, beta, false);
 
+      // Backtrack
       board.undo();
 
+      // Alpha-Beta Update
       maxEval = std::max(maxEval, eval);
       alpha = std::max(alpha, eval);
 
       // Beta Cut-off
-      if (beta <= alpha)
+      if (beta <= alpha) {
         break;
+      }
     }
     return maxEval;
-  } else {
+
+  } else {  // Minimizing Player (Opponent)
     int minEval = std::numeric_limits<int>::max();
+
     for (const Move& m : moves) {
       if (!board.makeMove(m.x, m.y))
         continue;
 
-      // 終局判定
+      // Optimization: Check for immediate loss
       if (board.checkWin()) {
         board.undo();
-        return -(ScoreConfig::WIN + depth);  // 早く負けるほど低得点
+        // Prefer losing later (lower depth remaining), result is negative
+        return -(ScoreConfig::WIN + depth);
       }
 
       board.changeTurn();
+
+      // Recurse
       int eval = _minimax(board, depth - 1, alpha, beta, true);
 
       board.undo();
 
+      // Alpha-Beta Update
       minEval = std::min(minEval, eval);
       beta = std::min(beta, eval);
 
       // Alpha Cut-off
-      if (beta <= alpha)
+      if (beta <= alpha) {
         break;
+      }
     }
     return minEval;
   }
