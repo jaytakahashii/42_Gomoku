@@ -161,6 +161,7 @@ class Board {
 
   // -- Coordinate / Bit Utils --
   int _getIndex(int x, int y) const;
+  int8_t _getCaptureCount(Color color) const;
 
   // -- Rule Implementations --
 
@@ -196,6 +197,15 @@ class Board {
    * @param line The 11-bit line representation centered at the move.
    */
   bool _checkFreeThree(LineBits line) const;
+
+  /**
+   * Checks if a detected 5-in-a-row line is safe from capture.
+   * @param startIdx The starting index of the 5-in-a-row line.
+   * @param shift The bitshift offset representing the line direction.
+   * @return true if the line is safe (not capturable).
+   */
+  bool _isWinningLineSafe(int startIdx, int shift, const BoardType& myStones,
+                          const BoardType& oppStones) const;
 
   /**
    * Checks if a stone at 'index' is currently vulnerable to capture.

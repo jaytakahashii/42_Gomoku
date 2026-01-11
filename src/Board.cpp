@@ -89,40 +89,27 @@ bool Board::checkWin() const {
 }
 
 bool Board::checkWin(Color color) const {
-  const BoardType& myStones = (color == Color::WHITE) ? _whiteStones : _blackStones;
-  const BoardType& oppStones = (color == Color::WHITE) ? _blackStones : _whiteStones;
-  int captures = (color == Color::WHITE) ? _whiteCaptures : _blackCaptures;
-
-  // 1. 捕獲勝ち
-  if (captures >= 10)
+  // 1. Win by captures
+  if (_getCaptureCount(color) >= 10)
     return true;
 
-  // 2. 5連チェック (4方向)
+  // 2. Check for 5-in-a-row (in 4 directions)
+  const BoardType& myStones = getMyStones(color);
+  const BoardType& oppStones = getOppStones(color);
+
   for (int shift : ALL_SHIFTS) {
-    // 5連の始点ビット列を取得
+    // Get the starting bitset for 5-in-a-row
     BoardType lines = _getFiveInARowBits(myStones, shift);
 
     if (lines.none())
       continue;
 
-    // 見つかった全ての5連ラインについて検証
+    // Validate all found 5-in-a-row lines
     for (int i = 0; i < MAX_CELLS; ++i) {
       if (lines.test(i)) {
-        // インデックス i から始まる5連が見つかった
-        bool lineIsSafe = true;
-
-        // 5つの石すべてについて「捕獲される危険性」をチェック
-        for (int k = 0; k < 5; ++k) {
-          int stoneIdx = i + k * shift;
-          if (_isStoneCapturable(stoneIdx, myStones, oppStones)) {
-            // 一つでも捕獲される石があれば、このラインでの勝利は成立しない
-            lineIsSafe = false;
-            break;
-          }
-        }
-
-        // 一つでも「安全な5連」があれば勝利確定
-        if (lineIsSafe) {
+        // Endgame Capture Rule:
+        // A line of 5 wins ONLY if the opponent cannot break it by capturing a pair.
+        if (_isWinningLineSafe(i, shift, myStones, oppStones)) {
           return true;
         }
       }
@@ -274,6 +261,10 @@ int Board::_getIndex(int x, int y) const {
   return y * BOARD_WIDTH + x;
 }
 
+int8_t Board::_getCaptureCount(Color color) const {
+  return (color == Color::BLACK) ? this->_blackCaptures : this->_whiteCaptures;
+}
+
 // -- Rule Implementations --
 
 void Board::_processCapture(int index) {
@@ -392,58 +383,83 @@ bool Board::_checkFreeThree(LineBits line) const {
   return false;
 }
 
+bool Board::_isWinningLineSafe(int startIdx, int shift, const BoardType& myStones,
+                               const BoardType& oppStones) const {
+  // Check each of the 5 stones in the line
+  for (int k = 0; k < 5; ++k) {
+    int stoneIdx = startIdx + k * shift;
+
+    // If the opponent can capture a pair that includes this stone,
+    // the line is considered "breakable" and does not count as a win yet. [cite: 25]
+    if (_isStoneCapturable(stoneIdx, myStones, oppStones)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool Board::_isStoneCapturable(int index, const BoardType& myStones,
                                const BoardType& oppStones) const {
-  // 全方向(4軸)をチェック
   for (int dir : ALL_SHIFTS) {
-    // インデックスを中心とした両側 (+dir, -dir) をチェック
-    const int sides[] = {dir, -dir};
+    const int neighbors[] = {dir, -dir};
 
-    for (int d : sides) {
-      int p_partner = index + d;
+    for (int d : neighbors) {
+      int partner = index + d;
 
-      // 1. 配列範囲チェック
-      if (p_partner < 0 || p_partner >= MAX_CELLS)
+      // 1. Basic Validity Check:
+      // Is the neighbor within bounds and is it my stone?
+      if (partner < 0 || partner >= MAX_CELLS || !myStones.test(partner)) {
         continue;
+      }
 
-      // 2. 隣が自分の石(=ペア成立)かチェック
-      if (myStones.test(p_partner)) {
-        // ペア: [index] [p_partner]
-        // このペアの両外側: (index - d) と (p_partner + d)
-        int p_outer_self = index - d;
-        int p_outer_partner = p_partner + d;
+      // We have a pair: [index]-[partner].
+      // Now check the outer flanks: (flank1) [index] [partner] (flank2)
+      int flank1 = index - d;    // The side next to 'index'
+      int flank2 = partner + d;  // The side next to 'partner'
 
-        // 範囲外チェック
-        if (p_outer_self < 0 || p_outer_self >= MAX_CELLS)
-          continue;
-        if (p_outer_partner < 0 || p_outer_partner >= MAX_CELLS)
-          continue;
+      // 2. Boundary Check for flanks
+      if (flank1 < 0 || flank1 >= MAX_CELLS || flank2 < 0 || flank2 >= MAX_CELLS) {
+        continue;
+      }
 
-        // 状態取得
-        // 捕獲条件: (敵, ペア, 空) または (空, ペア, 敵)
-        bool self_side_enemy = oppStones.test(p_outer_self);
-        bool partner_side_enemy = oppStones.test(p_outer_partner);
+      // 3. Capture Threat Check:
+      // Pattern must be: (Enemy, Pair, Empty) OR (Empty, Pair, Enemy)
+      bool f1_enemy = oppStones.test(flank1);
+      bool f2_enemy = oppStones.test(flank2);
 
-        // 敵でなく、かつ自分の石でもなければ「空」
-        bool self_side_empty = !self_side_enemy && !myStones.test(p_outer_self);
-        bool partner_side_empty = !partner_side_enemy && !myStones.test(p_outer_partner);
+      // Optimization: If both are enemies (XOOX) -> Already captured (should have been removed)
+      //               If neither are enemies   -> Safe for now
+      // We only care if EXACTLY one flank is an enemy.
+      if (f1_enemy == f2_enemy) {
+        continue;
+      }
 
-        if ((self_side_enemy && partner_side_empty) || (self_side_empty && partner_side_enemy)) {
+      // Now we know exactly one side is Enemy.
+      // We just need to verify the *other* side is Empty (not my stone).
+      // (Note: We don't need to check oppStones for the empty side because f1!=f2 guarantees it's
+      // not enemy)
+
+      if (f1_enemy) {
+        // flank1 is Enemy, so flank2 MUST be Empty
+        if (!myStones.test(flank2))
           return true;
-        }
+      } else {
+        // flank2 is Enemy, so flank1 MUST be Empty
+        if (!myStones.test(flank1))
+          return true;
       }
     }
   }
   return false;
 }
+
 BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) const {
   BoardType temp = stones;
 
-  // 1回ずらしてAND = 2連
   temp &= (temp >> shift_amount);
-  temp &= (temp >> shift_amount);  // 3連
-  temp &= (temp >> shift_amount);  // 4連
-  temp &= (temp >> shift_amount);  // 5連
+  temp &= (temp >> shift_amount);
+  temp &= (temp >> shift_amount);
+  temp &= (temp >> shift_amount);
 
   return temp;
 }
