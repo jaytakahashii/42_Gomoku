@@ -2,61 +2,63 @@
 
 #include <iostream>
 
-/**
- * Arguments:
- * - board: 現在の盤面状態 (参照渡し)
- * - color: AIの色
- * - level: AIの難易度
- */
 Move AI::getBestMove(const Board& board, Color color, AILevel level) {
-  // 1. セットアップ
-  Board clone = board;  // 盤面のクローンを作成 (1回のみ)
+  // 1. Setup Phase
+  Board clone = board;
   _aiPlayer = color;
   int maxDepth = _getDepthFromLevel(level);
 
-  // 2. 手の生成（1回のみ実行）
+  // 2. Move Generation & Ordering
+  // Optimization: Generating moves on the cloned board.
   std::vector<Move> moves = _generateMoves(clone);
 
-  // 打つ場所がない場合（引き分けや盤面埋まり）
+  // Edge Cases: No moves available or only one move
   if (moves.empty()) {
     return {-1, -1, 0};
   }
-
   if (moves.size() == 1) {
     return moves[0];
   }
 
+  // 3. Root Search Initialization
   Move bestMove = moves[0];
   bestMove.score = std::numeric_limits<int>::min();
 
   int alpha = std::numeric_limits<int>::min();
   int beta = std::numeric_limits<int>::max();
 
-  // 3. ルートノード探索 (Minimaxの開始点)
+  // 4. Root Loop (The first level of Minimax)
   for (const Move& m : moves) {
-    // 手を打つ (クローン上で)
-    if (!clone.makeMove(m.x, m.y))
+    // Execute move on the clone
+    if (!clone.makeMove(m.x, m.y)) {
       continue;
+    }
 
+    // Note: Assuming makeMove does NOT change turn automatically.
+    // If your Board::makeMove handles turn switching, remove this line.
     clone.changeTurn();
 
-    // 再帰呼び出し (次は相手のターンなのでfalse)
+    // Recursive call: Next is opponent's turn (Minimizer)
     int score = _minimax(clone, maxDepth - 1, alpha, beta, false);
 
-    // 手を戻す
+    // Undo move to restore state
     clone.undo();
 
-    // 最善手の更新
+    // Update Best Move (Maximizing at root)
     if (score > bestMove.score) {
       bestMove = m;
       bestMove.score = score;
     }
 
-    // Alpha値の更新
-    alpha = std::max(alpha, score);
+    // Alpha Update
+    if (bestMove.score > alpha) {
+      alpha = bestMove.score;
+    }
 
-    if (score >= ScoreConfig::WIN - 1000) {
-      break;  // 勝ち確定ならこれ以上探さない
+    // Optimization: Early Exit on Victory
+    // If we found a move that guarantees a win, we don't need to search further.
+    if (alpha >= ScoreConfig::WIN - 1000) {
+      return bestMove;
     }
   }
 
@@ -177,11 +179,9 @@ std::vector<Move> AI::_generateMoves(const Board& board) {
   if (moves.empty())
     return moves;
 
-  std::sort(moves.begin(), moves.end(),
-            [](const Move& a, const Move& b) { return a.score > b.score; });
-
-  if (moves.size() > 10) {
-    moves.resize(10);
+  std::sort(moves.begin(), moves.end(), std::greater<Move>());
+  if (moves.size() > MAX_MOVES_TO_CONSIDER) {
+    moves.resize(MAX_MOVES_TO_CONSIDER);
   }
 
   return moves;
