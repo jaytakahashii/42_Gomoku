@@ -30,6 +30,11 @@ struct Direction {
   int dy;
 };
 
+struct LineBits {
+  uint16_t my;
+  uint16_t opp;
+};
+
 // Snapshot of the board state for history/undo
 struct BoardState {
   BoardType blackStones;
@@ -66,6 +71,7 @@ class Board {
    * @param x The x-coordinate (0-based).
    * @param y The y-coordinate (0-based).
    * @return true if the move was valid and executed.
+   *         false if the move was invalid (out of bounds, occupied, double three).
    */
   bool makeMove(int x, int y);
 
@@ -123,6 +129,7 @@ class Board {
   // -- Game State --
   Color getCurrentTurn() const;
   Player getCurrentPlayer() const;
+  int getCaptures(Color color) const;
   int getBlackCaptures() const;
   int getWhiteCaptures() const;
 
@@ -173,13 +180,22 @@ class Board {
    * @param y The y-coordinate of the move.
    * @return true if the move creates a double three.
    */
-  bool _isDoubleThree(int x, int y);
+  void _DoubleThree(int x, int y);
+
+  /**
+   * Retrieves a 11-bit representation of stones along a line centered at (x, y).
+   * The center bit (bit 5) corresponds to (x, y).
+   * @param dir The direction to extract the line.
+   * @return LineBits containing my and opponent stones along the line.
+   */
+  LineBits _getLineBits(int x, int y, const Direction dir, const BoardType& myStones,
+                        const BoardType& oppStones) const;
 
   /**
    * Low-level check for a "Free Three" pattern in a specific direction.
+   * @param line The 11-bit line representation centered at the move.
    */
-  bool _checkFreeThree(int x, int y, int dir_x, int dir_y, const BoardType& myStones,
-                       const BoardType& oppStones) const;
+  bool _checkFreeThree(LineBits line) const;
 
   /**
    * Checks if a stone at 'index' is currently vulnerable to capture.

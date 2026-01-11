@@ -34,7 +34,6 @@ void Board::setupPlayers(TurnOrder order) {
 // ----------------------------------------------------------------
 
 bool Board::makeMove(int x, int y) {
-  // 範囲外チェック
   if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE)
     return false;
 
@@ -43,11 +42,12 @@ bool Board::makeMove(int x, int y) {
   if (this->_blackStones.test(index) || this->_whiteStones.test(index))
     return false;
 
-  saveState();  // 手を戻せるように状態を保存
+  saveState();
 
   _processCapture(index);
   if (!this->_capturedStatus) {
-    if (_isDoubleThree(x, y)) {
+    _DoubleThree(x, y);
+    if (this->_doubleThreeStatus) {
       undo();
       return false;
     }
@@ -277,8 +277,8 @@ int Board::_getIndex(int x, int y) const {
 // -- Rule Implementations --
 
 void Board::_processCapture(int index) {
-  BoardType& myStones = (_currentTurn == Color::BLACK) ? _blackStones : _whiteStones;
-  BoardType& oppStones = (_currentTurn == Color::BLACK) ? _whiteStones : _blackStones;
+  BoardType& myStones = (this->_currentTurn == Color::BLACK) ? _blackStones : _whiteStones;
+  BoardType& oppStones = (this->_currentTurn == Color::BLACK) ? _whiteStones : _blackStones;
   int8_t& myScore = (_currentTurn == Color::BLACK) ? _blackCaptures : _whiteCaptures;
   this->_capturedStatus = false;
 
@@ -286,24 +286,18 @@ void Board::_processCapture(int index) {
     const int directions[] = {d, -d};
 
     for (int dir : directions) {
-      // パターン: [自(index)] [敵] [敵] [自]
-      int p1 = index + dir;      // 隣
-      int p2 = index + dir * 2;  // 2つ隣
-      int p3 = index + dir * 3;  // 3つ隣
+      int p1 = index + dir;
+      int p2 = index + dir * 2;
+      int p3 = index + dir * 3;
 
-      // 範囲チェック
       if (p3 < 0 || p3 >= MAX_CELLS)
         continue;
 
-      // 判定ロジック:
-      // 1. 隣と2つ隣が「敵」
-      // 2. 3つ隣が「自分」
+      // Pattern: [my(index)] [opp] [opp] [my]
       if (oppStones.test(p1) && oppStones.test(p2) && myStones.test(p3)) {
-        // 捕獲成立！敵の石を消す
         oppStones.reset(p1);
         oppStones.reset(p2);
 
-        // スコア加算
         myScore += 2;
 
         this->_capturedStatus = true;
@@ -312,96 +306,89 @@ void Board::_processCapture(int index) {
   }
 }
 
-bool Board::_isDoubleThree(int x, int y) {
+void Board::_DoubleThree(int x, int y) {
+  _doubleThreeStatus = false;
+
   const BoardType& myStones = getMyStones(_currentTurn);
   const BoardType& oppStones = getOppStones(_currentTurn);
-
   int freeThreeCount = 0;
 
-  // 4方向チェック
-  for (auto& dir : CHECK_DIRS) {
-    if (_checkFreeThree(x, y, dir.dx, dir.dy, myStones, oppStones))
+  for (const auto& dir : CHECK_DIRS) {
+    // 1. Extract Line Bits
+    LineBits line = _getLineBits(x, y, dir, myStones, oppStones);
+
+    // 2. Check for Free Three pattern
+    if (_checkFreeThree(line)) {
       freeThreeCount++;
-    if (freeThreeCount >= 2) {
-      this->_doubleThreeStatus = true;
-      break;
+      if (freeThreeCount >= 2) {
+        _doubleThreeStatus = true;
+      }
     }
   }
-
-  return (freeThreeCount >= 2);
 }
 
-bool Board::_checkFreeThree(int x, int y, int dx, int dy, const BoardType& myStones,
-                            const BoardType& oppStones) const {
-  // bit 5 を中心 (x,y) とする
-  uint16_t line_m = 0;  // m = my
-  uint16_t line_o = 0;  // o = opponent
+LineBits Board::_getLineBits(int x, int y, const Direction dir, const BoardType& myStones,
+                             const BoardType& oppStones) const {
+  LineBits line = {0, 0};
 
-  // ±5マスを取得 (計11マス)
-  // Free-Threeパターンの最大長は .X.XX. (6マス) なのでこれで十分
+  // 中心 (x, y) は必ず自分の石 (bit 5)
+  line.my |= (1 << 5);
+
+  // ±5マスを走査 (i=0 は処理済みなのでスキップ可能だが、分岐減らすためループに含めても良い)
   for (int i = -5; i <= 5; ++i) {
-    if (i == 0) {
-      line_m |= (1 << 5);  // 中心は自分
+    if (i == 0)
       continue;
-    }
 
-    int nx = x + i * dx;
-    int ny = y + i * dy;
+    int nx = x + i * dir.dx;
+    int ny = y + i * dir.dy;
 
-    // 範囲外チェック
+    // 盤外は「敵の石（壁）」として扱う
     if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) {
-      line_o |= (1 << (i + 5));  // 壁
+      line.opp |= (1 << (i + 5));
     } else {
-      int idx = _getIndex(nx, ny);
-      if (myStones.test(idx))
-        line_m |= (1 << (i + 5));
-      else if (oppStones.test(idx))
-        line_o |= (1 << (i + 5));
+      int idx = _getIndex(dir.dx, dir.dy);  // インライン化しても良いが、可読性優先
+      if (myStones.test(idx)) {
+        line.my |= (1 << (i + 5));
+      } else if (oppStones.test(idx)) {
+        line.opp |= (1 << (i + 5));
+      }
     }
   }
+  return line;
+}
 
-  // パターン定義 (1:石, 0:空)
-  // bit 0 が左端
-  static const uint16_t patterns[] = {
-      0b001110,  // .XXX.  (連三)
-      0b010110,  // .X.XX. (飛び三 A)
-      0b011010   // .XX.X. (飛び三 B)
-  };
+// 役割: ビット列が Free-Three のパターンに合致するか判定する
+// 座標計算やボードデータへの依存がなくなり、純粋な論理関数になります
+bool Board::_checkFreeThree(LineBits line) const {
+  // パターン定義: 1=石, 0=空 (bit 0 が左端)
+  // .XXX. (連三), .X.XX. (飛び三A), .XX.X. (飛び三B)
+  static constexpr uint16_t patterns[] = {0b001110, 0b010110, 0b011010};
 
-  // 各パターンを盤面上でスライドさせて照合
-  for (uint16_t p : patterns) {
-    // パターンの長さは6ビット (0b000000 ~ 0b111111)
-    // これを line_m, line_o に対してずらしながらチェック
-
-    // パターンの位置をスライド (ウィンドウ)
-    // line_m の幅は11ビット (0..10)。パターンは6ビット。
-    // i はパターンの開始位置 (0..5)
+  for (const uint16_t p : patterns) {
+    // パターン (6bit) をウィンドウ (11bit) 内でスライド
     for (int i = 0; i <= 5; ++i) {
-      uint16_t mask = 0b111111 << i;
       uint16_t target = p << i;
+      uint16_t mask = 0b111111 << i;
 
-      // 1. 自分の石の形が一致するか？
-      // マスク範囲内の石配置がパターンと完全一致すること
-      // (パターン内の0は「石がない」ことを要求)
-      if ((line_m & mask) != target)
+      // 1. 今打った石 (bit 5) がこのパターンを構成する一部であるか？
+      // これがないと「遠くにある既存の三」を誤検知してしまう
+      if (!(target & (1 << 5)))
         continue;
 
-      // 2. 敵の石（壁）がないか？
-      // マスク範囲内は敵がゼロでなければならない（両端の空も含めて）
-      if ((line_o & mask) != 0)
+      // 2. 自分の石の配置が一致するか？
+      // (line.my & mask) == target
+      // -> パターンの '1' の場所に石があり、'0' の場所には自分の石がないこと
+      if ((line.my & mask) != target)
         continue;
 
-      // 3. 中心 (bit 5) がパターンに含まれているか？
-      // 今置いた石が、そのFree-Threeの一部でなければならない
-      // target (シフト済みのパターン) の bit 5 が 1 であるか確認
-      if ((target & (1 << 5)) == 0)
+      // 3. 敵の石（または壁）による妨害がないか？
+      // マスク範囲内において、敵のビットが立っていてはならない
+      if ((line.opp & mask) != 0)
         continue;
 
-      // すべてクリアならFree-Three
       return true;
     }
   }
-
   return false;
 }
 
