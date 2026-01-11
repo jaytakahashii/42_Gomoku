@@ -64,8 +64,28 @@ int Evaluator::evaluate(const Board& board, Color aiColor) {
   return static_cast<int>(myScore - (oppScore * 1.2));
 }
 
-// ビット演算を用いた高速パターンマッチング
-// 重複カウント（Open4をClosed4としても数える等）を避ける処理を入れています
+int Evaluator::evaluateMovePriority(const Board& board, int x, int y, Color myColor) {
+  int score = 0;
+  Color oppColor = (myColor == Color::BLACK) ? Color::WHITE : Color::BLACK;
+
+  // 中央に近いほど加点（基本戦術）
+  // int centerDist = std::abs(x - 9) + std::abs(y - 9);
+  // score += (10 - centerDist) * 10;
+
+  // 捕獲手のボーナス (Capture is usually good)
+  // ここで実装するには「この手を打つと捕獲が発生するか」のチェックが必要
+  // 重くなるのでAIクラスでのgenerateMoves時にフラグを渡すか、簡易的なら省略
+
+  // 4方向チェック
+  // [1,0], [0,1], [1,1], [1,-1]
+  score += _CheckLineScore(board, x, y, 1, 0, myColor, oppColor);
+  score += _CheckLineScore(board, x, y, 0, 1, myColor, oppColor);
+  score += _CheckLineScore(board, x, y, 1, 1, myColor, oppColor);
+  score += _CheckLineScore(board, x, y, 1, -1, myColor, oppColor);
+
+  return score;
+}
+
 int Evaluator::_CountPatterns(const BoardType& stones, const BoardType& empty) {
   int score = 0;
 
@@ -142,30 +162,6 @@ int Evaluator::_CountPatterns(const BoardType& stones, const BoardType& empty) {
     if (otCount > 0)
       score += otCount * ScoreConfig::OPEN_THREE;
   }
-  return score;
-}
-
-// Move Ordering用の評価
-// 配列確保を避けて高速化
-int Evaluator::evaluateMovePriority(const Board& board, int x, int y, Color myColor) {
-  int score = 0;
-  Color oppColor = (myColor == Color::BLACK) ? Color::WHITE : Color::BLACK;
-
-  // 中央に近いほど加点（基本戦術）
-  // int centerDist = std::abs(x - 9) + std::abs(y - 9);
-  // score += (10 - centerDist) * 10;
-
-  // 捕獲手のボーナス (Capture is usually good)
-  // ここで実装するには「この手を打つと捕獲が発生するか」のチェックが必要
-  // 重くなるのでAIクラスでのgenerateMoves時にフラグを渡すか、簡易的なら省略
-
-  // 4方向チェック
-  // [1,0], [0,1], [1,1], [1,-1]
-  score += _CheckLineScore(board, x, y, 1, 0, myColor, oppColor);
-  score += _CheckLineScore(board, x, y, 0, 1, myColor, oppColor);
-  score += _CheckLineScore(board, x, y, 1, 1, myColor, oppColor);
-  score += _CheckLineScore(board, x, y, 1, -1, myColor, oppColor);
-
   return score;
 }
 
