@@ -75,6 +75,8 @@ class AI {
    */
   std::vector<Move> _generateMoves(const Board& board);
 
+  std::vector<Move> _randomNeighbor(const BoardType& occupied);
+
   /**
    * Maps AI difficulty level to search depth.
    * @param level The AI difficulty level.

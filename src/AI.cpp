@@ -132,51 +132,121 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
 
 std::vector<Move> AI::_generateMoves(const Board& board) {
   std::vector<Move> moves;
+  moves.reserve(64);  // Reserve memory to prevent reallocations
 
-  BoardType empty = board.getEmptyStones();
   BoardType occupied = board.getOccupiedStones();
 
-  // 1. 初手（中央）
+  // 1. First Move Strategy (Center)
+  // If the board is empty, always play the center (standard Gomoku strategy).
   if (occupied.none()) {
     moves.push_back({BOARD_SIZE / 2, BOARD_SIZE / 2, 0});
     return moves;
   }
 
-  // 2. 探索範囲の決定（石の周囲1マス）
-  BoardType candidates;
-  const int W = BOARD_WIDTH;
-  const int shifts[] = {1, -1, W, -W, W + 1, -(W + 1), W - 1, -(W - 1)};
-
-  BoardType mask = occupied;
-  for (int s : shifts) {
-    BoardType s1 = (s > 0) ? (occupied << s) : (occupied >> -s);
-    mask |= s1;
+  if (occupied.count() == 1) {
+    return _randomNeighbor(occupied);
   }
-  candidates = mask & empty;
 
+  // 2. Determine Search Scope (Radius 1 around existing stones)
+  // Instead of a loop with branches, we apply bitwise operations directly.
+  // This creates a mask of all cells adjacent to any stone.
+  BoardType neighborMask = occupied;
+
+  // Horizontal
+  neighborMask |= (occupied << 1);
+  neighborMask |= (occupied >> 1);
+  // Vertical
+  neighborMask |= (occupied << BOARD_WIDTH);
+  neighborMask |= (occupied >> BOARD_WIDTH);
+  // Diagonal
+  neighborMask |= (occupied << (BOARD_WIDTH + 1));
+  neighborMask |= (occupied >> (BOARD_WIDTH + 1));
+  neighborMask |= (occupied << (BOARD_WIDTH - 1));
+  neighborMask |= (occupied >> (BOARD_WIDTH - 1));
+
+  // Filter: We only want cells that are currently empty
+  // (board.getEmptyStones() already handles the valid board boundaries)
+  BoardType candidates = neighborMask & board.getEmptyStones();
+
+  // 3. Evaluate and Collect Candidates
   for (int i = 0; i < MAX_CELLS; ++i) {
     if (candidates.test(i)) {
-      int y = i / W;
-      int x = i % W;
-      if (x >= BOARD_SIZE)
-        continue;
+      int x = i % BOARD_WIDTH;
+      int y = i / BOARD_WIDTH;
 
+      // Note: Since getEmptyStones() masks out the padding,
+      // x will never be >= BOARD_SIZE. But a safety check is fine.
+
+      // Calculate heuristic score for sorting
+      // (This function must be lightweight!)
       int priority = Evaluator::evaluateMovePriority(board, x, y, board.getCurrentTurn());
 
       moves.push_back({x, y, priority});
     }
   }
 
-  // 4. ソート (スコアが高い順)
-  if (moves.empty())
+  // 4. Sort and Prune (Beam Search approach)
+  if (moves.empty()) {
     return moves;
+  }
 
+  // Sort moves: Highest score first
   std::sort(moves.begin(), moves.end(), std::greater<Move>());
+
+  // Pruning: Only keep the top N moves to reduce search space.
+  // WARNING: 'MAX_MOVES_TO_CONSIDER' (10) might be too aggressive.
+  // If the opponent has a threat at the 11th best move, you will lose instantly.
+  // Consider increasing this to 20-30 or using a dynamic threshold
+  // (e.g., keep all moves within 500 points of the best move).
   if (moves.size() > MAX_MOVES_TO_CONSIDER) {
     moves.resize(MAX_MOVES_TO_CONSIDER);
   }
 
   return moves;
+}
+
+// return: 1 size list of random neighboring moves
+std::vector<Move> AI::_randomNeighbor(const BoardType& occupied) {
+  std::vector<Move> moves;
+  moves.reserve(1);
+
+  // Find all occupied positions
+  std::vector<int> occupiedIndices;
+  for (int i = 0; i < MAX_CELLS; ++i) {
+    if (occupied.test(i)) {
+      occupiedIndices.push_back(i);
+      break;
+    }
+  }
+
+  if (occupiedIndices.empty()) {
+    return moves;  // No occupied stones, should not happen here
+  }
+
+  // Randomly select one occupied stone
+  int randIndex = rand() % occupiedIndices.size();
+  int baseIndex = occupiedIndices[randIndex];
+  int baseX = baseIndex % BOARD_WIDTH;
+  int baseY = baseIndex / BOARD_WIDTH;
+
+  // Check neighboring cells (8 directions)
+  std::vector<std::pair<int, int>> directions = {{-1, -1}, {0, -1}, {1, -1}, {-1, 0},
+                                                 {1, 0},   {-1, 1}, {0, 1},  {1, 1}};
+
+  for (const auto& dir : directions) {
+    int nx = baseX + dir.first;
+    int ny = baseY + dir.second;
+
+    if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
+      int nIndex = ny * BOARD_WIDTH + nx;
+      if (!occupied.test(nIndex)) {
+        moves.push_back({nx, ny, 0});
+        return moves;  // Return immediately after finding the first valid neighbor
+      }
+    }
+  }
+
+  return moves;  // Fallback: no valid neighbors found
 }
 
 int AI::_getDepthFromLevel(AILevel level) {
