@@ -44,8 +44,8 @@ class AI {
 
  private:
   // --- Configuration ---
-  static constexpr int DEPTH_EASY = 6;
-  static constexpr int DEPTH_NORMAL = 7;
+  static constexpr int DEPTH_EASY = 5;
+  static constexpr int DEPTH_NORMAL = 10;
   static constexpr int DEPTH_HARD = 15;
 
   static constexpr int MAX_MOVES_TO_CONSIDER = 10;
