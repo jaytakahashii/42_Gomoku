@@ -85,4 +85,6 @@ class Evaluator {
   // Check line score based on coordinates (for Move Ordering)
   static int _CheckLineScore(const Board& board, int x, int y, int dx, int dy, Color myColor,
                              Color oppColor);
+
+  static int _evaluateColor(const BoardType& stones, const BoardType& empty);
 };
