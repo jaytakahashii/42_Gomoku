@@ -42,6 +42,7 @@ struct BoardState {
   int blackCaptures;
   int whiteCaptures;
   Color currentTurn;
+  uint64_t hash;
 };
 
 // ==========================================
@@ -137,6 +138,9 @@ class Board {
   bool getDoubleThreeStatus() const;
   void setDoubleThreeStatus(bool status);
   bool getCapturedStatus() const;
+
+  // -- Hashing --
+  uint64_t getHash() const;
 
   // -- AI Helpers --
   /**
@@ -238,6 +242,9 @@ class Board {
   // Meta Data
   std::map<Color, Player> _colorToPlayer;
   std::vector<BoardState> _history;  // Stack for undo functionality
+
+  // Hashing
+  uint64_t _currentHash;
 
   // ----------------------------------------------------------------
   // Directional Constants
