@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+AI::AI() : _tt(20) {
+}
+
 Move AI::getBestMove(const Board& board, Color color, AILevel level) {
   // 1. Setup Phase
   Board clone = board;
@@ -64,89 +67,129 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
 
   return bestMove;
 }
+
 int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer) {
-  // 1. Base Case: Leaf node reached
+  // [1] Transposition Table Lookup (キャッシュ確認)
+  // ---------------------------------------------------------
+  uint64_t key = board.getHash();
+  TTEntry* ttEntry = _tt.get(key);
+
+  if (ttEntry != nullptr && ttEntry->depth >= depth) {
+    // キャッシュされた結果が、今の探索よりも深い（＝信頼できる）場合
+    if (ttEntry->flag == TTFlag::EXACT) {
+      return ttEntry->score;
+    } else if (ttEntry->flag == TTFlag::LOWERBOUND) {
+      alpha = std::max(alpha, ttEntry->score);
+    } else if (ttEntry->flag == TTFlag::UPPERBOUND) {
+      beta = std::min(beta, ttEntry->score);
+    }
+
+    // キャッシュによって探索範囲が矛盾した（＝枝刈り可能）
+    if (alpha >= beta) {
+      return ttEntry->score;
+    }
+  }
+  // ---------------------------------------------------------
+
+  // [2] 終了条件
   if (depth == 0) {
     return Evaluator::evaluate(board, _aiPlayer);
   }
 
-  // 2. Move Generation
-  // Note: optimization (top 10 moves) is handled inside _generateMoves
+  // [3] 手の生成
   std::vector<Move> moves = _generateMoves(board);
-
-  // Handle Draw/Stalemate
-  if (moves.empty()) {
+  if (moves.empty())
     return 0;
+
+  // [★重要] Hash Move Ordering
+  // TTに「以前見つけた最善手(Best Move)」があれば、それを最優先で探索する。
+  // これにより枝刈り効率が劇的に向上する。
+  if (ttEntry != nullptr && ttEntry->bestMove.x != -1) {
+    for (size_t i = 0; i < moves.size(); ++i) {
+      if (moves[i].x == ttEntry->bestMove.x && moves[i].y == ttEntry->bestMove.y) {
+        // 先頭の手と交換
+        std::swap(moves[0], moves[i]);
+        // moves[0].score = ...; // 必要ならスコアを最大にしておく
+        break;
+      }
+    }
   }
 
-  // 3. Recursive Search
+  // --- 以降は通常のMinimaxループ ---
+
+  int originalAlpha = alpha;  // フラグ判定用に保存
+  Move bestMoveInThisNode = {-1, -1, 0};
+  int bestScore =
+      maximizingPlayer ? std::numeric_limits<int>::min() : std::numeric_limits<int>::max();
+
   if (maximizingPlayer) {
-    int maxEval = std::numeric_limits<int>::min();
-
-    for (const Move& m : moves) {
-      // Apply move
-      if (!board.makeMove(m.x, m.y))
-        continue;
-
-      // Optimization: Check for immediate win BEFORE recursing
-      // If this move wins, we don't need to look deeper.
-      if (board.checkWin()) {
-        board.undo();
-        // Prefer winning sooner (higher depth remaining)
-        return ScoreConfig::WIN + depth;
-      }
-
-      board.changeTurn();
-
-      // Recurse
-      int eval = _minimax(board, depth - 1, alpha, beta, false);
-
-      // Backtrack
-      board.undo();
-
-      // Alpha-Beta Update
-      maxEval = std::max(maxEval, eval);
-      alpha = std::max(alpha, eval);
-
-      // Beta Cut-off
-      if (beta <= alpha) {
-        break;
-      }
-    }
-    return maxEval;
-
-  } else {  // Minimizing Player (Opponent)
-    int minEval = std::numeric_limits<int>::max();
-
     for (const Move& m : moves) {
       if (!board.makeMove(m.x, m.y))
         continue;
 
-      // Optimization: Check for immediate loss
+      // 即時勝利判定
       if (board.checkWin()) {
         board.undo();
-        // Prefer losing later (lower depth remaining), result is negative
-        return -(ScoreConfig::WIN + depth);
+        int winScore = ScoreConfig::WIN + depth;  // 早く勝つ方が良い
+        // 勝利確定も保存してリターン
+        _tt.store(key, depth, winScore, TTFlag::EXACT, m);
+        return winScore;
       }
 
       board.changeTurn();
-
-      // Recurse
-      int eval = _minimax(board, depth - 1, alpha, beta, true);
-
+      int score = _minimax(board, depth - 1, alpha, beta, false);
       board.undo();
 
-      // Alpha-Beta Update
-      minEval = std::min(minEval, eval);
-      beta = std::min(beta, eval);
-
-      // Alpha Cut-off
-      if (beta <= alpha) {
-        break;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMoveInThisNode = m;
       }
+      alpha = std::max(alpha, bestScore);
+      if (beta <= alpha)
+        break;  // Beta Cut
     }
-    return minEval;
+  } else {
+    // Minimizing logic (対称の実装)
+    for (const Move& m : moves) {
+      if (!board.makeMove(m.x, m.y))
+        continue;
+
+      if (board.checkWin()) {
+        board.undo();
+        int loseScore = -(ScoreConfig::WIN + depth);
+        _tt.store(key, depth, loseScore, TTFlag::EXACT, m);
+        return loseScore;
+      }
+
+      board.changeTurn();
+      int score = _minimax(board, depth - 1, alpha, beta, true);
+      board.undo();
+
+      if (score < bestScore) {
+        bestScore = score;
+        bestMoveInThisNode = m;
+      }
+      beta = std::min(beta, bestScore);
+      if (beta <= alpha)
+        break;  // Alpha Cut
+    }
   }
+
+  // [4] 結果の保存
+  // ---------------------------------------------------------
+  TTFlag flag;
+  if (bestScore <= originalAlpha) {
+    flag = TTFlag::UPPERBOUND;  // Fail-Low (Alpha Cut-offされなかったけど全部ダメ)
+  } else if (bestScore >= beta) {
+    flag = TTFlag::LOWERBOUND;  // Fail-High (Beta Cut-offされた)
+  } else {
+    flag = TTFlag::EXACT;  // Alpha < Score < Beta (正確な値)
+  }
+
+  _tt.store(key, depth, bestScore, flag, bestMoveInThisNode);
+  // ---------------------------------------------------------
+
+  return bestScore;
 }
 
 std::vector<Move> AI::_generateMoves(const Board& board) {

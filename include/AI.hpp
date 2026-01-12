@@ -7,22 +7,8 @@
 #include "Board.hpp"
 #include "Enums.hpp"
 #include "Evaluator.hpp"
-
-// ==========================================
-// Move Structure
-// ==========================================
-
-struct Move {
-  int x;
-  int y;
-  int score;
-
-  // Operator for sorting moves (descending order of score).
-  // Crucial for Move Ordering in Alpha-Beta pruning.
-  bool operator>(const Move& other) const {
-    return score > other.score;
-  }
-};
+#include "GameConfig.hpp"
+#include "TranspositionTable.hpp"
 
 // ==========================================
 // AI Class
@@ -30,7 +16,7 @@ struct Move {
 
 class AI {
  public:
-  AI() = default;
+  AI();
   ~AI() = default;
 
   /**
@@ -44,14 +30,15 @@ class AI {
 
  private:
   // --- Configuration ---
-  static constexpr int DEPTH_EASY = 5;
+  static constexpr int DEPTH_EASY = 3;
   static constexpr int DEPTH_NORMAL = 10;
-  static constexpr int DEPTH_HARD = 15;
+  static constexpr int DEPTH_HARD = 20;
 
   static constexpr int MAX_MOVES_TO_CONSIDER = 10;
 
   // --- Component State ---
   Color _aiPlayer;
+  TranspositionTable _tt;
 
   // --- Internal Logic ---
 
