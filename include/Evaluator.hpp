@@ -43,7 +43,7 @@ struct ScoreConfig {
 
   // Priority 3: Offensive/Defensive Development
   static constexpr int PRIORITY_OPEN_THREE = 100'000;
-  static constexpr int PRIORITY_CAPTURE = 80'000;        // Creating a capture
+  static constexpr int PRIORITY_CAPTURE = 40'000;        // Creating a capture
   static constexpr int PRIORITY_BLOCK_CAPTURE = 60'000;  // Saving own stones
   static constexpr int PRIORITY_BLOCK_OPEN_3 = 50'000;
 };
@@ -79,12 +79,10 @@ class Evaluator {
 
   // --- Internal Logic ---
 
-  // Count patterns on the board using bitwise operations
-  static int _CountPatterns(const BoardType& myBoard, const BoardType& empty);
-
   // Check line score based on coordinates (for Move Ordering)
   static int _CheckLineScore(const Board& board, int x, int y, int dx, int dy, Color myColor,
                              Color oppColor);
 
+  // Evaluate score for a single color (used in full evaluation)
   static int _evaluateColor(const BoardType& stones, const BoardType& empty);
 };
