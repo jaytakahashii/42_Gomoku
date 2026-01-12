@@ -81,7 +81,9 @@ class GameScene : public Scene {
   sf::Vector2i _hintMove = {-1, -1};
   void _onAIAssist();
   void _handleHint();
+  void _cancelHint();
   sf::CircleShape _makeHintCircle() const;
+  std::shared_ptr<std::atomic<bool>> _cancelFlag;
 
   std::function<void()> _onEsc;
 

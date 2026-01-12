@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <limits>
 #include <vector>
 
@@ -40,7 +41,7 @@ class AI {
    * @param level The difficulty level of the AI.
    * @return The best move determined by the AI.
    */
-  Move getBestMove(const Board& board, Color color, AILevel level);
+  Move getBestMove(const Board& board, Color color, AILevel level, std::atomic<bool>& cancelFlag);
 
  private:
   // --- Configuration ---
@@ -66,7 +67,8 @@ class AI {
    * @param maximizingPlayer true if the current player is the maximizer, false if minimizer.
    * @return The evaluated score for the current board state.
    */
-  int _minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer);
+  int _minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer,
+               std::atomic<bool>& cancelFlag);
 
   /**
    * Generates a list of possible moves from the current board state.

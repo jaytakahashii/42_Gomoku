@@ -2,7 +2,8 @@
 
 #include <iostream>
 
-Move AI::getBestMove(const Board& board, Color color, AILevel level) {
+Move AI::getBestMove(const Board& board, Color color, AILevel level,
+                     std::atomic<bool>& cancelFlag) {
   // 1. Setup Phase
   Board clone = board;
   _aiPlayer = color;
@@ -39,7 +40,7 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
     clone.changeTurn();
 
     // Recursive call: Next is opponent's turn (Minimizer)
-    int score = _minimax(clone, maxDepth - 1, alpha, beta, false);
+    int score = _minimax(clone, maxDepth - 1, alpha, beta, false, cancelFlag);
 
     // Undo move to restore state
     clone.undo();
@@ -64,7 +65,11 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
 
   return bestMove;
 }
-int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer) {
+int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer,
+                 std::atomic<bool>& cancelFlag) {
+  if (cancelFlag.load()) {
+    return 0;
+  }
   // 1. Base Case: Leaf node reached
   if (depth == 0) {
     return Evaluator::evaluate(board, _aiPlayer);
@@ -99,10 +104,11 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       board.changeTurn();
 
       // Recurse
-      int eval = _minimax(board, depth - 1, alpha, beta, false);
-
+      int eval = _minimax(board, depth - 1, alpha, beta, false, cancelFlag);
       // Backtrack
       board.undo();
+      if (cancelFlag.load())
+        return 0;
 
       // Alpha-Beta Update
       maxEval = std::max(maxEval, eval);
@@ -132,9 +138,11 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       board.changeTurn();
 
       // Recurse
-      int eval = _minimax(board, depth - 1, alpha, beta, true);
+      int eval = _minimax(board, depth - 1, alpha, beta, true, cancelFlag);
 
       board.undo();
+      if (cancelFlag.load())
+        return 0;
 
       // Alpha-Beta Update
       minEval = std::min(minEval, eval);
