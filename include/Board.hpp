@@ -6,6 +6,8 @@
 #include <vector>
 
 #include "Enums.hpp"
+#include "GameConfig.hpp"
+#include "Zobrist.hpp"
 
 // ==========================================
 // Constants & Configuration
@@ -14,9 +16,9 @@
 // Board dimensions
 // Using 32 as width for bit board efficiency (power of 2) and to provide
 // sentinel padding preventing horizontal wrap-around during bitshifts.
-constexpr int BOARD_SIZE = 19;
-constexpr int BOARD_WIDTH = 32;
-constexpr int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
+// constexpr int BOARD_SIZE = 19;
+// constexpr int BOARD_WIDTH = 32;
+// constexpr int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
 
 // Type alias for the bit board representation
 using BoardType = std::bitset<MAX_CELLS>;

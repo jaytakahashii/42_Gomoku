@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <random>
 
-#include "Board.hpp"  // For MAX_CELLS, Color
 #include "Enums.hpp"
+#include "GameConfig.hpp"
 
 class Zobrist {
  public:
