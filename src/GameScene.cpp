@@ -44,17 +44,22 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
   onResize(initalSize);
 }
 
+GameScene::~GameScene() {
+  _stopAllThreads();
+}
+
 void GameScene::handleEvents(const EventList& events) {
-  if (this->_board.getCurrentPlayer() == Player::AI)
-    return;
   for (const auto e : events) {
     if (const auto* keyPtr = e->getIf<sf::Event::KeyPressed>()) {
       if (keyPtr->code == sf::Keyboard::Key::Escape) {
+        _stopAllThreads();
         if (this->_onEsc) {
           _onEsc();
         }
       }
     }
+    if (this->_board.getCurrentPlayer() == Player::AI)
+      return;
     if (const auto* mousePtr = e->getIf<sf::Event::MouseButtonPressed>()) {
       if (mousePtr->button == sf::Mouse::Button::Left) {
         sf::Vector2f mousePos(static_cast<float>(mousePtr->position.x),
@@ -459,4 +464,12 @@ void GameScene::_cancelHint() {
   this->_isCalculatingHint = false;
   this->_hintMove = {-1, -1};
   this->_aiInfoText.setString("AI Time: 0.00s");
+}
+
+void GameScene::_stopAllThreads() {
+  if (this->_cancelFlag) {
+    *this->_cancelFlag = true;
+  }
+  this->_isAIThinking = false;
+  this->_isCalculatingHint = false;
 }

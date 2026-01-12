@@ -22,6 +22,7 @@ const unsigned int WINDOW_HEIGHT = WINDOW_WIDTH + 50;
 class GameScene : public Scene {
  public:
   GameScene(sf::Font& font, const sf::Vector2u& initialSize);
+  ~GameScene();
   void handleEvents(const EventList& events);
   void update(float dt);
   void render(sf::RenderWindow& window);
@@ -88,4 +89,6 @@ class GameScene : public Scene {
   std::function<void()> _onEsc;
 
   OpeningRule _openingRule;
+
+  void _stopAllThreads();
 };
