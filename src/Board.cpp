@@ -13,7 +13,8 @@ Board::Board()
       _blackCaptures(0),
       _whiteCaptures(0),
       _capturedStatus(false),
-      _doubleThreeStatus(false) {
+      _doubleThreeStatus(false),
+      _currentHash(0) {
   this->_colorToPlayer.clear();
   this->_history.clear();
 }
@@ -44,7 +45,17 @@ bool Board::makeMove(int x, int y) {
 
   saveState();
 
+  if (this->_currentTurn == Color::BLACK) {
+    this->_blackStones.set(index);
+  } else {
+    this->_whiteStones.set(index);
+  }
+
+  // Update hash
+  this->_currentHash ^= Zobrist::getPieceHash(index, this->_currentTurn);
+
   _processCapture(index);
+
   if (!this->_capturedStatus) {
     _DoubleThree(x, y);
     if (this->_doubleThreeStatus) {
@@ -53,17 +64,12 @@ bool Board::makeMove(int x, int y) {
     }
   }
 
-  if (this->_currentTurn == Color::BLACK) {
-    this->_blackStones.set(index);
-  } else {
-    this->_whiteStones.set(index);
-  }
-
   return true;
 }
 
 void Board::changeTurn() {
   this->_currentTurn = (this->_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
+  _currentHash ^= Zobrist::getBlackTurnHash();
 }
 
 bool Board::undo() {
@@ -77,7 +83,7 @@ bool Board::undo() {
 
 void Board::saveState() {
   this->_history.push_back({this->_blackStones, this->_whiteStones, this->_blackCaptures,
-                            this->_whiteCaptures, this->_currentTurn});
+                            this->_whiteCaptures, this->_currentTurn, this->_currentHash});
 }
 
 // ----------------------------------------------------------------
@@ -223,6 +229,11 @@ bool Board::getCapturedStatus() const {
   return this->_capturedStatus;
 }
 
+// -- Hashing --
+uint64_t Board::getHash() const {
+  return this->_currentHash;
+}
+
 // -- AI Helpers --
 
 BoardType Board::getCapturableStones(Color myColor) const {
@@ -253,6 +264,7 @@ void Board::_applyState(const BoardState& state) {
   this->_blackCaptures = state.blackCaptures;
   this->_whiteCaptures = state.whiteCaptures;
   this->_currentTurn = state.currentTurn;
+  this->_currentHash = state.hash;
 }
 
 // -- Coordinate / Bit Utils --
@@ -271,6 +283,7 @@ void Board::_processCapture(int index) {
   BoardType& myStones = (this->_currentTurn == Color::BLACK) ? _blackStones : _whiteStones;
   BoardType& oppStones = (this->_currentTurn == Color::BLACK) ? _whiteStones : _blackStones;
   int8_t& myScore = (_currentTurn == Color::BLACK) ? _blackCaptures : _whiteCaptures;
+  Color oppColor = (this->_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
   this->_capturedStatus = false;
 
   for (int d : ALL_SHIFTS) {
@@ -288,6 +301,8 @@ void Board::_processCapture(int index) {
       if (oppStones.test(p1) && oppStones.test(p2) && myStones.test(p3)) {
         oppStones.reset(p1);
         oppStones.reset(p2);
+        _currentHash ^= Zobrist::getPieceHash(p1, oppColor);
+        _currentHash ^= Zobrist::getPieceHash(p2, oppColor);
 
         myScore += 2;
 

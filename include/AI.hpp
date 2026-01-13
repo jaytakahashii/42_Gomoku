@@ -8,22 +8,8 @@
 #include "Board.hpp"
 #include "Enums.hpp"
 #include "Evaluator.hpp"
-
-// ==========================================
-// Move Structure
-// ==========================================
-
-struct Move {
-  int x;
-  int y;
-  int score;
-
-  // Operator for sorting moves (descending order of score).
-  // Crucial for Move Ordering in Alpha-Beta pruning.
-  bool operator>(const Move& other) const {
-    return score > other.score;
-  }
-};
+#include "GameConfig.hpp"
+#include "TranspositionTable.hpp"
 
 // ==========================================
 // AI Class
@@ -31,8 +17,11 @@ struct Move {
 
 class AI {
  public:
-  AI() = default;
+  AI();
   ~AI() = default;
+
+  // TODO: debug
+  void printPV(Board board);
 
   /**
    * Calculates the best move for the AI using Minimax with Alpha-Beta pruning.
@@ -47,12 +36,14 @@ class AI {
   // --- Configuration ---
   static constexpr int DEPTH_EASY = 5;
   static constexpr int DEPTH_NORMAL = 10;
-  static constexpr int DEPTH_HARD = 15;
+  static constexpr int DEPTH_HARD = 20;
 
   static constexpr int MAX_MOVES_TO_CONSIDER = 10;
 
   // --- Component State ---
   Color _aiPlayer;
+  TranspositionTable _tt;
+  Move _killerMoves[DEPTH_HARD][2];
 
   // --- Internal Logic ---
 
@@ -75,7 +66,7 @@ class AI {
    * @param board The current board state.
    * @return A vector of possible moves with heuristic scores. (MAX: MAX_MOVES_TO_CONSIDER)
    */
-  std::vector<Move> _generateMoves(const Board& board);
+  std::vector<Move> _generateMoves(const Board& board, int depth);
 
   std::vector<Move> _randomNeighbor(const BoardType& occupied);
 

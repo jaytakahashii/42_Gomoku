@@ -64,6 +64,7 @@ SRC_FILES          = main.cpp \
 					 Board.cpp \
 					 AI.cpp \
 					 Evaluator.cpp \
+					 TranspositionTable.cpp \
 
 IFLAGS            += -Iinclude
 SRCS               = $(addprefix $(SRC_DIR), $(SRC_FILES))

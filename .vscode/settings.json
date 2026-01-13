@@ -32,6 +32,7 @@
   "cSpell.words": [
     "Abstra",
     "autopep",
+    "Bitboards",
     "Capturable",
     "celerybeat",
     "codz",
@@ -104,6 +105,7 @@
     "spyproject",
     "webassets",
     "Wextra",
-    "XOOX"
+    "XOOX",
+    "Zobrist"
   ]
 }

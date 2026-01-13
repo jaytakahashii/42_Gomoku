@@ -1,25 +1,16 @@
 #pragma once
 
 #include <array>
-#include <bitset>
 #include <map>
 #include <vector>
 
 #include "Enums.hpp"
+#include "GameConfig.hpp"
+#include "Zobrist.hpp"
 
 // ==========================================
 // Constants & Configuration
 // ==========================================
-
-// Board dimensions
-// Using 32 as width for bit board efficiency (power of 2) and to provide
-// sentinel padding preventing horizontal wrap-around during bitshifts.
-constexpr int BOARD_SIZE = 19;
-constexpr int BOARD_WIDTH = 32;
-constexpr int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
-
-// Type alias for the bit board representation
-using BoardType = std::bitset<MAX_CELLS>;
 
 // ==========================================
 // Helper Structures
@@ -42,6 +33,7 @@ struct BoardState {
   int blackCaptures;
   int whiteCaptures;
   Color currentTurn;
+  uint64_t hash;
 };
 
 // ==========================================
@@ -129,7 +121,6 @@ class Board {
   // -- Game State --
   Color getCurrentTurn() const;
   Player getCurrentPlayer() const;
-  int getCaptures(Color color) const;
   int getBlackCaptures() const;
   int getWhiteCaptures() const;
 
@@ -137,6 +128,9 @@ class Board {
   bool getDoubleThreeStatus() const;
   void setDoubleThreeStatus(bool status);
   bool getCapturedStatus() const;
+
+  // -- Hashing --
+  uint64_t getHash() const;
 
   // -- AI Helpers --
   /**
@@ -238,6 +232,9 @@ class Board {
   // Meta Data
   std::map<Color, Player> _colorToPlayer;
   std::vector<BoardState> _history;  // Stack for undo functionality
+
+  // Hashing
+  uint64_t _currentHash;
 
   // ----------------------------------------------------------------
   // Directional Constants

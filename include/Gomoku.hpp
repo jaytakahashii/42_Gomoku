@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 
+#include "Zobrist.hpp"
+
 class Gomoku {
  public:
   sf::Font font;
