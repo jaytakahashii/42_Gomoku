@@ -5,6 +5,7 @@
 #include <ResultScene.hpp>
 #include <SFML/Graphics.hpp>
 #include <Scene.hpp>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <iostream>
@@ -19,8 +20,10 @@ class Gomoku {
   Gomoku();
 
   void run();
+  void stop();
 
  private:
+  std::atomic<bool> _isRunning;
   sf::RenderWindow _window;
   std::unique_ptr<MenuScene> _menuScene;
   std::unique_ptr<GameScene> _gameScene;
