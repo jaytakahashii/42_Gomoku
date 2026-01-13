@@ -19,5 +19,6 @@ int main() {
   g_pointer = &game;
   std::signal(SIGINT, signalHandler);
   game.run();
+  std::cout << "Gomoku was Terminated." << std::endl;
   return 0;
 }
