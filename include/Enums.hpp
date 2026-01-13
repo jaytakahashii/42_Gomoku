@@ -1,6 +1,6 @@
 #pragma once
 
-enum class AILevel { Easy, Medium, Hard };
+enum class AILevel { Easy, Normal, Hard };
 
 enum class TurnOrder { HumanFirst, AIFirst };
 

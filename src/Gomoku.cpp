@@ -2,6 +2,7 @@
 
 Gomoku::Gomoku() : _window(sf::VideoMode({1080, 1000}), "Gomoku"), font() {
   _initFont("arial.ttf");
+  this->_isRunning = true;
   this->_window.setMinimumSize(sf::Vector2u(1080, 1000));
 
   this->_menuScene = std::make_unique<MenuScene>(font, this->_window.getSize());
@@ -35,7 +36,7 @@ void Gomoku::_initOnGameOver(const std::string& winner) {
 
 void Gomoku::run() {
   sf::Clock clock;
-  while (this->_window.isOpen()) {
+  while (this->_window.isOpen() && this->_isRunning) {
     sf::Time dt = clock.restart();
     float deltaTime = dt.asSeconds();
     EventList events = _getEventList();
@@ -45,6 +46,10 @@ void Gomoku::run() {
     this->_currentScene->render(this->_window);
     this->_window.display();
   }
+}
+
+void Gomoku::stop() {
+  this->_isRunning = false;
 }
 
 void Gomoku::_initFont(const std::string font) {
