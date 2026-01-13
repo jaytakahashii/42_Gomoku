@@ -443,7 +443,7 @@ int AI::_getDepthFromLevel(AILevel level) {
   switch (level) {
     case AILevel::Easy:
       return DEPTH_EASY;
-    case AILevel::Medium:
+    case AILevel::Normal:
       return DEPTH_NORMAL;
     case AILevel::Hard:
       return DEPTH_HARD;

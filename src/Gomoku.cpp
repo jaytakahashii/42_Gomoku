@@ -2,6 +2,7 @@
 
 Gomoku::Gomoku() : _window(sf::VideoMode({1080, 1000}), "Gomoku"), font() {
   _initFont("arial.ttf");
+  this->_isRunning = true;
   this->_window.setMinimumSize(sf::Vector2u(1080, 1000));
 
   this->_menuScene = std::make_unique<MenuScene>(font, this->_window.getSize());
