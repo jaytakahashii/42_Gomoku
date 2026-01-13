@@ -2,142 +2,21 @@
 
 #include <iostream>  // TODO: デバッグ用
 
+// ----------------------------------------------------------------
+// Lifecycle & Setup
+// ----------------------------------------------------------------
+
 Board::Board()
     : _blackStones(0),
       _whiteStones(0),
       _currentTurn(Color::BLACK),
       _blackCaptures(0),
       _whiteCaptures(0),
-      _doubleThreeStatus(false) {
-}
-
-bool Board::makeMove(int x, int y) {
-  if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE)
-    return false;
-
-  int index = _getIndex(x, y);
-
-  if (_blackStones.test(index) || _whiteStones.test(index))
-    return false;
-
-  saveState();
-  this->_capturedStatus = _checkAndProcessCapture(index);
-  if (!_capturedStatus) {
-    if (_isDoubleThree(x, y))
-      return false;
-  }
-
-  if (_currentTurn == Color::BLACK) {
-    _blackStones.set(index);
-  } else {
-    this->_whiteStones.set(index);
-  }
-
-  return true;
-}
-
-void Board::changeTurn() {
-  _currentTurn = (_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
-}
-
-bool Board::checkWin() {
-  const BoardType& myStones = (_currentTurn == Color::WHITE) ? _whiteStones : _blackStones;
-  const BoardType& oppStones = (_currentTurn == Color::WHITE) ? _blackStones : _whiteStones;
-  int captures = (_currentTurn == Color::WHITE) ? _whiteCaptures : _blackCaptures;
-
-  // 1. 捕獲勝ち
-  if (captures >= 10)
-    return true;
-
-  // 2. 5連チェック (4方向)
-  for (int shift : ALL_DIRS) {
-    // 5連の始点ビット列を取得
-    BoardType lines = _getFiveInARowBits(myStones, shift);
-
-    if (lines.none())
-      continue;
-
-    // 見つかった全ての5連ラインについて検証
-    for (int i = 0; i < MAX_CELLS; ++i) {
-      if (lines.test(i)) {
-        // インデックス i から始まる5連が見つかった
-        bool lineIsSafe = true;
-
-        // 5つの石すべてについて「捕獲される危険性」をチェック
-        for (int k = 0; k < 5; ++k) {
-          int stoneIdx = i + k * shift;
-          if (_isStoneCapturable(stoneIdx, myStones, oppStones)) {
-            // 一つでも捕獲される石があれば、このラインでの勝利は成立しない
-            lineIsSafe = false;
-            break;
-          }
-        }
-
-        // 一つでも「安全な5連」があれば勝利確定
-        if (lineIsSafe) {
-          return true;
-        }
-      }
-    }
-  }
-
-  return false;
-}
-
-// --- Getters / Setters ---
-
-Color Board::getColorAt(int x, int y) const {
-  int index = _getIndex(x, y);
-  if (_blackStones.test(index))
-    return Color::BLACK;
-  if (_whiteStones.test(index))
-    return Color::WHITE;
-  return Color::NONE;
-}
-
-Player Board::getPlayerAt(int x, int y) const {
-  int index = _getIndex(x, y);
-  std::map<Color, Player>::const_iterator it = this->_colorToPlayer.end();
-  if (_blackStones.test(index))
-    it = this->_colorToPlayer.find(Color::BLACK);
-  if (_whiteStones.test(index))
-    it = this->_colorToPlayer.find(Color::WHITE);
-  if (it != this->_colorToPlayer.end()) {
-    return it->second;
-  }
-  return Player::NONE;
-}
-
-Color Board::getCurrentTurn() const {
-  return _currentTurn;
-}
-
-Player Board::getCurrentPlayer() const {
-  auto it = this->_colorToPlayer.find(_currentTurn);
-  if (it == this->_colorToPlayer.end()) {
-    return Player::NONE;
-  }
-  return it->second;
-}
-
-int Board::getBlackCaptures() const {
-  return _blackCaptures;
-}
-
-int Board::getWhiteCaptures() const {
-  return _whiteCaptures;
-}
-
-bool Board::getDoubleThreeStatus() const {
-  return _doubleThreeStatus;
-}
-
-bool Board::getCapturedStatus() const {
-  return this->_capturedStatus;
-}
-
-void Board::setDoubleThreeStatus(bool status) {
-  _doubleThreeStatus = status;
+      _capturedStatus(false),
+      _doubleThreeStatus(false),
+      _currentHash(0) {
+  this->_colorToPlayer.clear();
+  this->_history.clear();
 }
 
 void Board::setupPlayers(TurnOrder order) {
@@ -151,220 +30,50 @@ void Board::setupPlayers(TurnOrder order) {
   }
 }
 
-const BoardType& Board::getBlackStones() const {
-  return _blackStones;
-}
+// ----------------------------------------------------------------
+// Core Gameplay Logic (Mutators)
+// ----------------------------------------------------------------
 
-const BoardType& Board::getWhiteStones() const {
-  return _whiteStones;
-}
+bool Board::makeMove(int x, int y) {
+  if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE)
+    return false;
 
-// --- Private Helpers ---
+  int index = _getIndex(x, y);
 
-int Board::_getIndex(int x, int y) const {
-  return y * BOARD_WIDTH + x;
-}
+  if (this->_blackStones.test(index) || this->_whiteStones.test(index))
+    return false;
 
-bool Board::_checkAndProcessCapture(int index) {
-  BoardType& myStones = (_currentTurn == Color::BLACK) ? _blackStones : _whiteStones;
-  BoardType& oppStones = (_currentTurn == Color::BLACK) ? _whiteStones : _blackStones;
-  int& myScore = (_currentTurn == Color::BLACK) ? _blackCaptures : _whiteCaptures;
-  bool captured = false;
+  saveState();
 
-  for (int d : ALL_DIRS) {
-    const int directions[] = {d, -d};
-
-    for (int dir : directions) {
-      // パターン: [自(index)] [敵] [敵] [自]
-      int p1 = index + dir;      // 隣
-      int p2 = index + dir * 2;  // 2つ隣
-      int p3 = index + dir * 3;  // 3つ隣
-
-      // 範囲チェック
-      if (p3 < 0 || p3 >= MAX_CELLS)
-        continue;
-
-      // 判定ロジック:
-      // 1. 隣と2つ隣が「敵」
-      // 2. 3つ隣が「自分」
-      if (oppStones.test(p1) && oppStones.test(p2) && myStones.test(p3)) {
-        // 捕獲成立！敵の石を消す
-        oppStones.reset(p1);
-        oppStones.reset(p2);
-
-        // スコア加算
-        myScore += 2;
-
-        captured = true;
-
-        // TODO: Debug output
-        std::cout << "Capture! Player " << ((_currentTurn == Color::BLACK) ? "BLACK" : "WHITE")
-                  << "\n"
-                  << "Total captures - BLACK: " << _blackCaptures << ", WHITE: " << _whiteCaptures
-                  << std::endl;
-      }
-    }
+  if (this->_currentTurn == Color::BLACK) {
+    this->_blackStones.set(index);
+  } else {
+    this->_whiteStones.set(index);
   }
-  return captured;
-}
 
-BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) const {
-  BoardType temp = stones;
+  // Update hash
+  this->_currentHash ^= Zobrist::getPieceHash(index, this->_currentTurn);
 
-  // 1回ずらしてAND = 2連
-  temp &= (temp >> shift_amount);
-  temp &= (temp >> shift_amount);  // 3連
-  temp &= (temp >> shift_amount);  // 4連
-  temp &= (temp >> shift_amount);  // 5連
+  _processCapture(index);
 
-  return temp;
-}
-
-bool Board::_isStoneCapturable(int index, const BoardType& myStones,
-                               const BoardType& oppStones) const {
-  // 全方向(4軸)をチェック
-  for (int dir : ALL_DIRS) {
-    // インデックスを中心とした両側 (+dir, -dir) をチェック
-    const int sides[] = {dir, -dir};
-
-    for (int d : sides) {
-      int p_partner = index + d;
-
-      // 1. 配列範囲チェック
-      if (p_partner < 0 || p_partner >= MAX_CELLS)
-        continue;
-
-      // 2. 隣が自分の石(=ペア成立)かチェック
-      if (myStones.test(p_partner)) {
-        // ペア: [index] [p_partner]
-        // このペアの両外側: (index - d) と (p_partner + d)
-        int p_outer_self = index - d;
-        int p_outer_partner = p_partner + d;
-
-        // 範囲外チェック
-        if (p_outer_self < 0 || p_outer_self >= MAX_CELLS)
-          continue;
-        if (p_outer_partner < 0 || p_outer_partner >= MAX_CELLS)
-          continue;
-
-        // 状態取得
-        // 捕獲条件: (敵, ペア, 空) または (空, ペア, 敵)
-        bool self_side_enemy = oppStones.test(p_outer_self);
-        bool partner_side_enemy = oppStones.test(p_outer_partner);
-
-        // 敵でなく、かつ自分の石でもなければ「空」
-        bool self_side_empty = !self_side_enemy && !myStones.test(p_outer_self);
-        bool partner_side_empty = !partner_side_enemy && !myStones.test(p_outer_partner);
-
-        if ((self_side_enemy && partner_side_empty) || (self_side_empty && partner_side_enemy)) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-}
-
-bool Board::_isDoubleThree(int x, int y) {
-  const BoardType& myStones = (_currentTurn == Color::BLACK) ? _blackStones : _whiteStones;
-  const BoardType& oppStones = (_currentTurn == Color::BLACK) ? _whiteStones : _blackStones;
-
-  int freeThreeCount = 0;
-
-  // 4方向チェック
-  for (auto& dir : CHECK_DIRS) {
-    if (_checkFreeThree(x, y, dir.dx, dir.dy, myStones, oppStones))
-      freeThreeCount++;
-    if (freeThreeCount >= 2) {
-      _doubleThreeStatus = true;
-      break;
+  if (!this->_capturedStatus) {
+    _DoubleThree(x, y);
+    if (this->_doubleThreeStatus) {
+      undo();
+      return false;
     }
   }
 
-  return (freeThreeCount >= 2);
+  return true;
 }
 
-bool Board::_checkFreeThree(int x, int y, int dx, int dy, const BoardType& myStones,
-                            const BoardType& oppStones) const {
-  // bit 5 を中心 (x,y) とする
-  uint16_t line_m = 0;  // m = my
-  uint16_t line_o = 0;  // o = opponent
-
-  // ±5マスを取得 (計11マス)
-  // Free-Threeパターンの最大長は .X.XX. (6マス) なのでこれで十分
-  for (int i = -5; i <= 5; ++i) {
-    if (i == 0) {
-      line_m |= (1 << 5);  // 中心は自分
-      continue;
-    }
-
-    int nx = x + i * dx;
-    int ny = y + i * dy;
-
-    // 範囲外チェック
-    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) {
-      line_o |= (1 << (i + 5));  // 壁
-    } else {
-      int idx = _getIndex(nx, ny);
-      if (myStones.test(idx))
-        line_m |= (1 << (i + 5));
-      else if (oppStones.test(idx))
-        line_o |= (1 << (i + 5));
-    }
-  }
-
-  // パターン定義 (1:石, 0:空)
-  // bit 0 が左端
-  static const uint16_t patterns[] = {
-      0b001110,  // .XXX.  (連三)
-      0b010110,  // .X.XX. (飛び三 A)
-      0b011010   // .XX.X. (飛び三 B)
-  };
-
-  // 各パターンを盤面上でスライドさせて照合
-  for (uint16_t p : patterns) {
-    // パターンの長さは6ビット (0b000000 ~ 0b111111)
-    // これを line_m, line_o に対してずらしながらチェック
-
-    // パターンの位置をスライド (ウィンドウ)
-    // line_m の幅は11ビット (0..10)。パターンは6ビット。
-    // i はパターンの開始位置 (0..5)
-    for (int i = 0; i <= 5; ++i) {
-      uint16_t mask = 0b111111 << i;
-      uint16_t target = p << i;
-
-      // 1. 自分の石の形が一致するか？
-      // マスク範囲内の石配置がパターンと完全一致すること
-      // (パターン内の0は「石がない」ことを要求)
-      if ((line_m & mask) != target)
-        continue;
-
-      // 2. 敵の石（壁）がないか？
-      // マスク範囲内は敵がゼロでなければならない（両端の空も含めて）
-      if ((line_o & mask) != 0)
-        continue;
-
-      // 3. 中心 (bit 5) がパターンに含まれているか？
-      // 今置いた石が、そのFree-Threeの一部でなければならない
-      // target (シフト済みのパターン) の bit 5 が 1 であるか確認
-      if ((target & (1 << 5)) == 0)
-        continue;
-
-      // すべてクリアならFree-Three
-      return true;
-    }
-  }
-
-  return false;
-}
-
-void Board::saveState() {
-  this->_history.push_back(
-      {_blackStones, _whiteStones, _blackCaptures, _whiteCaptures, _currentTurn});
+void Board::changeTurn() {
+  this->_currentTurn = (this->_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
+  _currentHash ^= Zobrist::getBlackTurnHash();
 }
 
 bool Board::undo() {
-  if (_history.empty())
+  if (this->_history.empty())
     return false;
   BoardState s = this->_history.back();
   this->_history.pop_back();
@@ -372,10 +81,397 @@ bool Board::undo() {
   return true;
 }
 
-void Board::_applyState(BoardState state) {
+void Board::saveState() {
+  this->_history.push_back({this->_blackStones, this->_whiteStones, this->_blackCaptures,
+                            this->_whiteCaptures, this->_currentTurn, this->_currentHash});
+}
+
+// ----------------------------------------------------------------
+// Game Status & Win Conditions
+// ----------------------------------------------------------------
+
+bool Board::checkWin() const {
+  return checkWin(_currentTurn);
+}
+
+bool Board::checkWin(Color color) const {
+  // 1. Win by captures
+  if (_getCaptureCount(color) >= 10)
+    return true;
+
+  // 2. Check for 5-in-a-row (in 4 directions)
+  const BoardType& myStones = getMyStones(color);
+  const BoardType& oppStones = getOppStones(color);
+
+  for (int shift : ALL_SHIFTS) {
+    // Get the starting bitset for 5-in-a-row
+    BoardType lines = _getFiveInARowBits(myStones, shift);
+
+    if (lines.none())
+      continue;
+
+    // Validate all found 5-in-a-row lines
+    for (int i = 0; i < MAX_CELLS; ++i) {
+      if (lines.test(i)) {
+        // Endgame Capture Rule:
+        // A line of 5 wins ONLY if the opponent cannot break it by capturing a pair.
+        if (_isWinningLineSafe(i, shift, myStones, oppStones)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+// ----------------------------------------------------------------
+// State Queries (Getters / Setters)
+// ----------------------------------------------------------------
+
+// -- Board Information --
+
+Color Board::getColorAt(int x, int y) const {
+  int index = _getIndex(x, y);
+  if (this->_blackStones.test(index))
+    return Color::BLACK;
+  if (this->_whiteStones.test(index))
+    return Color::WHITE;
+  return Color::NONE;
+}
+
+Player Board::getPlayerAt(int x, int y) const {
+  int index = _getIndex(x, y);
+  std::map<Color, Player>::const_iterator it = this->_colorToPlayer.end();
+  if (this->_blackStones.test(index))
+    it = this->_colorToPlayer.find(Color::BLACK);
+  if (this->_whiteStones.test(index))
+    it = this->_colorToPlayer.find(Color::WHITE);
+  if (it != this->_colorToPlayer.end()) {
+    return it->second;
+  }
+  return Player::NONE;
+}
+
+// -- Stone Bitsets --
+
+const BoardType& Board::getBlackStones() const {
+  return this->_blackStones;
+}
+
+const BoardType& Board::getWhiteStones() const {
+  return this->_whiteStones;
+}
+
+const BoardType& Board::getMyStones(Color myColor) const {
+  return (myColor == Color::BLACK) ? _blackStones : _whiteStones;
+}
+
+const BoardType& Board::getOppStones(Color myColor) const {
+  return (myColor == Color::BLACK) ? _whiteStones : _blackStones;
+}
+
+// -- Computed Bitsets --
+
+// 有効な盤面範囲（壁以外）を表すマスクを定義
+// static const にして一度だけ計算させる
+const BoardType Board::_validMask = []() {
+  BoardType mask;
+  for (int y = 0; y < BOARD_SIZE; ++y) {
+    for (int x = 0; x < BOARD_SIZE; ++x) {
+      mask.set(y * BOARD_WIDTH + x);
+    }
+  }
+  return mask;
+}();
+
+BoardType Board::getEmptyStones() const {
+  return ~(_blackStones | _whiteStones) & _validMask;
+}
+
+BoardType Board::getOccupiedStones() const {
+  return _blackStones | _whiteStones;
+}
+
+// -- Game State --
+
+Color Board::getCurrentTurn() const {
+  return this->_currentTurn;
+}
+
+Player Board::getCurrentPlayer() const {
+  auto it = this->_colorToPlayer.find(this->_currentTurn);
+  if (it == this->_colorToPlayer.end()) {
+    return Player::NONE;
+  }
+  return it->second;
+}
+
+int Board::getBlackCaptures() const {
+  return this->_blackCaptures;
+}
+
+int Board::getWhiteCaptures() const {
+  return this->_whiteCaptures;
+}
+
+// -- Special Rule Flags --
+
+bool Board::getDoubleThreeStatus() const {
+  return this->_doubleThreeStatus;
+}
+
+void Board::setDoubleThreeStatus(bool status) {
+  this->_doubleThreeStatus = status;
+}
+
+bool Board::getCapturedStatus() const {
+  return this->_capturedStatus;
+}
+
+// -- Hashing --
+uint64_t Board::getHash() const {
+  return this->_currentHash;
+}
+
+// -- AI Helpers --
+
+BoardType Board::getCapturableStones(Color myColor) const {
+  const BoardType& myStones = getMyStones(myColor);
+  const BoardType& oppStones = getOppStones(myColor);
+  BoardType capturable;
+
+  for (int i = 0; i < MAX_CELLS; ++i) {
+    if (oppStones.test(i)) {
+      if (_isStoneCapturable(i, myStones, oppStones)) {
+        capturable.set(i);
+      }
+    }
+  }
+
+  return capturable;
+}
+
+// ----------------------------------------------------------------
+// Internal Helper Methods
+// ----------------------------------------------------------------
+
+// -- State Management --
+
+void Board::_applyState(const BoardState& state) {
   this->_blackStones = state.blackStones;
   this->_whiteStones = state.whiteStones;
   this->_blackCaptures = state.blackCaptures;
   this->_whiteCaptures = state.whiteCaptures;
   this->_currentTurn = state.currentTurn;
+  this->_currentHash = state.hash;
+}
+
+// -- Coordinate / Bit Utils --
+
+int Board::_getIndex(int x, int y) const {
+  return y * BOARD_WIDTH + x;
+}
+
+int8_t Board::_getCaptureCount(Color color) const {
+  return (color == Color::BLACK) ? this->_blackCaptures : this->_whiteCaptures;
+}
+
+// -- Rule Implementations --
+
+void Board::_processCapture(int index) {
+  BoardType& myStones = (this->_currentTurn == Color::BLACK) ? _blackStones : _whiteStones;
+  BoardType& oppStones = (this->_currentTurn == Color::BLACK) ? _whiteStones : _blackStones;
+  int8_t& myScore = (_currentTurn == Color::BLACK) ? _blackCaptures : _whiteCaptures;
+  Color oppColor = (this->_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
+  this->_capturedStatus = false;
+
+  for (int d : ALL_SHIFTS) {
+    const int directions[] = {d, -d};
+
+    for (int dir : directions) {
+      int p1 = index + dir;
+      int p2 = index + dir * 2;
+      int p3 = index + dir * 3;
+
+      if (p3 < 0 || p3 >= MAX_CELLS)
+        continue;
+
+      // Pattern: [my(index)] [opp] [opp] [my]
+      if (oppStones.test(p1) && oppStones.test(p2) && myStones.test(p3)) {
+        oppStones.reset(p1);
+        oppStones.reset(p2);
+        _currentHash ^= Zobrist::getPieceHash(p1, oppColor);
+        _currentHash ^= Zobrist::getPieceHash(p2, oppColor);
+
+        myScore += 2;
+
+        this->_capturedStatus = true;
+      }
+    }
+  }
+}
+
+void Board::_DoubleThree(int x, int y) {
+  _doubleThreeStatus = false;
+
+  const BoardType& myStones = getMyStones(_currentTurn);
+  const BoardType& oppStones = getOppStones(_currentTurn);
+  int freeThreeCount = 0;
+
+  for (const auto& dir : CHECK_DIRS) {
+    // 1. Extract Line Bits
+    LineBits line = _getLineBits(x, y, dir, myStones, oppStones);
+
+    // 2. Check for Free Three pattern
+    if (_checkFreeThree(line)) {
+      freeThreeCount++;
+      if (freeThreeCount >= 2) {
+        _doubleThreeStatus = true;
+      }
+    }
+  }
+}
+
+LineBits Board::_getLineBits(int x, int y, const Direction dir, const BoardType& myStones,
+                             const BoardType& oppStones) const {
+  LineBits line = {0, 0};
+
+  // Center bit (the placed stone)
+  line.my |= (1 << 5);
+
+  // Check in both directions
+  for (int i = -5; i <= 5; ++i) {
+    if (i == 0)
+      continue;
+
+    int nx = x + i * dir.dx;
+    int ny = y + i * dir.dy;
+
+    // Treat out-of-bounds as "enemy stone (wall)"
+    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) {
+      line.opp |= (1 << (i + 5));
+    } else {
+      int idx = _getIndex(dir.dx, dir.dy);
+      if (myStones.test(idx)) {
+        line.my |= (1 << (i + 5));
+      } else if (oppStones.test(idx)) {
+        line.opp |= (1 << (i + 5));
+      }
+    }
+  }
+  return line;
+}
+
+bool Board::_checkFreeThree(LineBits line) const {
+  // Pattern definition: 1=stone, 0=empty (bit 0 is the leftmost)
+  // .XXX. (three in a row), .X.XX. (jumping three A), .XX.X. (jumping three B)
+  static constexpr uint16_t patterns[] = {0b001110, 0b010110, 0b011010};
+
+  for (const uint16_t p : patterns) {
+    // Slide the pattern (6bit) within the window (11bit)
+    for (int i = 0; i <= 5; ++i) {
+      uint16_t target = p << i;
+      uint16_t mask = 0b111111 << i;
+
+      // 1. Check if the recently placed stone (bit 5) is part of this pattern
+      if (!(target & (1 << 5)))
+        continue;
+
+      // 2. Check if my stone's placement matches
+      // (line.my & mask) == target
+      // -> There should be stones at '1' positions and no stones at '0' positions
+      if ((line.my & mask) != target)
+        continue;
+
+      // 3. Check for interference from enemy stones (or walls)
+      // There should be no enemy bits within the mask range
+      if ((line.opp & mask) != 0)
+        continue;
+
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Board::_isWinningLineSafe(int startIdx, int shift, const BoardType& myStones,
+                               const BoardType& oppStones) const {
+  // Check each of the 5 stones in the line
+  for (int k = 0; k < 5; ++k) {
+    int stoneIdx = startIdx + k * shift;
+
+    // If the opponent can capture a pair that includes this stone,
+    // the line is considered "breakable" and does not count as a win yet. [cite: 25]
+    if (_isStoneCapturable(stoneIdx, myStones, oppStones)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool Board::_isStoneCapturable(int index, const BoardType& myStones,
+                               const BoardType& oppStones) const {
+  for (int dir : ALL_SHIFTS) {
+    const int neighbors[] = {dir, -dir};
+
+    for (int d : neighbors) {
+      int partner = index + d;
+
+      // 1. Basic Validity Check:
+      // Is the neighbor within bounds and is it my stone?
+      if (partner < 0 || partner >= MAX_CELLS || !myStones.test(partner)) {
+        continue;
+      }
+
+      // We have a pair: [index]-[partner].
+      // Now check the outer flanks: (flank1) [index] [partner] (flank2)
+      int flank1 = index - d;    // The side next to 'index'
+      int flank2 = partner + d;  // The side next to 'partner'
+
+      // 2. Boundary Check for flanks
+      if (flank1 < 0 || flank1 >= MAX_CELLS || flank2 < 0 || flank2 >= MAX_CELLS) {
+        continue;
+      }
+
+      // 3. Capture Threat Check:
+      // Pattern must be: (Enemy, Pair, Empty) OR (Empty, Pair, Enemy)
+      bool f1_enemy = oppStones.test(flank1);
+      bool f2_enemy = oppStones.test(flank2);
+
+      // Optimization: If both are enemies (XOOX) -> Already captured (should have been removed)
+      //               If neither are enemies   -> Safe for now
+      // We only care if EXACTLY one flank is an enemy.
+      if (f1_enemy == f2_enemy) {
+        continue;
+      }
+
+      // Now we know exactly one side is Enemy.
+      // We just need to verify the *other* side is Empty (not my stone).
+      // (Note: We don't need to check oppStones for the empty side because f1!=f2 guarantees it's
+      // not enemy)
+
+      if (f1_enemy) {
+        // flank1 is Enemy, so flank2 MUST be Empty
+        if (!myStones.test(flank2))
+          return true;
+      } else {
+        // flank2 is Enemy, so flank1 MUST be Empty
+        if (!myStones.test(flank1))
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
+BoardType Board::_getFiveInARowBits(const BoardType& stones, int shift_amount) const {
+  BoardType temp = stones;
+
+  temp &= (temp >> shift_amount);
+  temp &= (temp >> shift_amount);
+  temp &= (temp >> shift_amount);
+  temp &= (temp >> shift_amount);
+
+  return temp;
 }

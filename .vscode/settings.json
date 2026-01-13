@@ -32,6 +32,7 @@
   "cSpell.words": [
     "Abstra",
     "autopep",
+    "Bitboards",
     "Capturable",
     "celerybeat",
     "codz",
@@ -72,6 +73,7 @@
     "mypy",
     "ncpu",
     "ndarray",
+    "Ninuki",
     "nosetests",
     "numpy",
     "optimizer",
@@ -91,6 +93,7 @@
     "pytype",
     "regularization",
     "relu",
+    "Renju",
     "RESULTSCENE",
     "ropeproject",
     "scrapy",
@@ -101,6 +104,8 @@
     "spyderproject",
     "spyproject",
     "webassets",
-    "Wextra"
+    "Wextra",
+    "XOOX",
+    "Zobrist"
   ]
 }

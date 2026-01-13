@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+#include "Zobrist.hpp"
+
 class Gomoku {
  public:
   sf::Font font;
@@ -31,8 +33,8 @@ class Gomoku {
   Scene* _currentScene = nullptr;
 
   using EventList = std::vector<std::optional<sf::Event>>;
-  void initFont(const std::string font);
-  EventList getEventList();
-  void changeScene(Scene* nextScene);
-  void initOnGameOver(const std::string& winner);
+  void _initFont(const std::string font);
+  EventList _getEventList();
+  void _changeScene(Scene* nextScene);
+  void _initOnGameOver(const std::string& winner);
 };

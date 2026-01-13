@@ -1,8 +1,7 @@
 #include <Gomoku.hpp>
 
 Gomoku::Gomoku() : _window(sf::VideoMode({1080, 1000}), "Gomoku"), font() {
-  initFont("arial.ttf");
-  this->_isRunning = true;
+  _initFont("arial.ttf");
   this->_window.setMinimumSize(sf::Vector2u(1080, 1000));
 
   this->_menuScene = std::make_unique<MenuScene>(font, this->_window.getSize());
@@ -14,24 +13,24 @@ Gomoku::Gomoku() : _window(sf::VideoMode({1080, 1000}), "Gomoku"), font() {
     this->_gameScene.get()->setAILevel(level);
     this->_gameScene.get()->setTurnOrder(turnOrder);
     this->_gameScene.get()->setOpeningRule(rule);
-    changeScene(this->_gameScene.get());
+    _changeScene(this->_gameScene.get());
   });
-  this->_gameScene->setOnGameOver([this](const std::string& winner) { initOnGameOver(winner); });
+  this->_gameScene->setOnGameOver([this](const std::string& winner) { _initOnGameOver(winner); });
   this->_gameScene->setOnEsc([this]() {
-    changeScene(this->_menuScene.get());
+    _changeScene(this->_menuScene.get());
     this->_gameScene->reset();
   });
   this->_resultScene->setOnBack([this] {
-    changeScene(this->_menuScene.get());
+    _changeScene(this->_menuScene.get());
     this->_gameScene->reset();
   });
 }
-void Gomoku::initOnGameOver(const std::string& winner) {
+void Gomoku::_initOnGameOver(const std::string& winner) {
   this->_window.clear();
   this->_gameScene->render(this->_window);
   this->_resultScene.get()->setBackground(this->_window);
   this->_resultScene.get()->setWinner(winner);
-  changeScene(this->_resultScene.get());
+  _changeScene(this->_resultScene.get());
 }
 
 void Gomoku::run() {
@@ -39,7 +38,7 @@ void Gomoku::run() {
   while (this->_window.isOpen() && this->_isRunning) {
     sf::Time dt = clock.restart();
     float deltaTime = dt.asSeconds();
-    EventList events = getEventList();
+    EventList events = _getEventList();
     this->_currentScene->handleEvents(events);
     this->_currentScene->update(deltaTime);
     this->_window.clear();
@@ -52,16 +51,16 @@ void Gomoku::stop() {
   this->_isRunning = false;
 }
 
-void Gomoku::initFont(const std::string font) {
+void Gomoku::_initFont(const std::string font) {
   if (!this->font.openFromFile(font)) {
     std::cerr << "Failed to load font!" << std::endl;
     return;
   }
 }
 
-Gomoku::EventList Gomoku::getEventList() {
+Gomoku::EventList Gomoku::_getEventList() {
   EventList events;
-  while (const std::optional e = _window.pollEvent()) {
+  while (const std::optional e = this->_window.pollEvent()) {
     if (e->is<sf::Event::Closed>()) {
       this->_window.close();
     } else if (const auto* resized = e->getIf<sf::Event::Resized>()) {
@@ -76,7 +75,7 @@ Gomoku::EventList Gomoku::getEventList() {
   return events;
 }
 
-void Gomoku::changeScene(Scene* nextScene) {
+void Gomoku::_changeScene(Scene* nextScene) {
   if (nextScene) {
     nextScene->onResize(this->_window.getSize());
     this->_currentScene = nextScene;

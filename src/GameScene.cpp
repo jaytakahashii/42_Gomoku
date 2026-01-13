@@ -1,4 +1,4 @@
-#include <GameScene.hpp>
+#include "GameScene.hpp"
 
 GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
     : _font(font),
@@ -25,7 +25,7 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
 
   this->_undoText.setCharacterSize(Theme::FontSize::Button);
   this->_undoText.setFillColor(sf::Color::Black);
-  this->_undoText.setOrigin(_undoText.getLocalBounds().getCenter());
+  this->_undoText.setOrigin(this->_undoText.getLocalBounds().getCenter());
 
   this->_undoButton.setSize(Theme::Size::Button);
   this->_undoButton.setFillColor(Theme::Color::ButtonActive);
@@ -33,26 +33,33 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
 
   this->_aiAssistText.setCharacterSize(Theme::FontSize::Button);
   this->_aiAssistText.setFillColor(sf::Color::Black);
-  this->_aiAssistText.setOrigin(_aiAssistText.getLocalBounds().getCenter());
+  this->_aiAssistText.setOrigin(this->_aiAssistText.getLocalBounds().getCenter());
 
   this->_aiAssistButton.setSize(Theme::Size::Button);
   this->_aiAssistButton.setFillColor(Theme::Color::ButtonActive);
   this->_aiAssistButton.setOrigin(this->_aiAssistButton.getSize() / 2.f);
 
+  this->_cancelFlag = std::make_shared<std::atomic<bool>>(false);
+
   onResize(initalSize);
 }
 
+GameScene::~GameScene() {
+  _stopAllThreads();
+}
+
 void GameScene::handleEvents(const EventList& events) {
-  if (this->_board.getCurrentPlayer() == Player::AI)
-    return;
   for (const auto e : events) {
     if (const auto* keyPtr = e->getIf<sf::Event::KeyPressed>()) {
       if (keyPtr->code == sf::Keyboard::Key::Escape) {
+        _stopAllThreads();
         if (this->_onEsc) {
           _onEsc();
         }
       }
     }
+    if (this->_board.getCurrentPlayer() == Player::AI)
+      return;
     if (const auto* mousePtr = e->getIf<sf::Event::MouseButtonPressed>()) {
       if (mousePtr->button == sf::Mouse::Button::Left) {
         sf::Vector2f mousePos(static_cast<float>(mousePtr->position.x),
@@ -61,8 +68,9 @@ void GameScene::handleEvents(const EventList& events) {
           _onUndo();
         } else if (this->_aiAssistButton.getGlobalBounds().contains(mousePos)) {
           _onAIAssist();
-        } else
+        } else {
           handleClick(mousePos.x, mousePos.y);
+        }
       }
     }
   }
@@ -73,32 +81,32 @@ void GameScene::displayTimedMessage(const std::string& str, sf::Vector2f pos) {
 }
 
 void GameScene::handleClick(int x, int y) {
-  int col = static_cast<int>(std::round((x - _boardOffset.x) / _cellSize));
-  int row = static_cast<int>(std::round((y - _boardOffset.y) / _cellSize));
+  int col = static_cast<int>(std::round((x - this->_boardOffset.x) / this->_cellSize));
+  int row = static_cast<int>(std::round((y - this->_boardOffset.y) / this->_cellSize));
 
-  if (col >= 0 && col < static_cast<int>(_boardSize) && row >= 0 &&
-      row < static_cast<int>(_boardSize)) {
+  if (col >= 0 && col < static_cast<int>(this->_boardSize) && row >= 0 &&
+      row < static_cast<int>(this->_boardSize)) {
     // makeMoveが成功（ルール上OK）なら、内部状態が更新される
-    float posX = _boardOffset.x + static_cast<float>(col * _cellSize);
-    float posY = _boardOffset.y + static_cast<float>(row * _cellSize);
-    if (_board.makeMove(col, row)) {
-      this->_hintMove = {-1, -1};
+    float posX = this->_boardOffset.x + static_cast<float>(col * this->_cellSize);
+    float posY = this->_boardOffset.y + static_cast<float>(row * this->_cellSize);
+    if (this->_board.makeMove(col, row)) {
+      _cancelHint();
 
-      if (_board.getCapturedStatus()) {
+      if (this->_board.getCapturedStatus()) {
         displayTimedMessage("Capture", {posX, posY});
       }
 
       _updateCaptures();
 
-      if (_board.checkWin()) {
-        if (_onGameOver)
+      if (this->_board.checkWin()) {
+        if (this->_onGameOver)
           _onGameOver("You");
       }
-      _board.changeTurn();
+      this->_board.changeTurn();
     }
-    if (_board.getDoubleThreeStatus()) {
+    if (this->_board.getDoubleThreeStatus()) {
       displayTimedMessage("DoubleThree", {posX, posY});
-      _board.setDoubleThreeStatus(false);  // リセット
+      this->_board.setDoubleThreeStatus(false);
     }
   }
 }
@@ -106,32 +114,34 @@ void GameScene::handleClick(int x, int y) {
 void GameScene::render(sf::RenderWindow& window) {
   window.clear(Theme::Color::Board);
 
-  const float boardLength = static_cast<float>((_boardSize - 1) * _cellSize);
+  const float boardLength = static_cast<float>((this->_boardSize - 1) * this->_cellSize);
 
-  for (unsigned int i = 0; i < _boardSize; ++i) {
-    float iPos = static_cast<float>(i * _cellSize);
+  for (unsigned int i = 0; i < this->_boardSize; ++i) {
+    float iPos = static_cast<float>(i * this->_cellSize);
 
     sf::Vertex h_line[] = {
-        sf::Vertex{{_boardOffset.x, _boardOffset.y + iPos}, sf::Color::Black},
-        sf::Vertex{{_boardOffset.x + boardLength, _boardOffset.y + iPos}, sf::Color::Black}};
+        sf::Vertex{{this->_boardOffset.x, this->_boardOffset.y + iPos}, sf::Color::Black},
+        sf::Vertex{{this->_boardOffset.x + boardLength, this->_boardOffset.y + iPos},
+                   sf::Color::Black}};
     window.draw(h_line, 2, sf::PrimitiveType::Lines);
 
     sf::Vertex v_line[] = {
-        sf::Vertex{{_boardOffset.x + iPos, _boardOffset.y}, sf::Color::Black},
-        sf::Vertex{{_boardOffset.x + iPos, _boardOffset.y + boardLength}, sf::Color::Black}};
+        sf::Vertex{{this->_boardOffset.x + iPos, this->_boardOffset.y}, sf::Color::Black},
+        sf::Vertex{{this->_boardOffset.x + iPos, this->_boardOffset.y + boardLength},
+                   sf::Color::Black}};
     window.draw(v_line, 2, sf::PrimitiveType::Lines);
   }
 
   sf::CircleShape stone(15.f);
   stone.setOrigin(sf::Vector2f(15.0f, 15.f));
 
-  for (unsigned int y = 0; y < _boardSize; ++y) {
-    for (unsigned int x = 0; x < _boardSize; ++x) {
-      Color p = _board.getColorAt(x, y);
+  for (unsigned int y = 0; y < this->_boardSize; ++y) {
+    for (unsigned int x = 0; x < this->_boardSize; ++x) {
+      Color p = this->_board.getColorAt(x, y);
 
       if (p != Color::NONE) {
-        float posX = _boardOffset.x + static_cast<float>(x * _cellSize);
-        float posY = _boardOffset.y + static_cast<float>(y * _cellSize);
+        float posX = this->_boardOffset.x + static_cast<float>(x * this->_cellSize);
+        float posY = this->_boardOffset.y + static_cast<float>(y * this->_cellSize);
         stone.setPosition(sf::Vector2f(posX, posY));
 
         stone.setFillColor(p == Color::BLACK ? sf::Color::Black : sf::Color::White);
@@ -174,8 +184,8 @@ void GameScene::update(float df) {
 void GameScene::_applyAIMove(Move move) {
   this->_board.makeMove(move.x, move.y);
 
-  float posX = _boardOffset.x + static_cast<float>(move.x * _cellSize);
-  float posY = _boardOffset.y + static_cast<float>(move.y * _cellSize);
+  float posX = this->_boardOffset.x + static_cast<float>(move.x * this->_cellSize);
+  float posY = this->_boardOffset.y + static_cast<float>(move.y * this->_cellSize);
 
   if (this->_board.getCapturedStatus()) {
     displayTimedMessage("Capture", {posX, posY});
@@ -191,8 +201,7 @@ void GameScene::_applyAIMove(Move move) {
       this->_onGameOver("AI");
     return;
   }
-
-  _board.changeTurn();
+  this->_board.changeTurn();
 }
 
 void GameScene::onResize(const sf::Vector2u& windowSize) {
@@ -201,12 +210,12 @@ void GameScene::onResize(const sf::Vector2u& windowSize) {
   float h = static_cast<float>(windowSize.y);
 
   // 盤面全体のピクセル幅・高さ（19本の線 = 18マス分）
-  float boardPixelSize = static_cast<float>((_boardSize - 1) * _cellSize);
+  float boardPixelSize = static_cast<float>((this->_boardSize - 1) * this->_cellSize);
 
   // 画面中央になるようにオフセットを計算
   // (画面幅 - 盤面幅) / 2 = 左側の余白
-  _boardOffset.x = (w - boardPixelSize) / 2.f;
-  _boardOffset.y = (h - boardPixelSize) / 2.f;
+  this->_boardOffset.x = (w - boardPixelSize) / 2.f;
+  this->_boardOffset.y = (h - boardPixelSize) / 2.f;
 
   this->_countWhiteCaptures.setPosition({w / 4.f, h / 9.5f});
   this->_countBlackCaptures.setPosition({w * 3 / 4.f, h / 9.5f});
@@ -216,10 +225,10 @@ void GameScene::onResize(const sf::Vector2u& windowSize) {
   this->_aiInfoText.setPosition({20.f, h - 50.f});
 
   this->_undoButton.setPosition({w * 3 / 4, h - 50.f});
-  this->_undoText.setPosition(_undoButton.getPosition());
+  this->_undoText.setPosition(this->_undoButton.getPosition());
 
   this->_aiAssistButton.setPosition({w * 2 / 4, h - 50.f});
-  this->_aiAssistText.setPosition(_aiAssistButton.getPosition());
+  this->_aiAssistText.setPosition(this->_aiAssistButton.getPosition());
 }
 
 void GameScene::setOnGameOver(std::function<void(const std::string& winner)> callback) {
@@ -258,13 +267,17 @@ GameScene::FloatingMessage::FloatingMessage(const sf::Font& font, const std::str
 }
 
 void GameScene::_onUndo() {
-  if (_isAIThinking || _isCalculatingHint)
+  if (this->_isAIThinking) {
     return;
+  }
+  if (this->_isCalculatingHint) {
+    _cancelHint();
+  }
 
   if (this->_board.undo()) {
     this->_board.undo();
   }
-  _hintMove = {-1, -1};
+  this->_hintMove = {-1, -1};
   _updateCaptures();
 }
 
@@ -281,16 +294,25 @@ void GameScene::_onAIAssist() {
     return;
   }
 
+  if (this->_cancelFlag) {
+    *this->_cancelFlag = true;
+  }
+
+  this->_cancelFlag = std::make_shared<std::atomic<bool>>(false);
+
   this->_isCalculatingHint = true;
   this->_hintMove = {-1, -1};
 
   AI ai;
-  Board boardCopy = this->_board;
-  Color turnColor = this->_board.getCurrentTurn();
+  const Board& board = this->_board;
+  Color turn = this->_board.getCurrentTurn();
   AILevel level = AILevel::Hard;
 
-  this->_hintFuture = std::async(std::launch::async, [ai, boardCopy, turnColor, level]() mutable {
-    return ai.getBestMove(boardCopy, turnColor, level);
+  std::shared_ptr<std::atomic<bool>> flagPtr = _cancelFlag;
+  this->_aiClock.restart();
+
+  this->_hintFuture = std::async(std::launch::async, [ai, board, turn, level, flagPtr]() mutable {
+    return ai.getBestMove(board, turn, level, *flagPtr);
   });
 }
 
@@ -334,9 +356,20 @@ void GameScene::_notifyPlayerTurn(float df) {
 
 void GameScene::_handleHint() {
   if (this->_isCalculatingHint) {
+    float elapsed = this->_aiClock.getElapsedTime().asSeconds();
+    std::stringstream ss;
+    ss << "Analyzing... " << std::fixed << std::setprecision(2) << elapsed << "s";
+    this->_aiInfoText.setString(ss.str());
+
     if (this->_hintFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
       Move bestMove = this->_hintFuture.get();
       this->_hintMove = {bestMove.x, bestMove.y};
+
+      float finalTime = this->_aiClock.getElapsedTime().asSeconds();
+      std::stringstream ssFinal;
+      ssFinal << "Hint Found: " << std::fixed << std::setprecision(2) << finalTime << "s";
+      this->_aiInfoText.setString(ssFinal.str());
+
       this->_isCalculatingHint = false;
     }
   }
@@ -351,15 +384,18 @@ void GameScene::_handleAIProcess(float df) {
         this->_isAIThinking = true;
         this->_aiMoveTimer = 0.0f;
 
+        this->_cancelFlag = std::make_shared<std::atomic<bool>>(false);
+        std::shared_ptr<std::atomic<bool>> flagPtr = _cancelFlag;
+
         AI ai;
-        Color turnColor = this->_board.getCurrentTurn();
         Board boardCopy = this->_board;
+        Color turn = this->_board.getCurrentTurn();
         AILevel level = this->_aiLevel;
 
         this->_aiClock.restart();
         this->_aiFuture =
-            std::async(std::launch::async, [ai, boardCopy, turnColor, level]() mutable {
-              return ai.getBestMove(boardCopy, turnColor, level);
+            std::async(std::launch::async, [ai, boardCopy, turn, level, flagPtr]() mutable {
+              return ai.getBestMove(boardCopy, turn, level, *flagPtr);
             });
       }
     } else {
@@ -419,4 +455,21 @@ void GameScene::reset() {
 
   this->_aiInfoText.setString("AI Time: 0.00s");
   _updateCaptures();
+}
+
+void GameScene::_cancelHint() {
+  if (this->_cancelFlag) {
+    *this->_cancelFlag = true;
+  }
+  this->_isCalculatingHint = false;
+  this->_hintMove = {-1, -1};
+  this->_aiInfoText.setString("AI Time: 0.00s");
+}
+
+void GameScene::_stopAllThreads() {
+  if (this->_cancelFlag) {
+    *this->_cancelFlag = true;
+  }
+  this->_isAIThinking = false;
+  this->_isCalculatingHint = false;
 }

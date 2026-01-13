@@ -12,6 +12,7 @@
 #include <thread>
 
 #include "AI.hpp"
+#include "Enums.hpp"
 
 const unsigned int CELL_SIZE = 40;
 const float OFFSET = 20.0f;
@@ -21,6 +22,7 @@ const unsigned int WINDOW_HEIGHT = WINDOW_WIDTH + 50;
 class GameScene : public Scene {
  public:
   GameScene(sf::Font& font, const sf::Vector2u& initialSize);
+  ~GameScene();
   void handleEvents(const EventList& events);
   void update(float dt);
   void render(sf::RenderWindow& window);
@@ -80,9 +82,13 @@ class GameScene : public Scene {
   sf::Vector2i _hintMove = {-1, -1};
   void _onAIAssist();
   void _handleHint();
+  void _cancelHint();
   sf::CircleShape _makeHintCircle() const;
+  std::shared_ptr<std::atomic<bool>> _cancelFlag;
 
   std::function<void()> _onEsc;
 
   OpeningRule _openingRule;
+
+  void _stopAllThreads();
 };

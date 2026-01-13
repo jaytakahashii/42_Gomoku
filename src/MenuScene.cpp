@@ -28,17 +28,17 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_orderText.setCharacterSize(Theme::FontSize::Button);
   this->_orderText.setFillColor(sf::Color::Black);
   this->_orderText.setStyle(sf::Text::Bold);
-  this->_orderText.setOrigin(_orderText.getLocalBounds().getCenter());
+  this->_orderText.setOrigin(this->_orderText.getLocalBounds().getCenter());
 
   this->_firstText.setCharacterSize(Theme::FontSize::Button);
   this->_firstText.setFillColor(sf::Color::Black);
   this->_firstText.setStyle(sf::Text::Bold);
-  this->_firstText.setOrigin(_firstText.getLocalBounds().getCenter());
+  this->_firstText.setOrigin(this->_firstText.getLocalBounds().getCenter());
 
   this->_secondText.setCharacterSize(Theme::FontSize::Button);
   this->_secondText.setFillColor(sf::Color::Black);
   this->_secondText.setStyle(sf::Text::Bold);
-  this->_secondText.setOrigin(_secondText.getLocalBounds().getCenter());
+  this->_secondText.setOrigin(this->_secondText.getLocalBounds().getCenter());
 
   this->_firstButton.setSize(Theme::Size::Button);
   this->_firstButton.setFillColor(Theme::Color::ButtonIdle);
@@ -51,7 +51,7 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_levelText.setCharacterSize(Theme::FontSize::Button);
   this->_levelText.setFillColor(sf::Color::Black);
   this->_levelText.setStyle(sf::Text::Bold);
-  this->_levelText.setOrigin(_levelText.getLocalBounds().getCenter());
+  this->_levelText.setOrigin(this->_levelText.getLocalBounds().getCenter());
 
   this->_easyButton.setSize(Theme::Size::Button);
   this->_easyButton.setFillColor(Theme::Color::ButtonIdle);
@@ -60,7 +60,7 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_easyText.setCharacterSize(Theme::FontSize::Button);
   this->_easyText.setFillColor(sf::Color::Black);
   this->_easyText.setStyle(sf::Text::Bold);
-  this->_easyText.setOrigin(_easyText.getLocalBounds().getCenter());
+  this->_easyText.setOrigin(this->_easyText.getLocalBounds().getCenter());
 
   this->_normalButton.setSize(Theme::Size::Button);
   this->_normalButton.setFillColor(Theme::Color::ButtonIdle);
@@ -78,12 +78,12 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_hardText.setCharacterSize(Theme::FontSize::Button);
   this->_hardText.setFillColor(sf::Color::Black);
   this->_hardText.setStyle(sf::Text::Bold);
-  this->_hardText.setOrigin(_hardText.getLocalBounds().getCenter());
+  this->_hardText.setOrigin(this->_hardText.getLocalBounds().getCenter());
 
   this->_openingRuleText.setCharacterSize(Theme::FontSize::Button);
   this->_openingRuleText.setFillColor(sf::Color::Black);
   this->_openingRuleText.setStyle(sf::Text::Bold);
-  this->_openingRuleText.setOrigin(_openingRuleText.getLocalBounds().getCenter());
+  this->_openingRuleText.setOrigin(this->_openingRuleText.getLocalBounds().getCenter());
 
   this->_startButtonText.setCharacterSize(30);
   this->_startButtonText.setFillColor(sf::Color::White);
@@ -97,7 +97,7 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_standardText.setCharacterSize(Theme::FontSize::Button);
   this->_standardText.setFillColor(sf::Color::Black);
   this->_standardText.setStyle(sf::Text::Bold);
-  this->_standardText.setOrigin(_standardText.getLocalBounds().getCenter());
+  this->_standardText.setOrigin(this->_standardText.getLocalBounds().getCenter());
 
   this->_proButton.setSize(Theme::Size::Button);
   this->_proButton.setFillColor(Theme::Color::ButtonIdle);
@@ -106,7 +106,7 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_proText.setCharacterSize(Theme::FontSize::Button);
   this->_proText.setFillColor(sf::Color::Black);
   this->_proText.setStyle(sf::Text::Bold);
-  this->_proText.setOrigin(_proText.getLocalBounds().getCenter());
+  this->_proText.setOrigin(this->_proText.getLocalBounds().getCenter());
 
   this->_longProButton.setSize(Theme::Size::Button);
   this->_longProButton.setFillColor(Theme::Color::ButtonIdle);
@@ -115,7 +115,7 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_longProText.setCharacterSize(Theme::FontSize::Button);
   this->_longProText.setFillColor(sf::Color::Black);
   this->_longProText.setStyle(sf::Text::Bold);
-  this->_longProText.setOrigin(_longProText.getLocalBounds().getCenter());
+  this->_longProText.setOrigin(this->_longProText.getLocalBounds().getCenter());
 
   onResize(initalSize);
 }
@@ -158,16 +158,16 @@ void MenuScene::handleEvents(const EventList& events) {
 }
 
 void MenuScene::update(float dt) {
-  _updateButtonStatus(this->_firstButton, _turnOrder == TurnOrder::HumanFirst);
-  _updateButtonStatus(this->_secondButton, _turnOrder == TurnOrder::AIFirst);
+  _updateButtonStatus(this->_firstButton, this->_turnOrder == TurnOrder::HumanFirst);
+  _updateButtonStatus(this->_secondButton, this->_turnOrder == TurnOrder::AIFirst);
 
   _updateButtonStatus(this->_easyButton, _aiLevel == AILevel::Easy);
   _updateButtonStatus(this->_normalButton, _aiLevel == AILevel::Normal);
   _updateButtonStatus(this->_hardButton, _aiLevel == AILevel::Hard);
 
-  _updateButtonStatus(this->_standardButton, _openingRule == OpeningRule::Standard);
-  _updateButtonStatus(this->_proButton, _openingRule == OpeningRule::Pro);
-  _updateButtonStatus(this->_longProButton, _openingRule == OpeningRule::LongPro);
+  _updateButtonStatus(this->_standardButton, this->_openingRule == OpeningRule::Standard);
+  _updateButtonStatus(this->_proButton, this->_openingRule == OpeningRule::Pro);
+  _updateButtonStatus(this->_longProButton, this->_openingRule == OpeningRule::LongPro);
 }
 
 void MenuScene::_updateButtonStatus(sf::RectangleShape& button, bool isActive) {
@@ -209,9 +209,9 @@ void MenuScene::onResize(const sf::Vector2u& windowSize) {
   this->_orderText.setPosition({titlePos.x, titlePos.y + 90.f});
   this->_startButton.setPosition({w / 2.f, h * 0.8f});
   this->_firstButton.setPosition(
-      {_orderText.getPosition().x * 0.7f, _orderText.getPosition().y + 50.f});
+      {this->_orderText.getPosition().x * 0.7f, this->_orderText.getPosition().y + 50.f});
   this->_secondButton.setPosition(
-      {_orderText.getPosition().x * 1.3f, _orderText.getPosition().y + 50.f});
+      {this->_orderText.getPosition().x * 1.3f, this->_orderText.getPosition().y + 50.f});
   this->_startButtonText.setPosition(this->_startButton.getPosition());
   this->_firstText.setPosition(this->_firstButton.getPosition());
   this->_secondText.setPosition(this->_secondButton.getPosition());
