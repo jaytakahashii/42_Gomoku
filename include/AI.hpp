@@ -19,6 +19,9 @@ class AI {
   AI();
   ~AI() = default;
 
+  // TODO: debug
+  void printPV(Board board);
+
   /**
    * Calculates the best move for the AI using Minimax with Alpha-Beta pruning.
    * @param board The current board state.
@@ -30,7 +33,7 @@ class AI {
 
  private:
   // --- Configuration ---
-  static constexpr int DEPTH_EASY = 3;
+  static constexpr int DEPTH_EASY = 5;
   static constexpr int DEPTH_NORMAL = 10;
   static constexpr int DEPTH_HARD = 20;
 

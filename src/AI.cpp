@@ -5,6 +5,33 @@
 AI::AI() : _tt(20) {
 }
 
+// TODO: debug
+// 現在の盤面から、TTを辿ってAIが考えている最善手順を表示する
+void AI::printPV(Board board) {
+  std::cout << "PV: ";
+  for (int i = 0; i < 20; ++i) {
+    uint64_t key = board.getHash();
+    TTEntry* entry = _tt.get(key);
+
+    // エントリがない、または最善手が記録されていないなら終了
+    if (entry == nullptr || entry->bestMove.x == -1) {
+      break;
+    }
+
+    Move m = entry->bestMove;
+    std::cout << "(" << m.x << "," << m.y << ") -> ";
+
+    if (!board.makeMove(m.x, m.y))
+      break;
+    if (board.checkWin()) {
+      std::cout << "WIN";
+      break;
+    }
+    board.changeTurn();
+  }
+  std::cout << std::endl;
+}
+
 Move AI::getBestMove(const Board& board, Color color, AILevel level) {
   // 1. Setup Phase
   Board clone = board;
@@ -61,9 +88,13 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
     // Optimization: Early Exit on Victory
     // If we found a move that guarantees a win, we don't need to search further.
     if (alpha >= ScoreConfig::WIN - 1000) {
+      printPV(board);  // TODO: debug
       return bestMove;
     }
   }
+
+  // TODO: debug
+  printPV(board);
 
   return bestMove;
 }
