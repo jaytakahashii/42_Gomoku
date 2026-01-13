@@ -53,7 +53,7 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
     // --- 1. Move Generation & Ordering ---
     // TT will now provide the "Best Move" from the previous depth (depth-1)
     // to sort moves efficiently.
-    std::vector<Move> moves = _generateMoves(searchBoard);
+    std::vector<Move> moves = _generateMoves(searchBoard, depth);
 
     if (moves.empty())
       return {-1, -1, 0};
@@ -141,60 +141,49 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
 }
 
 int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer) {
-  // [1] Transposition Table Lookup (キャッシュ確認)
-  // ---------------------------------------------------------
+  // [1] TT Lookup (既存コード) ...
   uint64_t key = board.getHash();
   TTEntry* ttEntry = _tt.get(key);
-
   if (ttEntry != nullptr && ttEntry->depth >= depth) {
-    // キャッシュされた結果が、今の探索よりも深い（＝信頼できる）場合
-    if (ttEntry->flag == TTFlag::EXACT) {
+    if (ttEntry->flag == TTFlag::EXACT)
       return ttEntry->score;
-    } else if (ttEntry->flag == TTFlag::LOWERBOUND) {
+    else if (ttEntry->flag == TTFlag::LOWERBOUND)
       alpha = std::max(alpha, ttEntry->score);
-    } else if (ttEntry->flag == TTFlag::UPPERBOUND) {
+    else if (ttEntry->flag == TTFlag::UPPERBOUND)
       beta = std::min(beta, ttEntry->score);
-    }
-
-    // キャッシュによって探索範囲が矛盾した（＝枝刈り可能）
-    if (alpha >= beta) {
+    if (alpha >= beta)
       return ttEntry->score;
-    }
   }
-  // ---------------------------------------------------------
 
-  // [2] 終了条件
-  if (depth == 0) {
+  // [2] Base Case (既存コード) ...
+  if (depth == 0)
     return Evaluator::evaluate(board, _aiPlayer);
-  }
 
-  // [3] 手の生成
-  std::vector<Move> moves = _generateMoves(board);
+  // [3] Move Generation (depthを渡すよう変更済み)
+  std::vector<Move> moves = _generateMoves(board, depth);
   if (moves.empty())
     return 0;
 
-  // [★重要] Hash Move Ordering
-  // TTに「以前見つけた最善手(Best Move)」があれば、それを最優先で探索する。
-  // これにより枝刈り効率が劇的に向上する。
+  // TT Move Ordering (既存コード) ...
   if (ttEntry != nullptr && ttEntry->bestMove.x != -1) {
+    // 先頭へスワップ
     for (size_t i = 0; i < moves.size(); ++i) {
       if (moves[i].x == ttEntry->bestMove.x && moves[i].y == ttEntry->bestMove.y) {
-        // 先頭の手と交換
         std::swap(moves[0], moves[i]);
-        // moves[0].score = ...; // 必要ならスコアを最大にしておく
         break;
       }
     }
   }
 
-  // --- 以降は通常のMinimaxループ ---
+  // --- PVS Search Loop ---
 
-  int originalAlpha = alpha;  // フラグ判定用に保存
+  int originalAlpha = alpha;
   Move bestMoveInThisNode = {-1, -1, 0};
-  int bestScore =
-      maximizingPlayer ? std::numeric_limits<int>::min() : std::numeric_limits<int>::max();
+  bool isFirstMove = true;  // ★ PVS用のフラグ
 
   if (maximizingPlayer) {
+    int maxEval = std::numeric_limits<int>::min();
+
     for (const Move& m : moves) {
       if (!board.makeMove(m.x, m.y))
         continue;
@@ -202,26 +191,60 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       // 即時勝利判定
       if (board.checkWin()) {
         board.undo();
-        int winScore = ScoreConfig::WIN + depth;  // 早く勝つ方が良い
-        // 勝利確定も保存してリターン
+        int winScore = ScoreConfig::WIN + depth;
         _tt.store(key, depth, winScore, TTFlag::EXACT, m);
         return winScore;
       }
-
       board.changeTurn();
-      int score = _minimax(board, depth - 1, alpha, beta, false);
+
+      int eval;
+      if (isFirstMove) {
+        // 1. 最初の手（最善手候補）は全力で探索 (Full Window)
+        eval = _minimax(board, depth - 1, alpha, beta, false);
+      } else {
+        // 2. 2手目以降は Null Window Search (alpha, alpha+1)
+        // 「今のalphaを超えないこと」を確認するだけの高速探索
+        eval = _minimax(board, depth - 1, alpha, alpha + 1, false);
+
+        // もし alpha を超えていたら (Fail-High)、評価が間違っていた可能性があるので
+        // 本来の窓 (alpha, beta) で再探索する
+        if (eval > alpha && eval < beta) {
+          eval = _minimax(board, depth - 1, alpha, beta, false);
+        }
+      }
+
       board.undo();
 
-      if (score > bestScore) {
-        bestScore = score;
+      if (eval > maxEval) {
+        maxEval = eval;
         bestMoveInThisNode = m;
       }
-      alpha = std::max(alpha, bestScore);
-      if (beta <= alpha)
-        break;  // Beta Cut
+
+      // Alpha Update
+      alpha = std::max(alpha, maxEval);
+
+      // Beta Cut-off
+      if (beta <= alpha) {
+        // ★ Killer Heuristic (Maximizerにとって、相手のこの分岐を断ち切る強い手)
+        if (!(_killerMoves[depth][0].x == m.x && _killerMoves[depth][0].y == m.y)) {
+          _killerMoves[depth][1] = _killerMoves[depth][0];
+          _killerMoves[depth][0] = m;
+        }
+        break;
+      }
+      isFirstMove = false;  // 2周目からはfalse
     }
+    // 結果保存 (既存コード)
+    TTFlag flag = (maxEval <= originalAlpha)
+                      ? TTFlag::UPPERBOUND
+                      : (maxEval >= beta ? TTFlag::LOWERBOUND : TTFlag::EXACT);
+    _tt.store(key, depth, maxEval, flag, bestMoveInThisNode);
+    return maxEval;
+
   } else {
-    // Minimizing logic (対称の実装)
+    // --- Minimizing Player (相手) ---
+    int minEval = std::numeric_limits<int>::max();
+
     for (const Move& m : moves) {
       if (!board.makeMove(m.x, m.y))
         continue;
@@ -232,39 +255,55 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
         _tt.store(key, depth, loseScore, TTFlag::EXACT, m);
         return loseScore;
       }
-
       board.changeTurn();
-      int score = _minimax(board, depth - 1, alpha, beta, true);
+
+      int eval;
+      if (isFirstMove) {
+        // 1. 最初の手は全力探索
+        eval = _minimax(board, depth - 1, alpha, beta, true);
+      } else {
+        // 2. 2手目以降は Null Window Search (beta-1, beta)
+        // 「今のbetaを下回らないこと」を確認する
+        eval = _minimax(board, depth - 1, beta - 1, beta, true);
+
+        // もし beta を下回っていたら (Fail-Low: 相手にとって良い手)、再探索
+        if (eval < beta && eval > alpha) {
+          eval = _minimax(board, depth - 1, alpha, beta, true);
+        }
+      }
+
       board.undo();
 
-      if (score < bestScore) {
-        bestScore = score;
+      if (eval < minEval) {
+        minEval = eval;
         bestMoveInThisNode = m;
       }
-      beta = std::min(beta, bestScore);
-      if (beta <= alpha)
-        break;  // Alpha Cut
+
+      // Beta Update
+      beta = std::min(beta, minEval);
+
+      // Alpha Cut-off
+      if (beta <= alpha) {
+        // ★ Killer Heuristic (Minimizer分岐でのCut。必要ならここでも更新可)
+        // 一般的にはMinimizer側でも有効な防御手などを登録する価値があります
+        if (!(_killerMoves[depth][0].x == m.x && _killerMoves[depth][0].y == m.y)) {
+          _killerMoves[depth][1] = _killerMoves[depth][0];
+          _killerMoves[depth][0] = m;
+        }
+        break;
+      }
+      isFirstMove = false;
     }
+    // 結果保存
+    TTFlag flag = (minEval <= originalAlpha)
+                      ? TTFlag::UPPERBOUND
+                      : (minEval >= beta ? TTFlag::LOWERBOUND : TTFlag::EXACT);
+    _tt.store(key, depth, minEval, flag, bestMoveInThisNode);
+    return minEval;
   }
-
-  // [4] 結果の保存
-  // ---------------------------------------------------------
-  TTFlag flag;
-  if (bestScore <= originalAlpha) {
-    flag = TTFlag::UPPERBOUND;  // Fail-Low (Alpha Cut-offされなかったけど全部ダメ)
-  } else if (bestScore >= beta) {
-    flag = TTFlag::LOWERBOUND;  // Fail-High (Beta Cut-offされた)
-  } else {
-    flag = TTFlag::EXACT;  // Alpha < Score < Beta (正確な値)
-  }
-
-  _tt.store(key, depth, bestScore, flag, bestMoveInThisNode);
-  // ---------------------------------------------------------
-
-  return bestScore;
 }
 
-std::vector<Move> AI::_generateMoves(const Board& board) {
+std::vector<Move> AI::_generateMoves(const Board& board, int depth) {
   std::vector<Move> moves;
   moves.reserve(64);  // Reserve memory to prevent reallocations
 
@@ -314,6 +353,14 @@ std::vector<Move> AI::_generateMoves(const Board& board) {
       // Calculate heuristic score for sorting
       // (This function must be lightweight!)
       int priority = Evaluator::evaluateMovePriority(board, x, y, board.getCurrentTurn());
+
+      // ★追加: キラー手ならボーナスを与える
+      // (現在の深さがわからないので、引数に depth を渡すように変更する必要があります)
+      // ここでは簡易的に「_generateMovesにdepthを渡す」修正が必要です。
+      if (moves[i] == _killerMoves[depth][0])
+        priority += 100000;  // Winよりは低いが非常に高く
+      else if (moves[i] == _killerMoves[depth][1])
+        priority += 90000;
 
       moves.push_back({x, y, priority});
     }

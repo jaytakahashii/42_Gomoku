@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <bitset>
 #include <map>
 #include <vector>
 
@@ -12,9 +11,6 @@
 // ==========================================
 // Constants & Configuration
 // ==========================================
-
-// Type alias for the bit board representation
-using BoardType = std::bitset<MAX_CELLS>;
 
 // ==========================================
 // Helper Structures
