@@ -25,17 +25,17 @@ class MenuScene : public Scene {
   sf::RectangleShape _firstButton;
   sf::RectangleShape _secondButton;
   sf::RectangleShape _easyButton;
-  sf::RectangleShape _mediumButton;
+  sf::RectangleShape _normalButton;
   sf::RectangleShape _hardButton;
   sf::Text _levelText;
-  sf::Text _mediumText;
+  sf::Text _normalText;
   sf::Text _easyText;
   sf::Text _hardText;
   sf::Text _firstText;
   sf::Text _secondText;
   sf::Text _startButtonText;
   TurnOrder _turnOrder = TurnOrder::HumanFirst;
-  AILevel _aiLevel = AILevel::Medium;
+  AILevel _aiLevel = AILevel::Normal;
   std::function<void(TurnOrder& turnOrder, AILevel& level, OpeningRule& rule)> _onStartGame;
 
   OpeningRule _openingRule = OpeningRule::Standard;
