@@ -33,70 +33,111 @@ void AI::printPV(Board board) {
 }
 
 Move AI::getBestMove(const Board& board, Color color, AILevel level) {
-  // 1. Setup Phase
-  Board clone = board;
   _aiPlayer = color;
-  int maxDepth = _getDepthFromLevel(level);
 
-  // 2. Move Generation & Ordering
-  // Optimization: Generating moves on the cloned board.
-  std::vector<Move> moves = _generateMoves(clone);
+  // Calculate target depth
+  int targetDepth = _getDepthFromLevel(level);
 
-  // Edge Cases: No moves available or only one move
-  if (moves.empty()) {
-    return {-1, -1, 0};
+  // Prepare variables for Iterative Deepening
+  Move globalBestMove = {-1, -1, 0};
+
+  // Clone the board ONCE for the search process
+  Board searchBoard = board;
+
+  // =========================================================
+  // Iterative Deepening (ID)
+  // Start from depth 2 and increase until targetDepth.
+  // This fills the TT with good moves, making deeper searches faster.
+  // =========================================================
+  for (int depth = 2; depth <= targetDepth; ++depth) {
+    // --- 1. Move Generation & Ordering ---
+    // TT will now provide the "Best Move" from the previous depth (depth-1)
+    // to sort moves efficiently.
+    std::vector<Move> moves = _generateMoves(searchBoard);
+
+    if (moves.empty())
+      return {-1, -1, 0};
+    if (moves.size() == 1)
+      return moves[0];  // Optimization
+
+    // Hash Move Check (Check TT for the root position)
+    uint64_t rootHash = searchBoard.getHash();
+    TTEntry* entry = _tt.get(rootHash);
+
+    if (entry != nullptr && entry->bestMove.x != -1) {
+      // Move the best move from previous depth to the front
+      for (size_t i = 0; i < moves.size(); ++i) {
+        if (moves[i].x == entry->bestMove.x && moves[i].y == entry->bestMove.y) {
+          std::swap(moves[0], moves[i]);
+          break;
+        }
+      }
+    }
+
+    // --- 2. Root Search Loop ---
+    Move currentDepthBestMove = moves[0];
+    currentDepthBestMove.score = std::numeric_limits<int>::min();
+
+    int alpha = std::numeric_limits<int>::min();
+    int beta = std::numeric_limits<int>::max();
+
+    for (const Move& m : moves) {
+      if (!searchBoard.makeMove(m.x, m.y))
+        continue;
+
+      // Win check optimization
+      if (searchBoard.checkWin()) {
+        searchBoard.undo();
+        // Found a winning move at this depth.
+        // Store and return immediately (no need to search deeper)
+        _tt.store(rootHash, depth, ScoreConfig::WIN, TTFlag::EXACT, m);
+        printPV(board);
+        return m;
+      }
+
+      searchBoard.changeTurn();
+
+      // Search children with reduced depth
+      int score = _minimax(searchBoard, depth - 1, alpha, beta, false);
+
+      searchBoard.undo();
+
+      // Update Best Move for this depth
+      if (score > currentDepthBestMove.score) {
+        currentDepthBestMove = m;
+        currentDepthBestMove.score = score;
+      }
+
+      // Alpha Update
+      if (currentDepthBestMove.score > alpha) {
+        alpha = currentDepthBestMove.score;
+      }
+
+      // Win Threshold Break
+      if (alpha >= ScoreConfig::WIN - 1000) {
+        break;
+      }
+    }
+
+    // --- 3. Update Global Best & Store to TT ---
+    globalBestMove = currentDepthBestMove;
+
+    // ★ CRITICAL: Store the Root Node result to TT
+    // This allows the next iteration (depth+1) to use this result for sorting,
+    // AND allows printPV to find the start of the chain.
+    TTFlag flag =
+        TTFlag::EXACT;  // Root node is usually exact unless alpha/beta cut logic is complex
+    _tt.store(rootHash, depth, globalBestMove.score, flag, globalBestMove);
+
+    // Debug output for each depth (Optional)
+    // std::cout << "Depth " << depth << " done. Best: " << globalBestMove.x << "," <<
+    // globalBestMove.y << std::endl;
   }
-  if (moves.size() == 1) {
-    return moves[0];
-  }
 
-  // 3. Root Search Initialization
-  Move bestMove = moves[0];
-  bestMove.score = std::numeric_limits<int>::min();
-
-  int alpha = std::numeric_limits<int>::min();
-  int beta = std::numeric_limits<int>::max();
-
-  // 4. Root Loop (The first level of Minimax)
-  for (const Move& m : moves) {
-    // Execute move on the clone
-    if (!clone.makeMove(m.x, m.y)) {
-      continue;
-    }
-
-    // Note: Assuming makeMove does NOT change turn automatically.
-    // If your Board::makeMove handles turn switching, remove this line.
-    clone.changeTurn();
-
-    // Recursive call: Next is opponent's turn (Minimizer)
-    int score = _minimax(clone, maxDepth - 1, alpha, beta, false);
-
-    // Undo move to restore state
-    clone.undo();
-
-    // Update Best Move (Maximizing at root)
-    if (score > bestMove.score) {
-      bestMove = m;
-      bestMove.score = score;
-    }
-
-    // Alpha Update
-    if (bestMove.score > alpha) {
-      alpha = bestMove.score;
-    }
-
-    // Optimization: Early Exit on Victory
-    // If we found a move that guarantees a win, we don't need to search further.
-    if (alpha >= ScoreConfig::WIN - 1000) {
-      printPV(board);  // TODO: debug
-      return bestMove;
-    }
-  }
-
-  // TODO: debug
+  // Print PV using the original board (hash matches rootHash)
   printPV(board);
 
-  return bestMove;
+  return globalBestMove;
 }
 
 int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer) {
