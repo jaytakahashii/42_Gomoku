@@ -9,6 +9,7 @@
 
 int main() {
   Gomoku game;
+  Zobrist::initialize();
   game.run();
   return 0;
 }

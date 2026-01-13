@@ -1,68 +1,77 @@
 #pragma once
 
 #include <algorithm>
-#include <chrono>
-#include <cmath>
 #include <limits>
 #include <vector>
 
 #include "Board.hpp"
+#include "Enums.hpp"
+#include "Evaluator.hpp"
+#include "GameConfig.hpp"
+#include "TranspositionTable.hpp"
 
-struct Move {
-  int x;
-  int y;
-  int score;
-};
+// ==========================================
+// AI Class
+// ==========================================
 
 class AI {
  public:
-  AI() = default;
+  AI();
+  ~AI() = default;
 
-  // 制限時間内に最善手を計算して返す
-  Move getBestMove(Board board, Color color, AILevel level);
+  // TODO: debug
+  void printPV(Board board);
+
+  /**
+   * Calculates the best move for the AI using Minimax with Alpha-Beta pruning.
+   * @param board The current board state.
+   * @param color The AI's color.
+   * @param level The difficulty level of the AI.
+   * @return The best move determined by the AI.
+   */
+  Move getBestMove(const Board& board, Color color, AILevel level);
 
  private:
-  // --- 定数定義 ---
+  // --- Configuration ---
+  static constexpr int DEPTH_EASY = 5;
+  static constexpr int DEPTH_NORMAL = 10;
+  static constexpr int DEPTH_HARD = 20;
 
-  // 評価スコア
-  static constexpr int _SCORE_WIN = 100000000;
-  static constexpr int _SCORE_OPEN_FOUR = 10000000;  // 次に確実に勝てる形
-  static constexpr int _SCORE_CAPTURE = 1000000;     // 石を取る価値
-  static constexpr int _SCORE_CLOSED_FOUR = 100000;  // 防がれないと勝てる形
-  static constexpr int _SCORE_OPEN_THREE = 100000;   // 次にOpenFourになる形
+  static constexpr int MAX_MOVES_TO_CONSIDER = 10;
 
-  // 探索設定
-  static constexpr int TIME_LIMIT_MS = 1000;  // 思考時間（ミリ秒）
-  static constexpr int MAX_DEPTH = 20;        // 反復深化の最大深さ
+  // --- Component State ---
+  Color _aiPlayer;
+  TranspositionTable _tt;
+  Move _killerMoves[DEPTH_HARD][2];
 
-  // --- メンバ変数 ---
+  // --- Internal Logic ---
 
-  Color _aiPlayer;  // AIの手番（色）
-  bool _timeOut;    // 時間切れフラグ
-  std::chrono::time_point<std::chrono::high_resolution_clock> _startTime;
+  /**
+   * Minimax algorithm with Alpha-Beta pruning.
+   * @param board The current board state (will be modified).
+   * @param depth The remaining search depth.
+   * @param alpha The Alpha value (best already explored option along the path to the root for the
+   * maximizer).
+   * @param beta The Beta value (best already explored option along the path to the root for the
+   * minimizer).
+   * @param maximizingPlayer true if the current player is the maximizer, false if minimizer.
+   * @return The evaluated score for the current board state.
+   */
+  int _minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer);
 
-  // --- 探索・思考ロジック ---
+  /**
+   * Generates a list of possible moves from the current board state.
+   * @param board The current board state.
+   * @return A vector of possible moves with heuristic scores. (MAX: MAX_MOVES_TO_CONSIDER)
+   */
+  std::vector<Move> _generateMoves(const Board& board, int depth);
 
-  // 時間切れかどうかを判定する
-  bool _isTimeUp();
+  std::vector<Move> _randomNeighbor(const BoardType& occupied);
 
-  // Minimax法（Alpha-Beta法）による再帰探索
-  int _minimax(Board board, int depth, int alpha, int beta, bool maximizingPlayer);
-
-  // --- 手の生成・順序付け ---
-
-  // 有効な手を生成し、有望な順にソートして返す
-  std::vector<Move> _generateMoves(const Board& board);
-
-  // 手の並び替え（Move Ordering）のための簡易評価
-  // 軽い処理で「良さそうな手」を高く評価する
-  int _evaluatePoint(const Board& board, int x, int y, Color color);
-
-  // --- 盤面評価 ---
-
-  // 盤面全体の静的な評価値を計算する（深さ0の時に呼ぶ）
-  int _evaluate(const Board& board, Color color);
-
-  // 特定のパターンの個数を数えてスコア化するヘルパー
-  int _countPatterns(const BoardType& stones, const BoardType& empty);
+  /**
+   * Maps AI difficulty level to search depth.
+   * @param level The AI difficulty level.
+   * @return The corresponding search depth.
+   */
+  int _getDepthFromLevel(AILevel level);
 };
