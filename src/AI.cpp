@@ -32,7 +32,8 @@ void AI::printPV(Board board) {
   std::cout << std::endl;
 }
 
-Move AI::getBestMove(const Board& board, Color color, AILevel level) {
+Move AI::getBestMove(const Board& board, Color color, AILevel level,
+                     std::atomic<bool>& cancelFlag) {
   _aiPlayer = color;
 
   // Calculate target depth
@@ -98,7 +99,7 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
       searchBoard.changeTurn();
 
       // Search children with reduced depth
-      int score = _minimax(searchBoard, depth - 1, alpha, beta, false);
+      int score = _minimax(searchBoard, depth - 1, alpha, beta, false, cancelFlag);
 
       searchBoard.undo();
 
@@ -140,7 +141,8 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level) {
   return globalBestMove;
 }
 
-int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer) {
+int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer,
+                 std::atomic<bool>& cancelFlag) {
   // [1] TT Lookup (既存コード) ...
   uint64_t key = board.getHash();
   TTEntry* ttEntry = _tt.get(key);
@@ -155,6 +157,9 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       return ttEntry->score;
   }
 
+  if (cancelFlag.load()) {
+    return 0;
+  }
   // [2] Base Case (既存コード) ...
   if (depth == 0)
     return Evaluator::evaluate(board, _aiPlayer);
@@ -200,20 +205,22 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       int eval;
       if (isFirstMove) {
         // 1. 最初の手（最善手候補）は全力で探索 (Full Window)
-        eval = _minimax(board, depth - 1, alpha, beta, false);
+        eval = _minimax(board, depth - 1, alpha, beta, false, cancelFlag);
       } else {
         // 2. 2手目以降は Null Window Search (alpha, alpha+1)
         // 「今のalphaを超えないこと」を確認するだけの高速探索
-        eval = _minimax(board, depth - 1, alpha, alpha + 1, false);
+        eval = _minimax(board, depth - 1, alpha, alpha + 1, false, cancelFlag);
 
         // もし alpha を超えていたら (Fail-High)、評価が間違っていた可能性があるので
         // 本来の窓 (alpha, beta) で再探索する
         if (eval > alpha && eval < beta) {
-          eval = _minimax(board, depth - 1, alpha, beta, false);
+          eval = _minimax(board, depth - 1, alpha, beta, false, cancelFlag);
         }
       }
 
       board.undo();
+      if (cancelFlag.load())
+        return 0;
 
       if (eval > maxEval) {
         maxEval = eval;
@@ -260,19 +267,21 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       int eval;
       if (isFirstMove) {
         // 1. 最初の手は全力探索
-        eval = _minimax(board, depth - 1, alpha, beta, true);
+        eval = _minimax(board, depth - 1, alpha, beta, true, cancelFlag);
       } else {
         // 2. 2手目以降は Null Window Search (beta-1, beta)
         // 「今のbetaを下回らないこと」を確認する
-        eval = _minimax(board, depth - 1, beta - 1, beta, true);
+        eval = _minimax(board, depth - 1, beta - 1, beta, true, cancelFlag);
 
         // もし beta を下回っていたら (Fail-Low: 相手にとって良い手)、再探索
         if (eval < beta && eval > alpha) {
-          eval = _minimax(board, depth - 1, alpha, beta, true);
+          eval = _minimax(board, depth - 1, alpha, beta, true, cancelFlag);
         }
       }
 
       board.undo();
+      if (cancelFlag.load())
+        return 0;
 
       if (eval < minEval) {
         minEval = eval;

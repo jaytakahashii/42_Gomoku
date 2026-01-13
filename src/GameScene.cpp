@@ -39,20 +39,27 @@ GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_aiAssistButton.setFillColor(Theme::Color::ButtonActive);
   this->_aiAssistButton.setOrigin(this->_aiAssistButton.getSize() / 2.f);
 
+  this->_cancelFlag = std::make_shared<std::atomic<bool>>(false);
+
   onResize(initalSize);
 }
 
+GameScene::~GameScene() {
+  _stopAllThreads();
+}
+
 void GameScene::handleEvents(const EventList& events) {
-  if (this->_board.getCurrentPlayer() == Player::AI)
-    return;
   for (const auto e : events) {
     if (const auto* keyPtr = e->getIf<sf::Event::KeyPressed>()) {
       if (keyPtr->code == sf::Keyboard::Key::Escape) {
+        _stopAllThreads();
         if (this->_onEsc) {
           _onEsc();
         }
       }
     }
+    if (this->_board.getCurrentPlayer() == Player::AI)
+      return;
     if (const auto* mousePtr = e->getIf<sf::Event::MouseButtonPressed>()) {
       if (mousePtr->button == sf::Mouse::Button::Left) {
         sf::Vector2f mousePos(static_cast<float>(mousePtr->position.x),
@@ -61,8 +68,9 @@ void GameScene::handleEvents(const EventList& events) {
           _onUndo();
         } else if (this->_aiAssistButton.getGlobalBounds().contains(mousePos)) {
           _onAIAssist();
-        } else
+        } else {
           handleClick(mousePos.x, mousePos.y);
+        }
       }
     }
   }
@@ -82,7 +90,7 @@ void GameScene::handleClick(int x, int y) {
     float posX = this->_boardOffset.x + static_cast<float>(col * this->_cellSize);
     float posY = this->_boardOffset.y + static_cast<float>(row * this->_cellSize);
     if (this->_board.makeMove(col, row)) {
-      this->_hintMove = {-1, -1};
+      _cancelHint();
 
       if (this->_board.getCapturedStatus()) {
         displayTimedMessage("Capture", {posX, posY});
@@ -259,8 +267,12 @@ GameScene::FloatingMessage::FloatingMessage(const sf::Font& font, const std::str
 }
 
 void GameScene::_onUndo() {
-  if (this->_isAIThinking || this->_isCalculatingHint)
+  if (this->_isAIThinking) {
     return;
+  }
+  if (this->_isCalculatingHint) {
+    _cancelHint();
+  }
 
   if (this->_board.undo()) {
     this->_board.undo();
@@ -282,6 +294,12 @@ void GameScene::_onAIAssist() {
     return;
   }
 
+  if (this->_cancelFlag) {
+    *this->_cancelFlag = true;
+  }
+
+  this->_cancelFlag = std::make_shared<std::atomic<bool>>(false);
+
   this->_isCalculatingHint = true;
   this->_hintMove = {-1, -1};
 
@@ -290,8 +308,11 @@ void GameScene::_onAIAssist() {
   Color turn = this->_board.getCurrentTurn();
   AILevel level = AILevel::Hard;
 
-  this->_hintFuture = std::async(std::launch::async, [ai, board, turn, level]() mutable {
-    return ai.getBestMove(board, turn, level);
+  std::shared_ptr<std::atomic<bool>> flagPtr = _cancelFlag;
+  this->_aiClock.restart();
+
+  this->_hintFuture = std::async(std::launch::async, [ai, board, turn, level, flagPtr]() mutable {
+    return ai.getBestMove(board, turn, level, *flagPtr);
   });
 }
 
@@ -335,9 +356,20 @@ void GameScene::_notifyPlayerTurn(float df) {
 
 void GameScene::_handleHint() {
   if (this->_isCalculatingHint) {
+    float elapsed = this->_aiClock.getElapsedTime().asSeconds();
+    std::stringstream ss;
+    ss << "Analyzing... " << std::fixed << std::setprecision(2) << elapsed << "s";
+    this->_aiInfoText.setString(ss.str());
+
     if (this->_hintFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
       Move bestMove = this->_hintFuture.get();
       this->_hintMove = {bestMove.x, bestMove.y};
+
+      float finalTime = this->_aiClock.getElapsedTime().asSeconds();
+      std::stringstream ssFinal;
+      ssFinal << "Hint Found: " << std::fixed << std::setprecision(2) << finalTime << "s";
+      this->_aiInfoText.setString(ssFinal.str());
+
       this->_isCalculatingHint = false;
     }
   }
@@ -352,15 +384,19 @@ void GameScene::_handleAIProcess(float df) {
         this->_isAIThinking = true;
         this->_aiMoveTimer = 0.0f;
 
+        this->_cancelFlag = std::make_shared<std::atomic<bool>>(false);
+        std::shared_ptr<std::atomic<bool>> flagPtr = _cancelFlag;
+
         AI ai;
         Board boardCopy = this->_board;
         Color turn = this->_board.getCurrentTurn();
         AILevel level = this->_aiLevel;
 
         this->_aiClock.restart();
-        this->_aiFuture = std::async(std::launch::async, [ai, boardCopy, turn, level]() mutable {
-          return ai.getBestMove(boardCopy, turn, level);
-        });
+        this->_aiFuture =
+            std::async(std::launch::async, [ai, boardCopy, turn, level, flagPtr]() mutable {
+              return ai.getBestMove(boardCopy, turn, level, *flagPtr);
+            });
       }
     } else {
       float elapsed = this->_aiClock.getElapsedTime().asSeconds();
@@ -419,4 +455,21 @@ void GameScene::reset() {
 
   this->_aiInfoText.setString("AI Time: 0.00s");
   _updateCaptures();
+}
+
+void GameScene::_cancelHint() {
+  if (this->_cancelFlag) {
+    *this->_cancelFlag = true;
+  }
+  this->_isCalculatingHint = false;
+  this->_hintMove = {-1, -1};
+  this->_aiInfoText.setString("AI Time: 0.00s");
+}
+
+void GameScene::_stopAllThreads() {
+  if (this->_cancelFlag) {
+    *this->_cancelFlag = true;
+  }
+  this->_isAIThinking = false;
+  this->_isCalculatingHint = false;
 }
