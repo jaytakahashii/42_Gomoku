@@ -3,7 +3,7 @@
 #include <bitset>
 
 constexpr int BOARD_SIZE = 19;
-constexpr int BOARD_WIDTH = 32;
+constexpr int BOARD_WIDTH = 32;  // 19 + sentinel padding
 constexpr int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
 
 // ==========================================
