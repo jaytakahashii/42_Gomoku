@@ -13,13 +13,6 @@
 // Constants & Configuration
 // ==========================================
 
-// Board dimensions
-// Using 32 as width for bit board efficiency (power of 2) and to provide
-// sentinel padding preventing horizontal wrap-around during bitshifts.
-// constexpr int BOARD_SIZE = 19;
-// constexpr int BOARD_WIDTH = 32;
-// constexpr int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
-
 // Type alias for the bit board representation
 using BoardType = std::bitset<MAX_CELLS>;
 
@@ -132,7 +125,6 @@ class Board {
   // -- Game State --
   Color getCurrentTurn() const;
   Player getCurrentPlayer() const;
-  int getCaptures(Color color) const;
   int getBlackCaptures() const;
   int getWhiteCaptures() const;
 
