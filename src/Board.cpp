@@ -5,15 +5,24 @@
 // ----------------------------------------------------------------
 
 Board::Board()
-    : _blackStones(0),
-      _whiteStones(0),
-      _currentTurn(Color::BLACK),
+    : _currentTurn(Color::BLACK),
       _nextTurn(Color::WHITE),
       _blackCaptures(0),
       _whiteCaptures(0),
       _capturedStatus(false),
       _doubleThreeStatus(false),
       _currentHash(0) {
+  this->_blackStones.reset();
+  this->_whiteStones.reset();
+
+  this->_sentinelStones.reset();
+  for (int y = 0; y < BOARD_SIZE; ++y) {
+    for (int x = BOARD_SIZE; x < BOARD_WIDTH; ++x) {
+      int index = y * BOARD_WIDTH + x;
+      _sentinelStones.set(index);
+    }
+  }
+
   this->_colorToPlayer.clear();
   this->_history.clear();
 }

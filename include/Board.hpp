@@ -221,6 +221,7 @@ class Board {
   // Board Data
   BoardType _blackStones;
   BoardType _whiteStones;
+  BoardType _sentinelStones;  // Padding walls to simplify boundary checks
 
   // Game State
   Color _currentTurn;
