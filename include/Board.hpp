@@ -3,6 +3,7 @@
 #include <array>
 #include <iostream>
 #include <map>
+#include <utility>
 #include <vector>
 
 #include "Enums.hpp"
@@ -34,7 +35,6 @@ struct BoardState {
   int blackCaptures;
   int whiteCaptures;
   Color currentTurn;
-  Color nextTurn;
   uint64_t hash;
 };
 
@@ -62,12 +62,11 @@ class Board {
   /**
    * Attempts to place a stone at (x, y).
    * Handles rule validation, capture processing, and state updates.
-   * @param x The x-coordinate (0-based).
-   * @param y The y-coordinate (0-based).
+   * @param index The linear index of the move.
    * @return true if the move was valid and executed.
    *         false if the move was invalid (out of bounds, occupied, double three).
    */
-  bool makeMove(int x, int y);
+  bool makeMove(int index);
 
   /**
    * Switches the current turn to the other player.
@@ -115,6 +114,7 @@ class Board {
   const BoardType& getWhiteStones() const;
   const BoardType& getMyStones(Color myColor) const;
   const BoardType& getOppStones(Color myColor) const;
+  const BoardType& getSentinelStones() const;
 
   // -- Computed Bitsets --
   BoardType getEmptyStones() const;
@@ -122,6 +122,7 @@ class Board {
 
   // -- Game State --
   Color getCurrentTurn() const;
+  Color getNextTurn() const;
   Player getCurrentPlayer() const;
   int getBlackCaptures() const;
   int getWhiteCaptures() const;
@@ -133,6 +134,10 @@ class Board {
 
   // -- Hashing --
   uint64_t getHash() const;
+
+  // -- Helpers --
+  std::pair<int, int> getCoordinates(int index) const;
+  int getIndex(int x, int y) const;
 
   // -- AI Helpers --
   /**
@@ -156,7 +161,6 @@ class Board {
   void _applyState(const BoardState& state);
 
   // -- Coordinate / Bit Utils --
-  int _getIndex(int x, int y) const;
   int8_t _getCaptureCount(Color color) const;
 
   // -- Rule Implementations --
@@ -173,11 +177,10 @@ class Board {
    * Checks if the move at (x, y) creates a forbidden "Double Three".
    * A double-three is two simultaneous "open threes".
    * Updates the _doubleThreeStatus flag.
-   * @param x The x-coordinate of the move.
-   * @param y The y-coordinate of the move.
+   * @param index The index of the newly placed stone.
    * @return true if the move creates a double three.
    */
-  void _DoubleThree(int x, int y);
+  void _DoubleThree(int index);
 
   /**
    * Retrieves a 11-bit representation of stones along a line centered at (x, y).
@@ -185,7 +188,7 @@ class Board {
    * @param dir The direction to extract the line.
    * @return LineBits containing my and opponent stones along the line.
    */
-  LineBits _getLineBits(int x, int y, const Direction dir, const BoardType& myStones,
+  LineBits _getLineBits(int centerIndex, int offset, const BoardType& myStones,
                         const BoardType& oppStones) const;
 
   /**
@@ -225,7 +228,6 @@ class Board {
 
   // Game State
   Color _currentTurn;
-  Color _nextTurn;
   int8_t _blackCaptures;
   int8_t _whiteCaptures;
 
@@ -243,22 +245,5 @@ class Board {
   // ----------------------------------------------------------------
   // Directional Constants
   // ----------------------------------------------------------------
-
-  // Bitshift offsets for the 1D bitset (optimized for performance)
-  static constexpr int SHIFT_H = 1;                 // Horizontal
-  static constexpr int SHIFT_V = BOARD_WIDTH;       // Vertical
-  static constexpr int SHIFT_D1 = BOARD_WIDTH + 1;  // Diagonal (Top-Left to Bottom-Right)
-  static constexpr int SHIFT_D2 = BOARD_WIDTH - 1;  // Diagonal (Top-Right to Bottom-Left)
-
-  static constexpr std::array<int, 4> ALL_SHIFTS = {SHIFT_H, SHIFT_V, SHIFT_D1, SHIFT_D2};
-
-  // Coordinate deltas for 2D logic (e.g., checking surroundings)
-  static constexpr std::array<Direction, 4> CHECK_DIRS = {{
-      {1, 0},  // Horizontal
-      {0, 1},  // Vertical
-      {1, 1},  // Diagonal Down-Right
-      {-1, 1}  // Diagonal Down-Left
-  }};
-
   static const BoardType _validMask;
 };

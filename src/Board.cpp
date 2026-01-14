@@ -6,7 +6,6 @@
 
 Board::Board()
     : _currentTurn(Color::BLACK),
-      _nextTurn(Color::WHITE),
       _blackCaptures(0),
       _whiteCaptures(0),
       _capturedStatus(false),
@@ -42,11 +41,9 @@ void Board::setupPlayers(TurnOrder order) {
 // Core Gameplay Logic (Mutators)
 // ----------------------------------------------------------------
 
-bool Board::makeMove(int x, int y) {
-  if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE)
+bool Board::makeMove(int index) {
+  if (index < 0 || index >= MAX_CELLS || this->_sentinelStones.test(index))
     return false;
-
-  int index = _getIndex(x, y);
 
   if (this->_blackStones.test(index) || this->_whiteStones.test(index))
     return false;
@@ -65,7 +62,7 @@ bool Board::makeMove(int x, int y) {
   _processCapture(index);
 
   if (!this->_capturedStatus) {
-    _DoubleThree(x, y);
+    _DoubleThree(index);
     if (this->_doubleThreeStatus) {
       undo();
       return false;
@@ -76,10 +73,8 @@ bool Board::makeMove(int x, int y) {
 }
 
 void Board::changeTurn() {
-  Color tmp = this->_nextTurn;
-  this->_nextTurn = this->_currentTurn;
-  this->_currentTurn = tmp;
-  _currentHash ^= Zobrist::getBlackTurnHash();
+  _currentTurn = static_cast<Color>(3 ^ static_cast<int>(_currentTurn));
+  this->_currentHash ^= Zobrist::getBlackTurnHash();
 }
 
 bool Board::undo() {
@@ -93,8 +88,7 @@ bool Board::undo() {
 
 void Board::saveState() {
   this->_history.push_back({this->_blackStones, this->_whiteStones, this->_blackCaptures,
-                            this->_whiteCaptures, this->_currentTurn, this->_nextTurn,
-                            this->_currentHash});
+                            this->_whiteCaptures, this->_currentTurn, this->_currentHash});
 }
 
 // ----------------------------------------------------------------
@@ -114,7 +108,7 @@ bool Board::checkWin(Color color) const {
   const BoardType& myStones = getMyStones(color);
   const BoardType& oppStones = getOppStones(color);
 
-  for (int shift : ALL_SHIFTS) {
+  for (int shift : DIR_OFFSETS) {
     // Get the starting bitset for 5-in-a-row
     BoardType lines = _getFiveInARowBits(myStones, shift);
 
@@ -143,7 +137,7 @@ bool Board::checkWin(Color color) const {
 // -- Board Information --
 
 Color Board::getColorAt(int x, int y) const {
-  int index = _getIndex(x, y);
+  int index = getIndex(x, y);
   if (this->_blackStones.test(index))
     return Color::BLACK;
   if (this->_whiteStones.test(index))
@@ -152,7 +146,7 @@ Color Board::getColorAt(int x, int y) const {
 }
 
 Player Board::getPlayerAt(int x, int y) const {
-  int index = _getIndex(x, y);
+  int index = getIndex(x, y);
   std::map<Color, Player>::const_iterator it = this->_colorToPlayer.end();
   if (this->_blackStones.test(index))
     it = this->_colorToPlayer.find(Color::BLACK);
@@ -182,6 +176,10 @@ const BoardType& Board::getOppStones(Color myColor) const {
   return (myColor == Color::BLACK) ? _whiteStones : _blackStones;
 }
 
+const BoardType& Board::getSentinelStones() const {
+  return this->_sentinelStones;
+}
+
 // -- Computed Bitsets --
 
 // 有効な盤面範囲（壁以外）を表すマスクを定義
@@ -208,6 +206,10 @@ BoardType Board::getOccupiedStones() const {
 
 Color Board::getCurrentTurn() const {
   return this->_currentTurn;
+}
+
+Color Board::getNextTurn() const {
+  return static_cast<Color>(3 ^ static_cast<int>(_currentTurn));
 }
 
 Player Board::getCurrentPlayer() const {
@@ -263,6 +265,18 @@ BoardType Board::getCapturableStones(Color myColor) const {
   return capturable;
 }
 
+// -- Helpers --
+
+int Board::getIndex(int x, int y) const {
+  return y * BOARD_WIDTH + x;
+}
+
+std::pair<int, int> Board::getCoordinates(int index) const {
+  int y = index / BOARD_WIDTH;
+  int x = index % BOARD_WIDTH;
+  return {x, y};
+}
+
 // ----------------------------------------------------------------
 // Internal Helper Methods
 // ----------------------------------------------------------------
@@ -280,10 +294,6 @@ void Board::_applyState(const BoardState& state) {
 
 // -- Coordinate / Bit Utils --
 
-int Board::_getIndex(int x, int y) const {
-  return y * BOARD_WIDTH + x;
-}
-
 int8_t Board::_getCaptureCount(Color color) const {
   return (color == Color::BLACK) ? this->_blackCaptures : this->_whiteCaptures;
 }
@@ -297,7 +307,7 @@ void Board::_processCapture(int index) {
   Color oppColor = (this->_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
   this->_capturedStatus = false;
 
-  for (int d : ALL_SHIFTS) {
+  for (int d : DIR_OFFSETS) {
     const int directions[] = {d, -d};
 
     for (int dir : directions) {
@@ -323,28 +333,29 @@ void Board::_processCapture(int index) {
   }
 }
 
-void Board::_DoubleThree(int x, int y) {
+void Board::_DoubleThree(int index) {
   _doubleThreeStatus = false;
 
   const BoardType& myStones = getMyStones(_currentTurn);
   const BoardType& oppStones = getOppStones(_currentTurn);
   int freeThreeCount = 0;
 
-  for (const auto& dir : CHECK_DIRS) {
+  for (int offset : DIR_OFFSETS) {
     // 1. Extract Line Bits
-    LineBits line = _getLineBits(x, y, dir, myStones, oppStones);
+    LineBits line = _getLineBits(index, offset, myStones, oppStones);
 
     // 2. Check for Free Three pattern
     if (_checkFreeThree(line)) {
       freeThreeCount++;
       if (freeThreeCount >= 2) {
         _doubleThreeStatus = true;
+        return;
       }
     }
   }
 }
 
-LineBits Board::_getLineBits(int x, int y, const Direction dir, const BoardType& myStones,
+LineBits Board::_getLineBits(int centerIndex, int offset, const BoardType& myStones,
                              const BoardType& oppStones) const {
   LineBits line = {0, 0};
 
@@ -356,21 +367,20 @@ LineBits Board::_getLineBits(int x, int y, const Direction dir, const BoardType&
     if (i == 0)
       continue;
 
-    int nx = x + i * dir.dx;
-    int ny = y + i * dir.dy;
+    int targetIndex = centerIndex + (i * offset);
 
     // Treat out-of-bounds as "enemy stone (wall)"
-    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) {
+    if (targetIndex < 0 || targetIndex >= MAX_CELLS || _sentinelStones.test(targetIndex)) {
+      line.opp |= (1 << (i + 5));  // 壁は敵石扱い
+      continue;
+    }
+    if (myStones.test(targetIndex)) {
+      line.my |= (1 << (i + 5));
+    } else if (oppStones.test(targetIndex)) {
       line.opp |= (1 << (i + 5));
-    } else {
-      int idx = _getIndex(dir.dx, dir.dy);
-      if (myStones.test(idx)) {
-        line.my |= (1 << (i + 5));
-      } else if (oppStones.test(idx)) {
-        line.opp |= (1 << (i + 5));
-      }
     }
   }
+
   return line;
 }
 
@@ -423,7 +433,7 @@ bool Board::_isWinningLineSafe(int startIdx, int shift, const BoardType& myStone
 
 bool Board::_isStoneCapturable(int index, const BoardType& myStones,
                                const BoardType& oppStones) const {
-  for (int dir : ALL_SHIFTS) {
+  for (int dir : DIR_OFFSETS) {
     const int neighbors[] = {dir, -dir};
 
     for (int d : neighbors) {
