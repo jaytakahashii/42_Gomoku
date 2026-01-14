@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <iostream>
 #include <map>
 #include <vector>
 
@@ -33,6 +34,7 @@ struct BoardState {
   int blackCaptures;
   int whiteCaptures;
   Color currentTurn;
+  Color nextTurn;
   uint64_t hash;
 };
 
@@ -222,6 +224,7 @@ class Board {
 
   // Game State
   Color _currentTurn;
+  Color _nextTurn;
   int8_t _blackCaptures;
   int8_t _whiteCaptures;
 
@@ -231,7 +234,7 @@ class Board {
 
   // Meta Data
   std::map<Color, Player> _colorToPlayer;
-  std::vector<BoardState> _history;  // Stack for undo functionality
+  std::vector<BoardState> _history;  // For undo functionality
 
   // Hashing
   uint64_t _currentHash;

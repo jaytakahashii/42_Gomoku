@@ -1,7 +1,5 @@
 #include "Board.hpp"
 
-#include <iostream>  // TODO: デバッグ用
-
 // ----------------------------------------------------------------
 // Lifecycle & Setup
 // ----------------------------------------------------------------
@@ -10,6 +8,7 @@ Board::Board()
     : _blackStones(0),
       _whiteStones(0),
       _currentTurn(Color::BLACK),
+      _nextTurn(Color::WHITE),
       _blackCaptures(0),
       _whiteCaptures(0),
       _capturedStatus(false),
@@ -68,7 +67,9 @@ bool Board::makeMove(int x, int y) {
 }
 
 void Board::changeTurn() {
-  this->_currentTurn = (this->_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
+  Color tmp = this->_nextTurn;
+  this->_nextTurn = this->_currentTurn;
+  this->_currentTurn = tmp;
   _currentHash ^= Zobrist::getBlackTurnHash();
 }
 
@@ -83,7 +84,8 @@ bool Board::undo() {
 
 void Board::saveState() {
   this->_history.push_back({this->_blackStones, this->_whiteStones, this->_blackCaptures,
-                            this->_whiteCaptures, this->_currentTurn, this->_currentHash});
+                            this->_whiteCaptures, this->_currentTurn, this->_nextTurn,
+                            this->_currentHash});
 }
 
 // ----------------------------------------------------------------
