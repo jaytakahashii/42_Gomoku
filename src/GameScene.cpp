@@ -303,16 +303,12 @@ void GameScene::_onAIAssist() {
   this->_isCalculatingHint = true;
   this->_hintMove = {-1, -1};
 
-  AI ai;
-  const Board& board = this->_board;
-  Color turn = this->_board.getCurrentTurn();
-  AILevel level = AILevel::Hard;
-
   std::shared_ptr<std::atomic<bool>> flagPtr = _cancelFlag;
   this->_aiClock.restart();
 
-  this->_hintFuture = std::async(std::launch::async, [ai, board, turn, level, flagPtr]() mutable {
-    return ai.getBestMove(board, turn, level, *flagPtr);
+  this->_hintFuture = std::async(std::launch::async, [this, flagPtr]() mutable {
+    return this->_ai.getBestMove(this->_board, this->_board.getCurrentTurn(), AILevel::Hard,
+                                 *flagPtr);
   });
 }
 
@@ -387,16 +383,13 @@ void GameScene::_handleAIProcess(float df) {
         this->_cancelFlag = std::make_shared<std::atomic<bool>>(false);
         std::shared_ptr<std::atomic<bool>> flagPtr = _cancelFlag;
 
-        AI ai;
-        Board boardCopy = this->_board;
-        Color turn = this->_board.getCurrentTurn();
         AILevel level = this->_aiLevel;
 
         this->_aiClock.restart();
-        this->_aiFuture =
-            std::async(std::launch::async, [ai, boardCopy, turn, level, flagPtr]() mutable {
-              return ai.getBestMove(boardCopy, turn, level, *flagPtr);
-            });
+        this->_aiFuture = std::async(std::launch::async, [this, flagPtr]() mutable {
+          return this->_ai.getBestMove(this->_board, this->_board.getCurrentTurn(), this->_aiLevel,
+                                       *flagPtr);
+        });
       }
     } else {
       float elapsed = this->_aiClock.getElapsedTime().asSeconds();
