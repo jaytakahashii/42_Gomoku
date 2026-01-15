@@ -56,12 +56,12 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level,
     int beta = std::numeric_limits<int>::max();
 
     for (const Move& m : moves) {
-      if (!searchBoard.makeMove(m.index))
+      if (!searchBoard.makeMoveAI(m.index))
         continue;
 
       // Win check optimization
       if (searchBoard.checkWin()) {
-        searchBoard.undo();
+        searchBoard.undoAI();
         // Found a winning move at this depth.
         // Store and return immediately (no need to search deeper)
         _tt.store(rootHash, depth, ScoreConfig::WIN, TTFlag::EXACT, m);
@@ -73,7 +73,7 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level,
       // Search children with reduced depth
       int score = _minimax(searchBoard, depth - 1, alpha, beta, false, cancelFlag);
 
-      searchBoard.undo();
+      searchBoard.undoAI();
 
       // Update Best Move for this depth
       if (score > currentDepthBestMove.score) {
@@ -156,12 +156,12 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
     int maxEval = std::numeric_limits<int>::min();
 
     for (const Move& m : moves) {
-      if (!board.makeMove(m.index))
+      if (!board.makeMoveAI(m.index))
         continue;
 
       // 即時勝利判定
       if (board.checkWin()) {
-        board.undo();
+        board.undoAI();
         int winScore = ScoreConfig::WIN + depth;
         _tt.store(key, depth, winScore, TTFlag::EXACT, m);
         return winScore;
@@ -184,7 +184,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
         }
       }
 
-      board.undo();
+      board.undoAI();
       if (cancelFlag.load())
         return 0;
 
@@ -220,11 +220,11 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
     int minEval = std::numeric_limits<int>::max();
 
     for (const Move& m : moves) {
-      if (!board.makeMove(m.index))
+      if (!board.makeMoveAI(m.index))
         continue;
 
       if (board.checkWin()) {
-        board.undo();
+        board.undoAI();
         int loseScore = -(ScoreConfig::WIN + depth);
         _tt.store(key, depth, loseScore, TTFlag::EXACT, m);
         return loseScore;
@@ -246,7 +246,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
         }
       }
 
-      board.undo();
+      board.undoAI();
       if (cancelFlag.load())
         return 0;
 
