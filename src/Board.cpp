@@ -4,13 +4,14 @@
 // Lifecycle & Setup
 // ----------------------------------------------------------------
 
-Board::Board()
+Board::Board(OpeningRule rule)
     : _currentTurn(Color::BLACK),
       _blackCaptures(0),
       _whiteCaptures(0),
       _capturedStatus(false),
       _doubleThreeStatus(false),
-      _currentHash(0) {
+      _currentHash(0),
+      _openingRule(rule) {
   this->_blackStones.reset();
   this->_whiteStones.reset();
 
@@ -19,6 +20,22 @@ Board::Board()
     for (int x = BOARD_SIZE; x < BOARD_WIDTH; ++x) {
       int index = y * BOARD_WIDTH + x;
       _sentinelStones.set(index);
+    }
+  }
+
+  this->_forbiddenHandsOfPro.reset();
+  for (int y = (BOARD_SIZE / 2) - 2; y <= (BOARD_SIZE / 2) + 2; ++y) {
+    for (int x = (BOARD_SIZE / 2) - 2; x <= (BOARD_SIZE / 2) + 2; ++x) {
+      int index = y * BOARD_WIDTH + x;
+      _forbiddenHandsOfPro.set(index);
+    }
+  }
+
+  this->_forbiddenHandsOfLongPro.reset();
+  for (int y = (BOARD_SIZE / 2) - 3; y <= (BOARD_SIZE / 2) + 3; ++y) {
+    for (int x = (BOARD_SIZE / 2) - 3; x <= (BOARD_SIZE / 2) + 3; ++x) {
+      int index = y * BOARD_WIDTH + x;
+      _forbiddenHandsOfLongPro.set(index);
     }
   }
 
@@ -49,6 +66,10 @@ bool Board::makeMove(int index) {
 
   if (this->_blackStones.test(index) || this->_whiteStones.test(index))
     return false;
+
+  if (_openingRule == OpeningRule::Pro) {
+  } else if (_openingRule == OpeningRule::LongPro) {
+  }
 
   saveState();
 

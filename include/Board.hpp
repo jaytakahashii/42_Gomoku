@@ -60,7 +60,7 @@ class Board {
   // ----------------------------------------------------------------
   // Lifecycle & Setup
   // ----------------------------------------------------------------
-  Board();
+  Board(OpeningRule rule = OpeningRule::Standard);
   ~Board() = default;
 
   /**
@@ -243,15 +243,19 @@ class Board {
   BoardType _blackStones;
   BoardType _whiteStones;
   BoardType _sentinelStones;  // Padding walls to simplify boundary checks
+  BoardType _forbiddenHandsOfPro;
+  BoardType _forbiddenHandsOfLongPro;
 
   // Game State
   Color _currentTurn;
   int8_t _blackCaptures;
   int8_t _whiteCaptures;
+  OpeningRule _openingRule;
 
   // Flags for the last move (for UI or logic checks)
   bool _capturedStatus;
   bool _doubleThreeStatus;
+  bool _forbiddenHandStatus;
 
   // Meta Data
   std::map<Color, Player> _colorToPlayer;

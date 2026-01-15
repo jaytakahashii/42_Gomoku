@@ -440,7 +440,7 @@ void GameScene::setOnEsc(std::function<void()> callback) {
 }
 
 void GameScene::reset() {
-  this->_board = Board();
+  this->_board = Board(_openingRule);
 
   this->_activeMessages.clear();
   this->_isAIThinking = false;
