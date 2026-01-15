@@ -5,6 +5,24 @@
 AI::AI() : _tt(20) {
 }
 
+Move AI::getSecondMoveForSpecialRule(const Board& board) {
+  BoardType occupied = board.getOccupiedStones();
+  if (board.getOpeningRule() == OpeningRule::Pro) {
+    if (occupied.test(PRO_CLOSEST_BOTTOM_INDEX)) {
+      return {PRO_CLOSEST_TOP_INDEX, 0};
+    } else {
+      return {PRO_CLOSEST_BOTTOM_INDEX, 0};
+    }
+  } else if (board.getOpeningRule() == OpeningRule::LongPro) {
+    if (occupied.test(LONG_PRO_CLOSEST_BOTTOM_INDEX)) {
+      return {LONG_PRO_CLOSEST_TOP_INDEX, 0};
+    } else {
+      return {LONG_PRO_CLOSEST_BOTTOM_INDEX, 0};
+    }
+  }
+  return {-1, 0};
+}
+
 Move AI::getBestMove(const Board& board, Color color, AILevel level,
                      std::atomic<bool>& cancelFlag) {
   _aiPlayer = color;
@@ -278,13 +296,6 @@ std::vector<Move> AI::_generateMoves(const Board& board, int depth, size_t limit
   moves.reserve(128);
 
   BoardType occupied = board.getOccupiedStones();
-
-  // 1. First Move Strategy (Center)
-  // If the board is empty, always play the center (standard Gomoku strategy).
-  if (occupied.none()) {
-    moves.push_back({CENTER_INDEX, 0});
-    return moves;
-  }
 
   if (occupied.count() == 1) {
     return _randomNeighbor(occupied);
