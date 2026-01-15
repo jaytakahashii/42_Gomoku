@@ -148,6 +148,8 @@ class Board {
   bool getDoubleThreeStatus() const;
   void setDoubleThreeStatus(bool status);
   bool getCapturedStatus() const;
+  bool getForbiddenHandStatus() const;
+  void setForbiddenHandStatus(bool status);
 
   // -- Hashing --
   uint64_t getHash() const;
@@ -252,6 +254,7 @@ class Board {
   // Flags for the last move (for UI or logic checks)
   bool _capturedStatus;
   bool _doubleThreeStatus;
+  bool _forbiddenHandStatus;
 
   // Meta Data
   std::map<Color, Player> _colorToPlayer;

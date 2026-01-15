@@ -313,6 +313,14 @@ bool Board::getCapturedStatus() const {
   return this->_capturedStatus;
 }
 
+bool Board::getForbiddenHandStatus() const {
+  return this->_forbiddenHandStatus;
+}
+
+void Board::setForbiddenHandStatus(bool status) {
+  this->_forbiddenHandStatus = status;
+}
+
 // -- Hashing --
 uint64_t Board::getHash() const {
   return this->_currentHash;
