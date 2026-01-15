@@ -1,4 +1,4 @@
-#include <Gomoku.hpp>
+#include "Gomoku.hpp"
 
 Gomoku::Gomoku() : _window(sf::VideoMode({1080, 1000}), "Gomoku"), font() {
   _initFont("arial.ttf");
