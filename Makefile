@@ -66,6 +66,7 @@ SRC_FILES          = main.cpp \
 					 Evaluator.cpp \
 					 TranspositionTable.cpp \
 					 Zobrist.cpp \
+					 Tooltip.cpp
 
 IFLAGS            += -Iinclude
 SRCS               = $(addprefix $(SRC_DIR), $(SRC_FILES))

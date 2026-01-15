@@ -1,5 +1,3 @@
-#include <Gomoku.hpp>
-#include <SFML/Graphics.hpp>
 #include <chrono>
 #include <cmath>
 #include <csignal>
@@ -7,6 +5,9 @@
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "Gomoku.hpp"
+#include "SFML/Graphics.hpp"
 
 Gomoku* g_pointer = nullptr;
 
