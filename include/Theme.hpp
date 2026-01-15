@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
+#include "SFML/Graphics.hpp"
 
 namespace Theme {
 
@@ -19,6 +19,7 @@ const unsigned int Title = 80;
 const unsigned int Header = 45;
 const unsigned int Text = 35;
 const unsigned int Button = 25;
+const unsigned int Tooltip = 20;
 }  // namespace FontSize
 
 namespace Size {
