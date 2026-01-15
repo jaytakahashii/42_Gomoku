@@ -9,8 +9,8 @@ TranspositionTable::TranspositionTable(size_t sizeExp) {
 
 void TranspositionTable::clear() {
   // 空のエントリで埋める
-  // key=0, depth=-1, score=0, EXACT, {-1,-1}
-  std::fill(_table.begin(), _table.end(), TTEntry{0, 0, -1, TTFlag::EXACT, {-1, -1, 0}});
+  // key=0, depth=-1, score=0, EXACT, {-1,0}
+  std::fill(_table.begin(), _table.end(), TTEntry{0, 0, -1, TTFlag::EXACT, {-1, 0}});
 }
 
 TTEntry* TranspositionTable::get(uint64_t key) {

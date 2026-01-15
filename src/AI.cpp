@@ -5,33 +5,6 @@
 AI::AI() : _tt(20) {
 }
 
-// TODO: debug
-// 現在の盤面から、TTを辿ってAIが考えている最善手順を表示する
-void AI::printPV(Board board) {
-  std::cout << "PV: ";
-  for (int i = 0; i < 20; ++i) {
-    uint64_t key = board.getHash();
-    TTEntry* entry = _tt.get(key);
-
-    // エントリがない、または最善手が記録されていないなら終了
-    if (entry == nullptr || entry->bestMove.x == -1) {
-      break;
-    }
-
-    Move m = entry->bestMove;
-    std::cout << "(" << m.x << "," << m.y << ") -> ";
-
-    if (!board.makeMove(m.x, m.y))
-      break;
-    if (board.checkWin()) {
-      std::cout << "WIN";
-      break;
-    }
-    board.changeTurn();
-  }
-  std::cout << std::endl;
-}
-
 Move AI::getBestMove(const Board& board, Color color, AILevel level,
                      std::atomic<bool>& cancelFlag) {
   _aiPlayer = color;
@@ -40,24 +13,17 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level,
   int targetDepth = _getDepthFromLevel(level);
 
   // Prepare variables for Iterative Deepening
-  Move globalBestMove = {-1, -1, 0};
+  Move globalBestMove = {-1, 0};
 
   // Clone the board ONCE for the search process
   Board searchBoard = board;
 
-  // =========================================================
-  // Iterative Deepening (ID)
-  // Start from depth 2 and increase until targetDepth.
-  // This fills the TT with good moves, making deeper searches faster.
-  // =========================================================
   for (int depth = 2; depth <= targetDepth; ++depth) {
     // --- 1. Move Generation & Ordering ---
-    // TT will now provide the "Best Move" from the previous depth (depth-1)
-    // to sort moves efficiently.
-    std::vector<Move> moves = _generateMoves(searchBoard, depth);
+    std::vector<Move> moves = _generateMoves(searchBoard, depth, MAX_CELLS);
 
     if (moves.empty())
-      return {-1, -1, 0};
+      return {-1, 0};
     if (moves.size() == 1)
       return moves[0];  // Optimization
 
@@ -65,10 +31,10 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level,
     uint64_t rootHash = searchBoard.getHash();
     TTEntry* entry = _tt.get(rootHash);
 
-    if (entry != nullptr && entry->bestMove.x != -1) {
+    if (entry != nullptr && entry->bestMove.index != -1) {
       // Move the best move from previous depth to the front
       for (size_t i = 0; i < moves.size(); ++i) {
-        if (moves[i].x == entry->bestMove.x && moves[i].y == entry->bestMove.y) {
+        if (moves[i].index == entry->bestMove.index) {
           std::swap(moves[0], moves[i]);
           break;
         }
@@ -82,26 +48,29 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level,
     int alpha = std::numeric_limits<int>::min();
     int beta = std::numeric_limits<int>::max();
 
-    for (const Move& m : moves) {
-      if (!searchBoard.makeMove(m.x, m.y))
+    for (size_t i = 0; i < moves.size(); ++i) {
+      Move& m = moves[i];
+      if (!searchBoard.makeMoveAI(m.index))
         continue;
 
       // Win check optimization
       if (searchBoard.checkWin()) {
-        searchBoard.undo();
-        // Found a winning move at this depth.
-        // Store and return immediately (no need to search deeper)
+        searchBoard.undoAI();
         _tt.store(rootHash, depth, ScoreConfig::WIN, TTFlag::EXACT, m);
-        printPV(board);
         return m;
       }
 
       searchBoard.changeTurn();
 
+      if (i >= MAX_MOVES_TO_CONSIDER) {
+        searchBoard.undoAI();
+        continue;
+      }
+
       // Search children with reduced depth
       int score = _minimax(searchBoard, depth - 1, alpha, beta, false, cancelFlag);
 
-      searchBoard.undo();
+      searchBoard.undoAI();
 
       // Update Best Move for this depth
       if (score > currentDepthBestMove.score) {
@@ -114,36 +83,26 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level,
         alpha = currentDepthBestMove.score;
       }
 
-      // Win Threshold Break
-      if (alpha >= ScoreConfig::WIN - 1000) {
+      if (cancelFlag.load())
         break;
-      }
     }
 
     // --- 3. Update Global Best & Store to TT ---
     globalBestMove = currentDepthBestMove;
 
-    // ★ CRITICAL: Store the Root Node result to TT
-    // This allows the next iteration (depth+1) to use this result for sorting,
-    // AND allows printPV to find the start of the chain.
-    TTFlag flag =
-        TTFlag::EXACT;  // Root node is usually exact unless alpha/beta cut logic is complex
+    TTFlag flag = TTFlag::EXACT;
     _tt.store(rootHash, depth, globalBestMove.score, flag, globalBestMove);
 
-    // Debug output for each depth (Optional)
-    // std::cout << "Depth " << depth << " done. Best: " << globalBestMove.x << "," <<
-    // globalBestMove.y << std::endl;
+    if (cancelFlag.load())
+      break;
   }
-
-  // Print PV using the original board (hash matches rootHash)
-  printPV(board);
 
   return globalBestMove;
 }
 
 int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPlayer,
                  std::atomic<bool>& cancelFlag) {
-  // [1] TT Lookup (既存コード) ...
+  // [1] TT Lookup
   uint64_t key = board.getHash();
   TTEntry* ttEntry = _tt.get(key);
   if (ttEntry != nullptr && ttEntry->depth >= depth) {
@@ -160,20 +119,21 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
   if (cancelFlag.load()) {
     return 0;
   }
-  // [2] Base Case (既存コード) ...
+
+  // [2] Base Case
   if (depth == 0)
     return Evaluator::evaluate(board, _aiPlayer);
 
-  // [3] Move Generation (depthを渡すよう変更済み)
-  std::vector<Move> moves = _generateMoves(board, depth);
+  // [3] Move Generation
+  std::vector<Move> moves = _generateMoves(board, depth, SEARCH_WIDTH);
   if (moves.empty())
     return 0;
 
-  // TT Move Ordering (既存コード) ...
-  if (ttEntry != nullptr && ttEntry->bestMove.x != -1) {
+  // TT Move Ordering
+  if (ttEntry != nullptr && ttEntry->bestMove.index != -1) {
     // 先頭へスワップ
     for (size_t i = 0; i < moves.size(); ++i) {
-      if (moves[i].x == ttEntry->bestMove.x && moves[i].y == ttEntry->bestMove.y) {
+      if (moves[i].index == ttEntry->bestMove.index) {
         std::swap(moves[0], moves[i]);
         break;
       }
@@ -183,19 +143,19 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
   // --- PVS Search Loop ---
 
   int originalAlpha = alpha;
-  Move bestMoveInThisNode = {-1, -1, 0};
+  Move bestMoveInThisNode = {-1, 0};
   bool isFirstMove = true;  // ★ PVS用のフラグ
 
   if (maximizingPlayer) {
     int maxEval = std::numeric_limits<int>::min();
 
     for (const Move& m : moves) {
-      if (!board.makeMove(m.x, m.y))
+      if (!board.makeMoveAI(m.index))
         continue;
 
       // 即時勝利判定
       if (board.checkWin()) {
-        board.undo();
+        board.undoAI();
         int winScore = ScoreConfig::WIN + depth;
         _tt.store(key, depth, winScore, TTFlag::EXACT, m);
         return winScore;
@@ -218,7 +178,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
         }
       }
 
-      board.undo();
+      board.undoAI();
       if (cancelFlag.load())
         return 0;
 
@@ -233,7 +193,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       // Beta Cut-off
       if (beta <= alpha) {
         // ★ Killer Heuristic (Maximizerにとって、相手のこの分岐を断ち切る強い手)
-        if (!(_killerMoves[depth][0].x == m.x && _killerMoves[depth][0].y == m.y)) {
+        if (_killerMoves[depth][0].index != m.index) {
           _killerMoves[depth][1] = _killerMoves[depth][0];
           _killerMoves[depth][0] = m;
         }
@@ -241,7 +201,8 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       }
       isFirstMove = false;  // 2周目からはfalse
     }
-    // 結果保存 (既存コード)
+
+    // 結果保存
     TTFlag flag = (maxEval <= originalAlpha)
                       ? TTFlag::UPPERBOUND
                       : (maxEval >= beta ? TTFlag::LOWERBOUND : TTFlag::EXACT);
@@ -253,11 +214,11 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
     int minEval = std::numeric_limits<int>::max();
 
     for (const Move& m : moves) {
-      if (!board.makeMove(m.x, m.y))
+      if (!board.makeMoveAI(m.index))
         continue;
 
       if (board.checkWin()) {
-        board.undo();
+        board.undoAI();
         int loseScore = -(ScoreConfig::WIN + depth);
         _tt.store(key, depth, loseScore, TTFlag::EXACT, m);
         return loseScore;
@@ -279,7 +240,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
         }
       }
 
-      board.undo();
+      board.undoAI();
       if (cancelFlag.load())
         return 0;
 
@@ -295,7 +256,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       if (beta <= alpha) {
         // ★ Killer Heuristic (Minimizer分岐でのCut。必要ならここでも更新可)
         // 一般的にはMinimizer側でも有効な防御手などを登録する価値があります
-        if (!(_killerMoves[depth][0].x == m.x && _killerMoves[depth][0].y == m.y)) {
+        if (_killerMoves[depth][0].index != m.index) {
           _killerMoves[depth][1] = _killerMoves[depth][0];
           _killerMoves[depth][0] = m;
         }
@@ -312,16 +273,16 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
   }
 }
 
-std::vector<Move> AI::_generateMoves(const Board& board, int depth) {
+std::vector<Move> AI::_generateMoves(const Board& board, int depth, size_t limit) {
   std::vector<Move> moves;
-  moves.reserve(64);  // Reserve memory to prevent reallocations
+  moves.reserve(128);
 
   BoardType occupied = board.getOccupiedStones();
 
   // 1. First Move Strategy (Center)
   // If the board is empty, always play the center (standard Gomoku strategy).
   if (occupied.none()) {
-    moves.push_back({BOARD_SIZE / 2, BOARD_SIZE / 2, 0});
+    moves.push_back({CENTER_INDEX, 0});
     return moves;
   }
 
@@ -353,25 +314,21 @@ std::vector<Move> AI::_generateMoves(const Board& board, int depth) {
   // 3. Evaluate and Collect Candidates
   for (int i = 0; i < MAX_CELLS; ++i) {
     if (candidates.test(i)) {
-      int x = i % BOARD_WIDTH;
-      int y = i / BOARD_WIDTH;
+      int priority = Evaluator::evaluateMovePriority(board, i, board.getCurrentTurn());
 
-      // Note: Since getEmptyStones() masks out the padding,
-      // x will never be >= BOARD_SIZE. But a safety check is fine.
-
-      // Calculate heuristic score for sorting
-      // (This function must be lightweight!)
-      int priority = Evaluator::evaluateMovePriority(board, x, y, board.getCurrentTurn());
+      // Killer Move Logic
+      // 以前のコードでは moves[i] と比較していましたが、
+      // ここでは「現在の候補地 i」と「キラー手の位置」を比較します
 
       // ★追加: キラー手ならボーナスを与える
       // (現在の深さがわからないので、引数に depth を渡すように変更する必要があります)
       // ここでは簡易的に「_generateMovesにdepthを渡す」修正が必要です。
-      if (moves[i] == _killerMoves[depth][0])
-        priority += 100000;  // Winよりは低いが非常に高く
-      else if (moves[i] == _killerMoves[depth][1])
+      if (i == _killerMoves[depth][0].index)
+        priority += 100000;
+      else if (i == _killerMoves[depth][1].index)
         priority += 90000;
 
-      moves.push_back({x, y, priority});
+      moves.push_back({i, priority});
     }
   }
 
@@ -388,55 +345,83 @@ std::vector<Move> AI::_generateMoves(const Board& board, int depth) {
   // If the opponent has a threat at the 11th best move, you will lose instantly.
   // Consider increasing this to 20-30 or using a dynamic threshold
   // (e.g., keep all moves within 500 points of the best move).
-  if (moves.size() > MAX_MOVES_TO_CONSIDER) {
-    moves.resize(MAX_MOVES_TO_CONSIDER);
+  if (moves.size() > limit) {
+    moves.resize(limit);
   }
 
   return moves;
 }
 
-// return: 1 size list of random neighboring moves
 std::vector<Move> AI::_randomNeighbor(const BoardType& occupied) {
   std::vector<Move> moves;
   moves.reserve(1);
 
-  // Find all occupied positions
-  std::vector<int> occupiedIndices;
+  // 1. Find the occupied stone
+  // count() == 1 の前提で呼び出されるため、最初のビットが見つかればOKです
+  int baseIndex = -1;
   for (int i = 0; i < MAX_CELLS; ++i) {
     if (occupied.test(i)) {
-      occupiedIndices.push_back(i);
+      baseIndex = i;
       break;
     }
   }
 
-  if (occupiedIndices.empty()) {
-    return moves;  // No occupied stones, should not happen here
+  if (baseIndex == -1) {
+    return moves;
   }
 
-  // Randomly select one occupied stone
-  int randIndex = rand() % occupiedIndices.size();
-  int baseIndex = occupiedIndices[randIndex];
-  int baseX = baseIndex % BOARD_WIDTH;
-  int baseY = baseIndex / BOARD_WIDTH;
+  // 2. Define offsets for 8 directions
+  // BOARD_WIDTH = 32
+  // 上(-32), 下(+32), 左(-1), 右(+1), および斜め
+  static const int offsets[8] = {
+      -BOARD_WIDTH - 1,
+      -BOARD_WIDTH,
+      -BOARD_WIDTH + 1,  // Upper-Left, Up, Upper-Right
+      -1,
+      1,  // Left, Right
+      BOARD_WIDTH - 1,
+      BOARD_WIDTH,
+      BOARD_WIDTH + 1  // Lower-Left, Down, Lower-Right
+  };
 
-  // Check neighboring cells (8 directions)
-  std::vector<std::pair<int, int>> directions = {{-1, -1}, {0, -1}, {1, -1}, {-1, 0},
-                                                 {1, 0},   {-1, 1}, {0, 1},  {1, 1}};
+  // Base X coordinate for wrapping check (0-31)
+  int baseX = baseIndex & 31;  // equivalent to: baseIndex % 32
 
-  for (const auto& dir : directions) {
-    int nx = baseX + dir.first;
-    int ny = baseY + dir.second;
+  // 3. Randomize search start direction
+  // 元のコードは固定順序でしたが、AIの挙動としてランダムな方向から探す方が自然です
+  int startDir = rand() % 8;
 
-    if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
-      int nIndex = ny * BOARD_WIDTH + nx;
-      if (!occupied.test(nIndex)) {
-        moves.push_back({nx, ny, 0});
-        return moves;  // Return immediately after finding the first valid neighbor
-      }
+  for (int k = 0; k < 8; ++k) {
+    // ランダムな位置から8方向を巡回
+    int dirIdx = (startDir + k) % 8;
+    int offset = offsets[dirIdx];
+
+    int nIndex = baseIndex + offset;
+
+    // [A] 配列の範囲チェック
+    if (nIndex < 0 || nIndex >= MAX_CELLS)
+      continue;
+
+    // [B] 横方向のラップアラウンド（折り返し）チェック
+    // 1次元配列上で単に -1 すると、行が変わって右端に行ってしまうのを防ぐ
+    int nX = nIndex & 31;  // nIndex % 32
+    if (std::abs(baseX - nX) > 1)
+      continue;
+
+    // [C] 盤面の有効範囲チェック
+    // パディング領域(x >= 19)への着手を禁止
+    if (nX >= BOARD_SIZE)
+      continue;
+
+    // [D] 空きマスかどうかチェック
+    if (!occupied.test(nIndex)) {
+      // 見つかったら即座に返す
+      moves.push_back({nIndex, 0});
+      return moves;
     }
   }
 
-  return moves;  // Fallback: no valid neighbors found
+  return moves;  // 周囲がすべて埋まっている場合
 }
 
 int AI::_getDepthFromLevel(AILevel level) {

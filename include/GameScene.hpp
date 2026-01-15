@@ -50,8 +50,9 @@ class GameScene : public Scene {
   const unsigned int _cellSize = CELL_SIZE;
   sf::Vector2f _boardOffset;
   AILevel _aiLevel;
-
   Board _board;
+  AI _ai;
+
   void handleClick(int x, int y);
   void displayTimedMessage(const std::string& message, sf::Vector2f pos);
   void _handleMessage(float df);

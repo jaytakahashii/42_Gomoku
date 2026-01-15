@@ -89,7 +89,9 @@ void GameScene::handleClick(int x, int y) {
     // makeMoveが成功（ルール上OK）なら、内部状態が更新される
     float posX = this->_boardOffset.x + static_cast<float>(col * this->_cellSize);
     float posY = this->_boardOffset.y + static_cast<float>(row * this->_cellSize);
-    if (this->_board.makeMove(col, row)) {
+    int index = this->_board.getIndex(col, row);
+
+    if (this->_board.makeMove(index)) {
       _cancelHint();
 
       if (this->_board.getCapturedStatus()) {
@@ -182,10 +184,11 @@ void GameScene::update(float df) {
 }
 
 void GameScene::_applyAIMove(Move move) {
-  this->_board.makeMove(move.x, move.y);
+  this->_board.makeMove(move.index);
 
-  float posX = this->_boardOffset.x + static_cast<float>(move.x * this->_cellSize);
-  float posY = this->_boardOffset.y + static_cast<float>(move.y * this->_cellSize);
+  std::pair<int, int> pair = this->_board.getCoordinates(move.index);
+  float posX = this->_boardOffset.x + static_cast<float>(pair.first * this->_cellSize);
+  float posY = this->_boardOffset.y + static_cast<float>(pair.second * this->_cellSize);
 
   if (this->_board.getCapturedStatus()) {
     displayTimedMessage("Capture", {posX, posY});
@@ -303,16 +306,12 @@ void GameScene::_onAIAssist() {
   this->_isCalculatingHint = true;
   this->_hintMove = {-1, -1};
 
-  AI ai;
-  const Board& board = this->_board;
-  Color turn = this->_board.getCurrentTurn();
-  AILevel level = AILevel::Hard;
-
   std::shared_ptr<std::atomic<bool>> flagPtr = _cancelFlag;
   this->_aiClock.restart();
 
-  this->_hintFuture = std::async(std::launch::async, [ai, board, turn, level, flagPtr]() mutable {
-    return ai.getBestMove(board, turn, level, *flagPtr);
+  this->_hintFuture = std::async(std::launch::async, [this, flagPtr]() mutable {
+    return this->_ai.getBestMove(this->_board, this->_board.getCurrentTurn(), AILevel::Hard,
+                                 *flagPtr);
   });
 }
 
@@ -363,7 +362,8 @@ void GameScene::_handleHint() {
 
     if (this->_hintFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
       Move bestMove = this->_hintFuture.get();
-      this->_hintMove = {bestMove.x, bestMove.y};
+      std::pair<int, int> coords = this->_board.getCoordinates(bestMove.index);
+      this->_hintMove = {coords.first, coords.second};
 
       float finalTime = this->_aiClock.getElapsedTime().asSeconds();
       std::stringstream ssFinal;
@@ -387,16 +387,13 @@ void GameScene::_handleAIProcess(float df) {
         this->_cancelFlag = std::make_shared<std::atomic<bool>>(false);
         std::shared_ptr<std::atomic<bool>> flagPtr = _cancelFlag;
 
-        AI ai;
-        Board boardCopy = this->_board;
-        Color turn = this->_board.getCurrentTurn();
         AILevel level = this->_aiLevel;
 
         this->_aiClock.restart();
-        this->_aiFuture =
-            std::async(std::launch::async, [ai, boardCopy, turn, level, flagPtr]() mutable {
-              return ai.getBestMove(boardCopy, turn, level, *flagPtr);
-            });
+        this->_aiFuture = std::async(std::launch::async, [this, flagPtr]() mutable {
+          return this->_ai.getBestMove(this->_board, this->_board.getCurrentTurn(), this->_aiLevel,
+                                       *flagPtr);
+        });
       }
     } else {
       float elapsed = this->_aiClock.getElapsedTime().asSeconds();

@@ -1,22 +1,31 @@
 #include "Board.hpp"
 
-#include <iostream>  // TODO: デバッグ用
-
 // ----------------------------------------------------------------
 // Lifecycle & Setup
 // ----------------------------------------------------------------
 
 Board::Board()
-    : _blackStones(0),
-      _whiteStones(0),
-      _currentTurn(Color::BLACK),
+    : _currentTurn(Color::BLACK),
       _blackCaptures(0),
       _whiteCaptures(0),
       _capturedStatus(false),
       _doubleThreeStatus(false),
       _currentHash(0) {
+  this->_blackStones.reset();
+  this->_whiteStones.reset();
+
+  this->_sentinelStones.reset();
+  for (int y = 0; y < BOARD_SIZE; ++y) {
+    for (int x = BOARD_SIZE; x < BOARD_WIDTH; ++x) {
+      int index = y * BOARD_WIDTH + x;
+      _sentinelStones.set(index);
+    }
+  }
+
   this->_colorToPlayer.clear();
   this->_history.clear();
+  this->_aiHistory.clear();
+  this->_aiHistory.reserve(100);
 }
 
 void Board::setupPlayers(TurnOrder order) {
@@ -34,11 +43,9 @@ void Board::setupPlayers(TurnOrder order) {
 // Core Gameplay Logic (Mutators)
 // ----------------------------------------------------------------
 
-bool Board::makeMove(int x, int y) {
-  if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE)
+bool Board::makeMove(int index) {
+  if (index < 0 || index >= MAX_CELLS || this->_sentinelStones.test(index))
     return false;
-
-  int index = _getIndex(x, y);
 
   if (this->_blackStones.test(index) || this->_whiteStones.test(index))
     return false;
@@ -54,10 +61,10 @@ bool Board::makeMove(int x, int y) {
   // Update hash
   this->_currentHash ^= Zobrist::getPieceHash(index, this->_currentTurn);
 
-  _processCapture(index);
+  _processCapture(index, nullptr);
 
   if (!this->_capturedStatus) {
-    _DoubleThree(x, y);
+    _DoubleThree(index);
     if (this->_doubleThreeStatus) {
       undo();
       return false;
@@ -67,9 +74,49 @@ bool Board::makeMove(int x, int y) {
   return true;
 }
 
+bool Board::makeMoveAI(int index) {
+  if (index < 0 || index >= MAX_CELLS || this->_sentinelStones.test(index))
+    return false;
+
+  if (this->_blackStones.test(index) || this->_whiteStones.test(index))
+    return false;
+
+  // create record for undo
+  AIMoveRecord record;
+  record.moveIndex = index;
+  record.prevHash = this->_currentHash;
+  record.currentTurn = this->_currentTurn;
+  record.prevBlackCaptures = this->_blackCaptures;
+  record.prevWhiteCaptures = this->_whiteCaptures;
+  record.capturedCount = 0;
+
+  if (this->_currentTurn == Color::BLACK) {
+    this->_blackStones.set(index);
+  } else {
+    this->_whiteStones.set(index);
+  }
+
+  // Update hash
+  this->_currentHash ^= Zobrist::getPieceHash(index, this->_currentTurn);
+
+  _processCapture(index, &record);
+
+  this->_aiHistory.push_back(record);
+
+  if (!this->_capturedStatus) {
+    _DoubleThree(index);
+    if (this->_doubleThreeStatus) {
+      undoAI();
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void Board::changeTurn() {
-  this->_currentTurn = (this->_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
-  _currentHash ^= Zobrist::getBlackTurnHash();
+  _currentTurn = static_cast<Color>(3 ^ static_cast<int>(_currentTurn));
+  this->_currentHash ^= Zobrist::getBlackTurnHash();
 }
 
 bool Board::undo() {
@@ -79,6 +126,35 @@ bool Board::undo() {
   this->_history.pop_back();
   _applyState(s);
   return true;
+}
+
+void Board::undoAI() {
+  if (this->_aiHistory.empty())
+    return;
+
+  AIMoveRecord record = this->_aiHistory.back();
+  this->_aiHistory.pop_back();
+
+  this->_currentTurn = record.currentTurn;
+
+  if (record.currentTurn == Color::BLACK) {
+    this->_blackStones.reset(record.moveIndex);
+  } else {
+    this->_whiteStones.reset(record.moveIndex);
+  }
+
+  Color oppColor = (record.currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
+  BoardType* oppBoard = (oppColor == Color::BLACK) ? &this->_blackStones : &this->_whiteStones;
+
+  for (int i = 0; i < record.capturedCount; ++i) {
+    int capIndex = record.capturedIndices[i];
+    oppBoard->set(capIndex);
+  }
+
+  // 5. カウンターとハッシュを復元
+  this->_blackCaptures = record.prevBlackCaptures;
+  this->_whiteCaptures = record.prevWhiteCaptures;
+  this->_currentHash = record.prevHash;
 }
 
 void Board::saveState() {
@@ -103,7 +179,7 @@ bool Board::checkWin(Color color) const {
   const BoardType& myStones = getMyStones(color);
   const BoardType& oppStones = getOppStones(color);
 
-  for (int shift : ALL_SHIFTS) {
+  for (int shift : DIR_OFFSETS) {
     // Get the starting bitset for 5-in-a-row
     BoardType lines = _getFiveInARowBits(myStones, shift);
 
@@ -132,7 +208,7 @@ bool Board::checkWin(Color color) const {
 // -- Board Information --
 
 Color Board::getColorAt(int x, int y) const {
-  int index = _getIndex(x, y);
+  int index = getIndex(x, y);
   if (this->_blackStones.test(index))
     return Color::BLACK;
   if (this->_whiteStones.test(index))
@@ -141,7 +217,7 @@ Color Board::getColorAt(int x, int y) const {
 }
 
 Player Board::getPlayerAt(int x, int y) const {
-  int index = _getIndex(x, y);
+  int index = getIndex(x, y);
   std::map<Color, Player>::const_iterator it = this->_colorToPlayer.end();
   if (this->_blackStones.test(index))
     it = this->_colorToPlayer.find(Color::BLACK);
@@ -171,6 +247,10 @@ const BoardType& Board::getOppStones(Color myColor) const {
   return (myColor == Color::BLACK) ? _whiteStones : _blackStones;
 }
 
+const BoardType& Board::getSentinelStones() const {
+  return this->_sentinelStones;
+}
+
 // -- Computed Bitsets --
 
 // 有効な盤面範囲（壁以外）を表すマスクを定義
@@ -197,6 +277,10 @@ BoardType Board::getOccupiedStones() const {
 
 Color Board::getCurrentTurn() const {
   return this->_currentTurn;
+}
+
+Color Board::getNextTurn() const {
+  return static_cast<Color>(3 ^ static_cast<int>(_currentTurn));
 }
 
 Player Board::getCurrentPlayer() const {
@@ -252,6 +336,18 @@ BoardType Board::getCapturableStones(Color myColor) const {
   return capturable;
 }
 
+// -- Helpers --
+
+int Board::getIndex(int x, int y) const {
+  return y * BOARD_WIDTH + x;
+}
+
+std::pair<int, int> Board::getCoordinates(int index) const {
+  int y = index / BOARD_WIDTH;
+  int x = index % BOARD_WIDTH;
+  return {x, y};
+}
+
 // ----------------------------------------------------------------
 // Internal Helper Methods
 // ----------------------------------------------------------------
@@ -269,24 +365,20 @@ void Board::_applyState(const BoardState& state) {
 
 // -- Coordinate / Bit Utils --
 
-int Board::_getIndex(int x, int y) const {
-  return y * BOARD_WIDTH + x;
-}
-
 int8_t Board::_getCaptureCount(Color color) const {
   return (color == Color::BLACK) ? this->_blackCaptures : this->_whiteCaptures;
 }
 
 // -- Rule Implementations --
 
-void Board::_processCapture(int index) {
+void Board::_processCapture(int index, AIMoveRecord* record) {
   BoardType& myStones = (this->_currentTurn == Color::BLACK) ? _blackStones : _whiteStones;
   BoardType& oppStones = (this->_currentTurn == Color::BLACK) ? _whiteStones : _blackStones;
   int8_t& myScore = (_currentTurn == Color::BLACK) ? _blackCaptures : _whiteCaptures;
   Color oppColor = (this->_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
   this->_capturedStatus = false;
 
-  for (int d : ALL_SHIFTS) {
+  for (int d : DIR_OFFSETS) {
     const int directions[] = {d, -d};
 
     for (int dir : directions) {
@@ -307,33 +399,41 @@ void Board::_processCapture(int index) {
         myScore += 2;
 
         this->_capturedStatus = true;
+
+        if (record) {
+          if (record->capturedCount + 2 <= 8) {
+            record->capturedIndices[record->capturedCount++] = p1;
+            record->capturedIndices[record->capturedCount++] = p2;
+          }
+        }
       }
     }
   }
 }
 
-void Board::_DoubleThree(int x, int y) {
+void Board::_DoubleThree(int index) {
   _doubleThreeStatus = false;
 
   const BoardType& myStones = getMyStones(_currentTurn);
   const BoardType& oppStones = getOppStones(_currentTurn);
   int freeThreeCount = 0;
 
-  for (const auto& dir : CHECK_DIRS) {
+  for (int offset : DIR_OFFSETS) {
     // 1. Extract Line Bits
-    LineBits line = _getLineBits(x, y, dir, myStones, oppStones);
+    LineBits line = _getLineBits(index, offset, myStones, oppStones);
 
     // 2. Check for Free Three pattern
     if (_checkFreeThree(line)) {
       freeThreeCount++;
       if (freeThreeCount >= 2) {
         _doubleThreeStatus = true;
+        return;
       }
     }
   }
 }
 
-LineBits Board::_getLineBits(int x, int y, const Direction dir, const BoardType& myStones,
+LineBits Board::_getLineBits(int centerIndex, int offset, const BoardType& myStones,
                              const BoardType& oppStones) const {
   LineBits line = {0, 0};
 
@@ -345,21 +445,20 @@ LineBits Board::_getLineBits(int x, int y, const Direction dir, const BoardType&
     if (i == 0)
       continue;
 
-    int nx = x + i * dir.dx;
-    int ny = y + i * dir.dy;
+    int targetIndex = centerIndex + (i * offset);
 
     // Treat out-of-bounds as "enemy stone (wall)"
-    if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) {
+    if (targetIndex < 0 || targetIndex >= MAX_CELLS || _sentinelStones.test(targetIndex)) {
+      line.opp |= (1 << (i + 5));  // 壁は敵石扱い
+      continue;
+    }
+    if (myStones.test(targetIndex)) {
+      line.my |= (1 << (i + 5));
+    } else if (oppStones.test(targetIndex)) {
       line.opp |= (1 << (i + 5));
-    } else {
-      int idx = _getIndex(dir.dx, dir.dy);
-      if (myStones.test(idx)) {
-        line.my |= (1 << (i + 5));
-      } else if (oppStones.test(idx)) {
-        line.opp |= (1 << (i + 5));
-      }
     }
   }
+
   return line;
 }
 
@@ -412,7 +511,7 @@ bool Board::_isWinningLineSafe(int startIdx, int shift, const BoardType& myStone
 
 bool Board::_isStoneCapturable(int index, const BoardType& myStones,
                                const BoardType& oppStones) const {
-  for (int dir : ALL_SHIFTS) {
+  for (int dir : DIR_OFFSETS) {
     const int neighbors[] = {dir, -dir};
 
     for (int d : neighbors) {

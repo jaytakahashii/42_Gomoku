@@ -34,11 +34,12 @@ class AI {
 
  private:
   // --- Configuration ---
-  static constexpr int DEPTH_EASY = 5;
-  static constexpr int DEPTH_NORMAL = 10;
-  static constexpr int DEPTH_HARD = 20;
+  static constexpr int DEPTH_EASY = 2;
+  static constexpr int DEPTH_NORMAL = 5;
+  static constexpr int DEPTH_HARD = 10;
 
-  static constexpr int MAX_MOVES_TO_CONSIDER = 10;
+  static constexpr int MAX_MOVES_TO_CONSIDER = 14;
+  static constexpr int SEARCH_WIDTH = 3;
 
   // --- Component State ---
   Color _aiPlayer;
@@ -66,7 +67,8 @@ class AI {
    * @param board The current board state.
    * @return A vector of possible moves with heuristic scores. (MAX: MAX_MOVES_TO_CONSIDER)
    */
-  std::vector<Move> _generateMoves(const Board& board, int depth);
+  std::vector<Move> _generateMoves(const Board& board, int depth,
+                                   size_t limit = MAX_MOVES_TO_CONSIDER);
 
   std::vector<Move> _randomNeighbor(const BoardType& occupied);
 

@@ -66,7 +66,7 @@ class Evaluator {
    * This is fast and approximate. Used for sorting moves (Move Ordering).
    * @return Raw priority score.
    */
-  static int evaluateMovePriority(const Board& board, int x, int y, Color color);
+  static int evaluateMovePriority(const Board& board, int index, Color color);
 
  private:
   // --- Helper Constants ---
@@ -80,8 +80,8 @@ class Evaluator {
   // --- Internal Logic ---
 
   // Check line score based on coordinates (for Move Ordering)
-  static int _CheckLineScore(const Board& board, int x, int y, int dx, int dy, Color myColor,
-                             Color oppColor);
+  static int _CheckLineScore(int index, int offset, const BoardType& myStones,
+                             const BoardType& oppStones, const BoardType& sentinels);
 
   // Evaluate score for a single color (used in full evaluation)
   static int _evaluateColor(const BoardType& stones, const BoardType& empty);

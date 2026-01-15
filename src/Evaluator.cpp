@@ -71,75 +71,73 @@ int Evaluator::evaluate(const Board& board, Color aiColor) {
   return static_cast<int>(myScore - weightedOppScore);
 }
 
-int Evaluator::evaluateMovePriority(const Board& board, int x, int y, Color myColor) {
+int Evaluator::evaluateMovePriority(const Board& board, int index, Color myColor) {
   int score = 0;
-  Color oppColor = (myColor == Color::BLACK) ? Color::WHITE : Color::BLACK;
 
   // 1. Centrality Bonus (Optional but recommended)
-  // Encourages play in the center early game.
+  int x = index & WIDTH_MASK;    // index % 32
+  int y = index >> WIDTH_SHIFT;  // index / 32
+
   int centerDist = std::abs(x - BOARD_SIZE / 2) + std::abs(y - BOARD_SIZE / 2);
-  score += (10 - centerDist);  // Small bonus (0-10 points)
+  score += (10 - centerDist);
 
-  // 2. Capture Heuristic (Crucial for Ninuki-Renju)
-  // If this move captures something, give it a HUGE bonus.
-  // It's worth checking even if slightly expensive because captures alter the board state
-  // significantly. (Assuming _CheckCapture is a lightweight helper you might add, or rely on line
-  // checks) For now, we stick to line checks as requested.
+  // 準備: bitsetへの参照をキャッシュして高速アクセス
+  const BoardType& myStones = board.getMyStones(myColor);
+  const BoardType& oppStones = board.getOppStones(myColor);
+  const BoardType& sentinels = board.getSentinelStones();
 
-  // 3. Line Analysis
-  // [1,0], [0,1], [1,1], [1,-1]
-  // Unrolling the loop manually for performance as you did is good.
-  score += _CheckLineScore(board, x, y, 1, 0, myColor, oppColor);
-  score += _CheckLineScore(board, x, y, 0, 1, myColor, oppColor);
-  score += _CheckLineScore(board, x, y, 1, 1, myColor, oppColor);
-  score += _CheckLineScore(board, x, y, 1, -1, myColor, oppColor);
+  // 2. Line Analysis with Offsets
+  // index操作だけで済むためループ展開がさらに効果的になります
+
+  // Horizontal (Offset 1)
+  score += _CheckLineScore(index, 1, myStones, oppStones, sentinels);
+  // Vertical (Offset 32)
+  score += _CheckLineScore(index, BOARD_WIDTH, myStones, oppStones, sentinels);
+  // Diagonal \ (Offset 33: 1 down + 1 right)
+  score += _CheckLineScore(index, BOARD_WIDTH + 1, myStones, oppStones, sentinels);
+  // Diagonal / (Offset 31: 1 down + 1 left)
+  score += _CheckLineScore(index, BOARD_WIDTH - 1, myStones, oppStones, sentinels);
 
   return score;
 }
 
-int Evaluator::_CheckLineScore(const Board& board, int x, int y, int dx, int dy, Color myColor,
-                               Color oppColor) {
-  int score = 0;
-
-  // We need to count consecutive stones in both directions
+int Evaluator::_CheckLineScore(int index, int offset, const BoardType& myStones,
+                               const BoardType& oppStones, const BoardType& sentinels) {
   // 0: My stones, 1: Opponent stones
   int consecutive[2] = {0, 0};
   int openEnds[2] = {0, 0};
 
-  // Helper lambda to scan a direction
-  auto scan = [&](int k_start, int k_end, int sign) {
+  // direction: 1 (Forward), -1 (Backward)
+  for (int sign = -1; sign <= 1; sign += 2) {
     bool myBlocked = false;
     bool oppBlocked = false;
 
-    for (int k = k_start; k <= k_end; ++k) {
-      int nx = x + (dx * k * sign);
-      int ny = y + (dy * k * sign);
+    for (int k = 1; k <= 4; ++k) {
+      int currentIdx = index + (offset * k * sign);
 
-      if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) {
-        // Board edge counts as blocked
-        return;
-      }
-
-      Color c = board.getColorAt(nx, ny);
+      if (currentIdx < 0 || currentIdx >= MAX_CELLS || sentinels.test(currentIdx))
+        break;
 
       // --- Check My Stones ---
+      bool isMyStone = myStones.test(currentIdx);
+      bool isOppStone = oppStones.test(currentIdx);
+
       if (!myBlocked) {
-        if (c == myColor) {
+        if (isMyStone) {
           consecutive[0]++;
         } else {
-          if (c == Color::NONE)
+          if (!isOppStone)  // Empty
             openEnds[0]++;
-          myBlocked = true;  // Stop counting my consecutive
+          myBlocked = true;
         }
       }
 
       // --- Check Opponent Stones ---
-      // We are checking: "If I hadn't played here, how many would opp have?"
       if (!oppBlocked) {
-        if (c == oppColor) {
+        if (isOppStone) {
           consecutive[1]++;
         } else {
-          if (c == Color::NONE)
+          if (!isMyStone)  // Empty
             openEnds[1]++;
           oppBlocked = true;
         }
@@ -148,45 +146,37 @@ int Evaluator::_CheckLineScore(const Board& board, int x, int y, int dx, int dy,
       if (myBlocked && oppBlocked)
         break;
     }
-  };
+  }
 
-  // Scan Forward and Backward
-  scan(1, 4, 1);   // Forward (Limit 4 is enough to detect 5)
-  scan(1, 4, -1);  // Backward
+  // --- Scoring Logic (変更なし) ---
+  int score = 0;
 
-  // --- Scoring Logic ---
-
-  // 1. My Offense (Trying to build lines)
-  // +1 because we are placing a stone at (x,y)
+  // 1. My Offense
   int myTotal = consecutive[0] + 1;
-
-  if (myTotal >= 5) {
-    score += ScoreConfig::PRIORITY_WIN;  // 5連
-  } else if (myTotal == 4) {
+  if (myTotal >= 5)
+    score += ScoreConfig::PRIORITY_WIN;  // XXXXX
+  else if (myTotal == 4) {
     if (openEnds[0] >= 2)
       score += ScoreConfig::PRIORITY_OPEN_FOUR;  // .XXXX.
     else if (openEnds[0] >= 1)
-      score += ScoreConfig::PRIORITY_OPEN_THREE;  // Closed 4 (still strong)
+      score += ScoreConfig::PRIORITY_OPEN_THREE;  // XXXX.
   } else if (myTotal == 3) {
     if (openEnds[0] >= 2)
       score += ScoreConfig::PRIORITY_OPEN_THREE;  // .XXX.
   }
 
-  // 2. Opponent Defense (Blocking their lines)
-  // +1 because if we don't play here, they will play here and connect their lines
+  // 2. Opponent Defense
   int oppTotal = consecutive[1] + 1;
-
-  if (oppTotal >= 5) {
-    score += ScoreConfig::PRIORITY_BLOCK_WIN;  // Block their 5
-  } else if (oppTotal == 4) {
-    // Blocking a 4 is critical. Even a closed 4 is deadly if not blocked.
+  if (oppTotal >= 5)
+    score += ScoreConfig::PRIORITY_BLOCK_WIN;  // XXXXX
+  else if (oppTotal == 4) {
     if (openEnds[1] >= 2)
-      score += ScoreConfig::PRIORITY_BLOCK_OPEN_4;  // Block .XXXX.
+      score += ScoreConfig::PRIORITY_BLOCK_OPEN_4;  // .XXXX.
     else if (openEnds[1] >= 1)
-      score += ScoreConfig::PRIORITY_BLOCK_OPEN_4;  // Block X.XXX (Force block)
+      score += ScoreConfig::PRIORITY_BLOCK_OPEN_4;  // XXXX. (Force block)
   } else if (oppTotal == 3) {
     if (openEnds[1] >= 2)
-      score += ScoreConfig::PRIORITY_BLOCK_OPEN_3;  // Block .XXX.
+      score += ScoreConfig::PRIORITY_BLOCK_OPEN_3;  // .XXX.
   }
 
   return score;
