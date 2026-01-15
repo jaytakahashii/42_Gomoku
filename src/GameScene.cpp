@@ -109,6 +109,9 @@ void GameScene::handleClick(int x, int y) {
     if (this->_board.getDoubleThreeStatus()) {
       displayTimedMessage("DoubleThree", {posX, posY});
       this->_board.setDoubleThreeStatus(false);
+    } else if (this->_board.getForbiddenHandStatus()) {
+      displayTimedMessage("Forbidden Hand", {posX, posY});
+      this->_board.setForbiddenHandStatus(false);
     }
   }
 }

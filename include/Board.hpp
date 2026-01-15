@@ -148,6 +148,8 @@ class Board {
   bool getDoubleThreeStatus() const;
   void setDoubleThreeStatus(bool status);
   bool getCapturedStatus() const;
+  bool getForbiddenHandStatus() const;
+  void setForbiddenHandStatus(bool status);
 
   // -- Hashing --
   uint64_t getHash() const;
