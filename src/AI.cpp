@@ -6,10 +6,19 @@ AI::AI() : _tt(20) {
 }
 
 Move AI::getSecondMoveForSpecialRule(const Board& board) {
+  BoardType occupied = board.getOccupiedStones();
   if (board.getOpeningRule() == OpeningRule::Pro) {
-    return {PRO_CLOSEST_TOP_INDEX, 0};
+    if (occupied.test(PRO_CLOSEST_BOTTOM_INDEX)) {
+      return {PRO_CLOSEST_TOP_INDEX, 0};
+    } else {
+      return {PRO_CLOSEST_BOTTOM_INDEX, 0};
+    }
   } else if (board.getOpeningRule() == OpeningRule::LongPro) {
-    return {LONG_PRO_CLOSEST_TOP_INDEX, 0};
+    if (occupied.test(LONG_PRO_CLOSEST_BOTTOM_INDEX)) {
+      return {LONG_PRO_CLOSEST_TOP_INDEX, 0};
+    } else {
+      return {LONG_PRO_CLOSEST_BOTTOM_INDEX, 0};
+    }
   }
   return {-1, 0};
 }
