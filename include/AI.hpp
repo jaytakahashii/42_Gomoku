@@ -20,8 +20,12 @@ class AI {
   AI();
   ~AI() = default;
 
-  // TODO: debug
-  void printPV(Board board);
+  /**
+   * Special handling for the second move under specific opening rules.
+   * @param board The current board state.
+   * @return The predetermined second move for the special rule, or {-1, 0} if not applicable.
+   */
+  Move getSecondMoveForSpecialRule(const Board& board);
 
   /**
    * Calculates the best move for the AI using Minimax with Alpha-Beta pruning.
