@@ -24,6 +24,7 @@ Board::Board()
 
   this->_colorToPlayer.clear();
   this->_history.clear();
+  this->_aiHistory.reserve(100);
 }
 
 void Board::setupPlayers(TurnOrder order) {
@@ -59,12 +60,51 @@ bool Board::makeMove(int index) {
   // Update hash
   this->_currentHash ^= Zobrist::getPieceHash(index, this->_currentTurn);
 
-  _processCapture(index);
+  _processCapture(index, nullptr);
 
   if (!this->_capturedStatus) {
     _DoubleThree(index);
     if (this->_doubleThreeStatus) {
       undo();
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool Board::makeMoveAI(int index) {
+  if (index < 0 || index >= MAX_CELLS || this->_sentinelStones.test(index))
+    return false;
+
+  if (this->_blackStones.test(index) || this->_whiteStones.test(index))
+    return false;
+
+  // create record for undo
+  AIMoveRecord record;
+  record.moveIndex = index;
+  record.prevHash = this->_currentHash;
+  record.prevBlackCaptures = this->_blackCaptures;
+  record.prevWhiteCaptures = this->_whiteCaptures;
+  record.capturedCount = 0;
+
+  this->_aiHistory.push_back(record);
+
+  if (this->_currentTurn == Color::BLACK) {
+    this->_blackStones.set(index);
+  } else {
+    this->_whiteStones.set(index);
+  }
+
+  // Update hash
+  this->_currentHash ^= Zobrist::getPieceHash(index, this->_currentTurn);
+
+  _processCapture(index, &record);
+
+  if (!this->_capturedStatus) {
+    _DoubleThree(index);
+    if (this->_doubleThreeStatus) {
+      undoAI();
       return false;
     }
   }
@@ -84,6 +124,36 @@ bool Board::undo() {
   this->_history.pop_back();
   _applyState(s);
   return true;
+}
+
+void Board::undoAI() {
+  if (this->_aiHistory.empty())
+    return;
+
+  AIMoveRecord record = this->_aiHistory.back();
+  this->_aiHistory.pop_back();
+
+  Color prevTurn = (this->_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
+  this->_currentTurn = prevTurn;
+
+  if (prevTurn == Color::BLACK) {
+    this->_blackStones.reset(record.moveIndex);
+  } else {
+    this->_whiteStones.reset(record.moveIndex);
+  }
+
+  Color oppColor = (prevTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
+  BoardType* oppBoard = (oppColor == Color::BLACK) ? &this->_blackStones : &this->_whiteStones;
+
+  for (int i = 0; i < record.capturedCount; ++i) {
+    int capIndex = record.capturedIndices[i];
+    oppBoard->set(capIndex);
+  }
+
+  // 5. カウンターとハッシュを復元
+  this->_blackCaptures = record.prevBlackCaptures;
+  this->_whiteCaptures = record.prevWhiteCaptures;
+  this->_currentHash = record.prevHash;
 }
 
 void Board::saveState() {
@@ -300,7 +370,7 @@ int8_t Board::_getCaptureCount(Color color) const {
 
 // -- Rule Implementations --
 
-void Board::_processCapture(int index) {
+void Board::_processCapture(int index, AIMoveRecord* record) {
   BoardType& myStones = (this->_currentTurn == Color::BLACK) ? _blackStones : _whiteStones;
   BoardType& oppStones = (this->_currentTurn == Color::BLACK) ? _whiteStones : _blackStones;
   int8_t& myScore = (_currentTurn == Color::BLACK) ? _blackCaptures : _whiteCaptures;
@@ -328,6 +398,13 @@ void Board::_processCapture(int index) {
         myScore += 2;
 
         this->_capturedStatus = true;
+
+        if (record) {
+          if (record->capturedCount + 2 <= 8) {
+            record->capturedIndices[record->capturedCount++] = p1;
+            record->capturedIndices[record->capturedCount++] = p2;
+          }
+        }
       }
     }
   }

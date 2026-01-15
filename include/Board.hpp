@@ -38,6 +38,18 @@ struct BoardState {
   uint64_t hash;
 };
 
+// Information about a move, including captures
+struct AIMoveRecord {
+  int moveIndex;          // 打った手
+  uint64_t prevHash;      // 手を打つ前のハッシュ値
+  int prevBlackCaptures;  // 手を打つ前の黒の捕獲数
+  int prevWhiteCaptures;  // 手を打つ前の白の捕獲数
+
+  // 捕獲された石のインデックスを記録（最大でも8個程度なので固定長で十分）
+  int capturedCount;
+  std::array<int, 8> capturedIndices;
+};
+
 // ==========================================
 // Board Class
 // ==========================================
@@ -68,6 +80,8 @@ class Board {
    */
   bool makeMove(int index);
 
+  bool makeMoveAI(int index);
+
   /**
    * Switches the current turn to the other player.
    */
@@ -83,6 +97,8 @@ class Board {
    * @return true if undo was successful (history not empty).
    */
   bool undo();
+
+  void undoAI();
 
   // ----------------------------------------------------------------
   // Game Status & Win Conditions
@@ -170,8 +186,9 @@ class Board {
    * Updates capture counts and removes stones from bit boards.
    * Updates the _capturedStatus flag.
    * @param index The index of the newly placed stone.
+   * @param record Optional AIMoveRecord to log captured stones. if nullptr, no logging is done.
    */
-  void _processCapture(int index);
+  void _processCapture(int index, AIMoveRecord* record);
 
   /**
    * Checks if the move at (x, y) creates a forbidden "Double Three".
@@ -237,7 +254,8 @@ class Board {
 
   // Meta Data
   std::map<Color, Player> _colorToPlayer;
-  std::vector<BoardState> _history;  // For undo functionality
+  std::vector<BoardState> _history;      // For undo functionality
+  std::vector<AIMoveRecord> _aiHistory;  // For AI move tracking
 
   // Hashing
   uint64_t _currentHash;
