@@ -177,7 +177,7 @@ void MenuScene::_checkHoverOnRules(sf::RenderWindow& window) {
   bool isHovering = false;
 
   if (this->_standardButton.getGlobalBounds().contains(mousePos)) {
-    _tooltip.show("No restrictions.\nJust connect 5 stones.", mousePos, window);
+    _tooltip.show("No restrictions.", mousePos, window);
     isHovering = true;
   } else if (this->_proButton.getGlobalBounds().contains(mousePos)) {
     _tooltip.show("- First move must be center.\n- Third move must be outside 3x3 zone.", mousePos,
