@@ -18,93 +18,84 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level,
   // Clone the board ONCE for the search process
   Board searchBoard = board;
 
-  // =========================================================
-  // Iterative Deepening (ID)
-  // Start from depth 2 and increase until targetDepth.
-  // This fills the TT with good moves, making deeper searches faster.
-  // =========================================================
-  // --- 1. Move Generation & Ordering ---
-  // TT will now provide the "Best Move" from the previous depth (depth-1)
-  // to sort moves efficiently.
-  std::vector<Move> moves = _generateMoves(searchBoard, targetDepth, MAX_CELLS);
+  for (int depth = 2; depth <= targetDepth; ++depth) {
+    // --- 1. Move Generation & Ordering ---
+    std::vector<Move> moves = _generateMoves(searchBoard, depth, MAX_CELLS);
 
-  if (moves.empty())
-    return {-1, 0};
-  if (moves.size() == 1)
-    return moves[0];  // Optimization
+    if (moves.empty())
+      return {-1, 0};
+    if (moves.size() == 1)
+      return moves[0];  // Optimization
 
-  // Hash Move Check (Check TT for the root position)
-  uint64_t rootHash = searchBoard.getHash();
-  TTEntry* entry = _tt.get(rootHash);
+    // Hash Move Check (Check TT for the root position)
+    uint64_t rootHash = searchBoard.getHash();
+    TTEntry* entry = _tt.get(rootHash);
 
-  if (entry != nullptr && entry->bestMove.index != -1) {
-    // Move the best move from previous depth to the front
-    for (size_t i = 0; i < moves.size(); ++i) {
-      if (moves[i].index == entry->bestMove.index) {
-        std::swap(moves[0], moves[i]);
-        break;
+    if (entry != nullptr && entry->bestMove.index != -1) {
+      // Move the best move from previous depth to the front
+      for (size_t i = 0; i < moves.size(); ++i) {
+        if (moves[i].index == entry->bestMove.index) {
+          std::swap(moves[0], moves[i]);
+          break;
+        }
       }
     }
-  }
 
-  // --- 2. Root Search Loop ---
-  Move currentDepthBestMove = moves[0];
-  currentDepthBestMove.score = std::numeric_limits<int>::min();
+    // --- 2. Root Search Loop ---
+    Move currentDepthBestMove = moves[0];
+    currentDepthBestMove.score = std::numeric_limits<int>::min();
 
-  int alpha = std::numeric_limits<int>::min();
-  int beta = std::numeric_limits<int>::max();
+    int alpha = std::numeric_limits<int>::min();
+    int beta = std::numeric_limits<int>::max();
 
-  for (size_t i = 0; i < moves.size(); ++i) {
-    Move& m = moves[i];  // indexが必要なのでイテレータではなくインデックスアクセス推奨
-    if (!searchBoard.makeMoveAI(m.index))
-      continue;
+    for (size_t i = 0; i < moves.size(); ++i) {
+      Move& m = moves[i];
+      if (!searchBoard.makeMoveAI(m.index))
+        continue;
 
-    // Win check optimization
-    if (searchBoard.checkWin()) {
+      // Win check optimization
+      if (searchBoard.checkWin()) {
+        searchBoard.undoAI();
+        _tt.store(rootHash, depth, ScoreConfig::WIN, TTFlag::EXACT, m);
+        return m;
+      }
+
+      searchBoard.changeTurn();
+
+      if (i >= MAX_MOVES_TO_CONSIDER) {
+        searchBoard.undoAI();
+        continue;
+      }
+
+      // Search children with reduced depth
+      int score = _minimax(searchBoard, depth - 1, alpha, beta, false, cancelFlag);
+
       searchBoard.undoAI();
-      // Found a winning move at this depth.
-      // Store and return immediately (no need to search deeper)
-      _tt.store(rootHash, targetDepth, ScoreConfig::WIN, TTFlag::EXACT, m);
-      return m;
+
+      // Update Best Move for this depth
+      if (score > currentDepthBestMove.score) {
+        currentDepthBestMove = m;
+        currentDepthBestMove.score = score;
+      }
+
+      // Alpha Update
+      if (currentDepthBestMove.score > alpha) {
+        alpha = currentDepthBestMove.score;
+      }
+
+      if (cancelFlag.load())
+        break;
     }
 
-    searchBoard.changeTurn();
+    // --- 3. Update Global Best & Store to TT ---
+    globalBestMove = currentDepthBestMove;
 
-    if (i >= MAX_MOVES_TO_CONSIDER) {
-      searchBoard.undoAI();
-      continue;
-    }
+    TTFlag flag = TTFlag::EXACT;
+    _tt.store(rootHash, depth, globalBestMove.score, flag, globalBestMove);
 
-    // Search children with reduced depth
-    int score = _minimax(searchBoard, targetDepth - 1, alpha, beta, false, cancelFlag);
-
-    searchBoard.undoAI();
-
-    // Update Best Move for this depth
-    if (score > currentDepthBestMove.score) {
-      currentDepthBestMove = m;
-      currentDepthBestMove.score = score;
-    }
-
-    // Alpha Update
-    if (currentDepthBestMove.score > alpha) {
-      alpha = currentDepthBestMove.score;
-    }
-
-    // Win Threshold Break
-    if (alpha >= ScoreConfig::WIN - 1000) {
+    if (cancelFlag.load())
       break;
-    }
   }
-
-  // --- 3. Update Global Best & Store to TT ---
-  globalBestMove = currentDepthBestMove;
-
-  // ★ CRITICAL: Store the Root Node result to TT
-  // This allows the next iteration (depth+1) to use this result for sorting,
-  // AND allows printPV to find the start of the chain.
-  TTFlag flag = TTFlag::EXACT;  // Root node is usually exact unless alpha/beta cut logic is complex
-  _tt.store(rootHash, 0, globalBestMove.score, flag, globalBestMove);
 
   return globalBestMove;
 }
