@@ -1,9 +1,11 @@
 #pragma once
 
-#include <Enums.hpp>
-#include <Scene.hpp>
-#include <Theme.hpp>
 #include <functional>
+
+#include "Enums.hpp"
+#include "Scene.hpp"
+#include "Theme.hpp"
+#include "Tooltip.hpp"
 
 class MenuScene : public Scene {
  public:
@@ -47,6 +49,8 @@ class MenuScene : public Scene {
   sf::Text _proText;
   sf::RectangleShape _longProButton;
   sf::Text _longProText;
+  Tooltip _tooltip;
+  void _checkHoverOnRules(sf::RenderWindow& window);
 
   void _updateButtonStatus(sf::RectangleShape& button, bool isActive);
 };

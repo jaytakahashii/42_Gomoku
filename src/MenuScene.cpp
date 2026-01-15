@@ -1,4 +1,4 @@
-#include <MenuScene.hpp>
+#include "MenuScene.hpp"
 
 MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
     : _font(font),
@@ -14,7 +14,8 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
       _openingRuleText(font, "Select starting condition."),
       _standardText(font, "Standard"),
       _proText(font, "Pro"),
-      _longProText(font, "Long Pro") {
+      _longProText(font, "Long Pro"),
+      _tooltip(font) {
   this->_titleText.setCharacterSize(Theme::FontSize::Title);
   this->_titleText.setFillColor(Theme::Color::Text);
   this->_titleText.setStyle(sf::Text::Bold);
@@ -170,6 +171,29 @@ void MenuScene::update(float dt) {
   _updateButtonStatus(this->_longProButton, this->_openingRule == OpeningRule::LongPro);
 }
 
+void MenuScene::_checkHoverOnRules(sf::RenderWindow& window) {
+  sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
+  sf::Vector2f mousePos = window.mapPixelToCoords(pixelPos);
+  bool isHovering = false;
+
+  if (this->_standardButton.getGlobalBounds().contains(mousePos)) {
+    _tooltip.show("No restrictions.\nJust connect 5 stones.", mousePos, window);
+    isHovering = true;
+  } else if (this->_proButton.getGlobalBounds().contains(mousePos)) {
+    _tooltip.show("- First move must be center.\n- Third move must be outside 3x3 zone.", mousePos,
+                  window);
+    isHovering = true;
+  } else if (this->_longProButton.getGlobalBounds().contains(mousePos)) {
+    _tooltip.show("- First move must be center.\n- Third move must be outside 4x4 zone.", mousePos,
+                  window);
+    isHovering = true;
+  }
+
+  if (!isHovering) {
+    _tooltip.hide();
+  }
+}
+
 void MenuScene::_updateButtonStatus(sf::RectangleShape& button, bool isActive) {
   button.setFillColor(isActive ? Theme::Color::ButtonActive : Theme::Color::ButtonIdle);
 }
@@ -198,6 +222,8 @@ void MenuScene::render(sf::RenderWindow& window) {
   window.draw(this->_proText);
   window.draw(this->_longProButton);
   window.draw(this->_longProText);
+  _checkHoverOnRules(window);
+  _tooltip.draw(window);
 }
 
 void MenuScene::onResize(const sf::Vector2u& windowSize) {
