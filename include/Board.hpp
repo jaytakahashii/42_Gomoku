@@ -44,6 +44,7 @@ struct AIMoveRecord {
   uint64_t prevHash;      // 手を打つ前のハッシュ値
   int prevBlackCaptures;  // 手を打つ前の黒の捕獲数
   int prevWhiteCaptures;  // 手を打つ前の白の捕獲数
+  Color currentTurn;
 
   // 捕獲された石のインデックスを記録（最大でも8個程度なので固定長で十分）
   int capturedCount;

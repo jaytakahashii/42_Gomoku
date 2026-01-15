@@ -24,6 +24,7 @@ Board::Board()
 
   this->_colorToPlayer.clear();
   this->_history.clear();
+  this->_aiHistory.clear();
   this->_aiHistory.reserve(100);
 }
 
@@ -84,11 +85,10 @@ bool Board::makeMoveAI(int index) {
   AIMoveRecord record;
   record.moveIndex = index;
   record.prevHash = this->_currentHash;
+  record.currentTurn = this->_currentTurn;
   record.prevBlackCaptures = this->_blackCaptures;
   record.prevWhiteCaptures = this->_whiteCaptures;
   record.capturedCount = 0;
-
-  this->_aiHistory.push_back(record);
 
   if (this->_currentTurn == Color::BLACK) {
     this->_blackStones.set(index);
@@ -100,6 +100,8 @@ bool Board::makeMoveAI(int index) {
   this->_currentHash ^= Zobrist::getPieceHash(index, this->_currentTurn);
 
   _processCapture(index, &record);
+
+  this->_aiHistory.push_back(record);
 
   if (!this->_capturedStatus) {
     _DoubleThree(index);
@@ -133,16 +135,15 @@ void Board::undoAI() {
   AIMoveRecord record = this->_aiHistory.back();
   this->_aiHistory.pop_back();
 
-  Color prevTurn = (this->_currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
-  this->_currentTurn = prevTurn;
+  this->_currentTurn = record.currentTurn;
 
-  if (prevTurn == Color::BLACK) {
+  if (record.currentTurn == Color::BLACK) {
     this->_blackStones.reset(record.moveIndex);
   } else {
     this->_whiteStones.reset(record.moveIndex);
   }
 
-  Color oppColor = (prevTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
+  Color oppColor = (record.currentTurn == Color::BLACK) ? Color::WHITE : Color::BLACK;
   BoardType* oppBoard = (oppColor == Color::BLACK) ? &this->_blackStones : &this->_whiteStones;
 
   for (int i = 0; i < record.capturedCount; ++i) {
