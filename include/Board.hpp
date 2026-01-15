@@ -36,6 +36,7 @@ struct BoardState {
   int whiteCaptures;
   Color currentTurn;
   uint64_t hash;
+  int handCount;
 };
 
 // Information about a move, including captures
@@ -138,13 +139,16 @@ class Board {
   BoardType getOccupiedStones() const;
 
   // -- Game State --
+  int getHandCount() const;
   Color getCurrentTurn() const;
   Color getNextTurn() const;
   Player getCurrentPlayer() const;
   int getBlackCaptures() const;
   int getWhiteCaptures() const;
 
-  // -- Special Rule Flags --
+  // -- Special Rule Flags / State --
+  void setOpeningRule(OpeningRule rule);
+  OpeningRule getOpeningRule() const;
   bool getDoubleThreeStatus() const;
   void setDoubleThreeStatus(bool status);
   bool getCapturedStatus() const;
@@ -245,11 +249,15 @@ class Board {
   BoardType _blackStones;
   BoardType _whiteStones;
   BoardType _sentinelStones;  // Padding walls to simplify boundary checks
+  BoardType _forbiddenHandsOfPro;
+  BoardType _forbiddenHandsOfLongPro;
 
   // Game State
+  int _handCount;
   Color _currentTurn;
   int8_t _blackCaptures;
   int8_t _whiteCaptures;
+  OpeningRule _openingRule;
 
   // Flags for the last move (for UI or logic checks)
   bool _capturedStatus;

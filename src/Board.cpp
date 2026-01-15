@@ -5,7 +5,8 @@
 // ----------------------------------------------------------------
 
 Board::Board()
-    : _currentTurn(Color::BLACK),
+    : _handCount(0),
+      _currentTurn(Color::BLACK),
       _blackCaptures(0),
       _whiteCaptures(0),
       _capturedStatus(false),
@@ -19,6 +20,22 @@ Board::Board()
     for (int x = BOARD_SIZE; x < BOARD_WIDTH; ++x) {
       int index = y * BOARD_WIDTH + x;
       _sentinelStones.set(index);
+    }
+  }
+
+  this->_forbiddenHandsOfPro.reset();
+  for (int y = (BOARD_SIZE / 2) - 2; y <= (BOARD_SIZE / 2) + 2; ++y) {
+    for (int x = (BOARD_SIZE / 2) - 2; x <= (BOARD_SIZE / 2) + 2; ++x) {
+      int index = y * BOARD_WIDTH + x;
+      _forbiddenHandsOfPro.set(index);
+    }
+  }
+
+  this->_forbiddenHandsOfLongPro.reset();
+  for (int y = (BOARD_SIZE / 2) - 3; y <= (BOARD_SIZE / 2) + 3; ++y) {
+    for (int x = (BOARD_SIZE / 2) - 3; x <= (BOARD_SIZE / 2) + 3; ++x) {
+      int index = y * BOARD_WIDTH + x;
+      _forbiddenHandsOfLongPro.set(index);
     }
   }
 
@@ -50,6 +67,39 @@ bool Board::makeMove(int index) {
   if (this->_blackStones.test(index) || this->_whiteStones.test(index))
     return false;
 
+  BoardType occupied = getOccupiedStones();
+  this->_forbiddenHandStatus = false;
+
+  if (_openingRule == OpeningRule::Pro) {
+    if (occupied.none()) {
+      // First move must be center
+      if (index != CENTER_INDEX) {
+        this->_forbiddenHandStatus = true;
+        return false;
+      }
+    } else if (occupied.count() == 2) {
+      // Second move must be within forbidden hands area
+      if (this->_forbiddenHandsOfPro.test(index)) {
+        this->_forbiddenHandStatus = true;
+        return false;
+      }
+    }
+  } else if (_openingRule == OpeningRule::LongPro) {
+    if (occupied.none()) {
+      // First move must be center
+      if (index != CENTER_INDEX) {
+        this->_forbiddenHandStatus = true;
+        return false;
+      }
+    } else if (occupied.count() == 2) {
+      // Second move must be within forbidden hands area
+      if (this->_forbiddenHandsOfLongPro.test(index)) {
+        this->_forbiddenHandStatus = true;
+        return false;
+      }
+    }
+  }
+
   saveState();
 
   if (this->_currentTurn == Color::BLACK) {
@@ -70,6 +120,8 @@ bool Board::makeMove(int index) {
       return false;
     }
   }
+
+  _handCount++;
 
   return true;
 }
@@ -159,7 +211,8 @@ void Board::undoAI() {
 
 void Board::saveState() {
   this->_history.push_back({this->_blackStones, this->_whiteStones, this->_blackCaptures,
-                            this->_whiteCaptures, this->_currentTurn, this->_currentHash});
+                            this->_whiteCaptures, this->_currentTurn, this->_currentHash,
+                            this->_handCount});
 }
 
 // ----------------------------------------------------------------
@@ -275,6 +328,10 @@ BoardType Board::getOccupiedStones() const {
 
 // -- Game State --
 
+int Board::getHandCount() const {
+  return this->_handCount;
+}
+
 Color Board::getCurrentTurn() const {
   return this->_currentTurn;
 }
@@ -300,6 +357,14 @@ int Board::getWhiteCaptures() const {
 }
 
 // -- Special Rule Flags --
+
+void Board::setOpeningRule(OpeningRule rule) {
+  this->_openingRule = rule;
+}
+
+OpeningRule Board::getOpeningRule() const {
+  return this->_openingRule;
+}
 
 bool Board::getDoubleThreeStatus() const {
   return this->_doubleThreeStatus;
@@ -369,6 +434,7 @@ void Board::_applyState(const BoardState& state) {
   this->_whiteCaptures = state.whiteCaptures;
   this->_currentTurn = state.currentTurn;
   this->_currentHash = state.hash;
+  this->_handCount = state.handCount;
 }
 
 // -- Coordinate / Bit Utils --

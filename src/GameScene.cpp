@@ -251,6 +251,7 @@ void GameScene::setTurnOrder(TurnOrder& turnOrder) {
 
 void GameScene::setOpeningRule(OpeningRule& rule) {
   this->_openingRule = rule;
+  this->_board.setOpeningRule(rule);
 }
 
 GameScene::FloatingMessage::FloatingMessage(const sf::Font& font, const std::string& str,
@@ -313,6 +314,14 @@ void GameScene::_onAIAssist() {
   this->_aiClock.restart();
 
   this->_hintFuture = std::async(std::launch::async, [this, flagPtr]() mutable {
+    if (this->_board.getHandCount() == 0) {
+      return Move{CENTER_INDEX, 0};
+    }
+    if (this->_openingRule == OpeningRule::Pro || this->_openingRule == OpeningRule::LongPro) {
+      if (this->_board.getHandCount() == 2) {
+        return this->_ai.getSecondMoveForSpecialRule(this->_board);
+      }
+    }
     return this->_ai.getBestMove(this->_board, this->_board.getCurrentTurn(), AILevel::Hard,
                                  *flagPtr);
   });
@@ -394,6 +403,15 @@ void GameScene::_handleAIProcess(float df) {
 
         this->_aiClock.restart();
         this->_aiFuture = std::async(std::launch::async, [this, flagPtr]() mutable {
+          if (this->_board.getHandCount() == 0) {
+            return Move{CENTER_INDEX, 0};
+          }
+          if (this->_openingRule == OpeningRule::Pro ||
+              this->_openingRule == OpeningRule::LongPro) {
+            if (this->_board.getHandCount() == 2) {
+              return this->_ai.getSecondMoveForSpecialRule(this->_board);
+            }
+          }
           return this->_ai.getBestMove(this->_board, this->_board.getCurrentTurn(), this->_aiLevel,
                                        *flagPtr);
         });
