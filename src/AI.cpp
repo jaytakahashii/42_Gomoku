@@ -172,15 +172,12 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
 
       int eval;
       if (isFirstMove) {
-        // 1. 最初の手（最善手候補）は全力で探索 (Full Window)
+        // 1. Full Window
         eval = _minimax(board, depth - 1, alpha, beta, false, cancelFlag);
       } else {
-        // 2. 2手目以降は Null Window Search (alpha, alpha+1)
-        // 「今のalphaを超えないこと」を確認するだけの高速探索
+        // 2. Null Window Search (alpha, alpha+1)
         eval = _minimax(board, depth - 1, alpha, alpha + 1, false, cancelFlag);
 
-        // もし alpha を超えていたら (Fail-High)、評価が間違っていた可能性があるので
-        // 本来の窓 (alpha, beta) で再探索する
         if (eval > alpha && eval < beta) {
           eval = _minimax(board, depth - 1, alpha, beta, false, cancelFlag);
         }
@@ -200,25 +197,24 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
 
       // Beta Cut-off
       if (beta <= alpha) {
-        // ★ Killer Heuristic (Maximizerにとって、相手のこの分岐を断ち切る強い手)
         if (_killerMoves[depth][0].index != m.index) {
           _killerMoves[depth][1] = _killerMoves[depth][0];
           _killerMoves[depth][0] = m;
         }
         break;
       }
-      isFirstMove = false;  // 2周目からはfalse
+      isFirstMove = false;
     }
 
-    // 結果保存
+    // Store Result
     TTFlag flag = (maxEval <= originalAlpha)
                       ? TTFlag::UPPERBOUND
                       : (maxEval >= beta ? TTFlag::LOWERBOUND : TTFlag::EXACT);
     _tt.store(key, depth, maxEval, flag, bestMoveInThisNode);
     return maxEval;
 
-    // --- Minimizing Player (Opp) ---
   } else {
+    // --- Minimizing Player (Opp) ---
     int minEval = std::numeric_limits<int>::max();
 
     for (const Move& m : moves) {
@@ -235,14 +231,10 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
 
       int eval;
       if (isFirstMove) {
-        // 1. 最初の手は全力探索
         eval = _minimax(board, depth - 1, alpha, beta, true, cancelFlag);
       } else {
-        // 2. 2手目以降は Null Window Search (beta-1, beta)
-        // 「今のbetaを下回らないこと」を確認する
         eval = _minimax(board, depth - 1, beta - 1, beta, true, cancelFlag);
 
-        // もし beta を下回っていたら (Fail-Low: 相手にとって良い手)、再探索
         if (eval < beta && eval > alpha) {
           eval = _minimax(board, depth - 1, alpha, beta, true, cancelFlag);
         }
@@ -262,8 +254,6 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
 
       // Alpha Cut-off
       if (beta <= alpha) {
-        // ★ Killer Heuristic (Minimizer分岐でのCut。必要ならここでも更新可)
-        // 一般的にはMinimizer側でも有効な防御手などを登録する価値があります
         if (_killerMoves[depth][0].index != m.index) {
           _killerMoves[depth][1] = _killerMoves[depth][0];
           _killerMoves[depth][0] = m;
@@ -272,7 +262,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       }
       isFirstMove = false;
     }
-    // 結果保存
+
     TTFlag flag = (minEval <= originalAlpha)
                       ? TTFlag::UPPERBOUND
                       : (minEval >= beta ? TTFlag::LOWERBOUND : TTFlag::EXACT);
