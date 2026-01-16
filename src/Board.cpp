@@ -11,7 +11,8 @@ Board::Board()
       _whiteCaptures(0),
       _capturedStatus(false),
       _doubleThreeStatus(false),
-      _currentHash(0) {
+      _currentHash(0),
+      _prePlayerCannotMove(false) {
   this->_blackStones.reset();
   this->_whiteStones.reset();
 
@@ -64,6 +65,19 @@ void Board::setupPlayers(TurnOrder order, bool isPvP) {
 // ----------------------------------------------------------------
 // Core Gameplay Logic (Mutators)
 // ----------------------------------------------------------------
+
+bool Board::canMove() {
+  BoardType emptyStones = getEmptyStones();
+  for (int i = 0; i < MAX_CELLS; ++i) {
+    if (emptyStones.test(i)) {
+      _DoubleThree(i);
+      if (!_doubleThreeStatus) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 bool Board::makeMove(int index) {
   if (index < 0 || index >= MAX_CELLS || this->_sentinelStones.test(index))
@@ -127,6 +141,8 @@ bool Board::makeMove(int index) {
   }
 
   _handCount++;
+
+  _prePlayerCannotMove = false;
 
   return true;
 }
@@ -359,6 +375,14 @@ int Board::getBlackCaptures() const {
 
 int Board::getWhiteCaptures() const {
   return this->_whiteCaptures;
+}
+
+bool Board::isPrePlayerCannotMove() const {
+  return this->_prePlayerCannotMove;
+}
+
+void Board::setPrePlayerCannotMove(bool status) {
+  this->_prePlayerCannotMove = status;
 }
 
 // -- Special Rule Flags --

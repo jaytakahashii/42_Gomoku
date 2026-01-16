@@ -184,6 +184,16 @@ void GameScene::render(sf::RenderWindow& window) {
 }
 
 void GameScene::update(float df) {
+  if (!this->_board.canMove()) {
+    if (this->_board.isPrePlayerCannotMove()) {
+      if (this->_onGameOver)
+        this->_onGameOver("Draw");
+    } else {
+      this->_board.setPrePlayerCannotMove(true);
+      this->_board.changeTurn();
+    }
+  }
+  this->_board.setPrePlayerCannotMove(false);
   _handleMessage(df);
 
   if (this->_board.getCurrentPlayer() == Player::HUMAN) {
