@@ -12,10 +12,6 @@
 #include "GameConfig.hpp"
 #include "TranspositionTable.hpp"
 
-// ==========================================
-// AI Class
-// ==========================================
-
 class AI {
  public:
   AI();
