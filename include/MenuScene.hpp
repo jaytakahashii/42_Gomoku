@@ -9,7 +9,7 @@
 
 class MenuScene : public Scene {
  public:
-  MenuScene(sf::Font& font, const sf::Vector2u& initialSize);
+  MenuScene(Fonts& fonts, const sf::Vector2u& initialSize);
 
   void handleEvents(const EventList& events);
   void update(float dt);
@@ -21,7 +21,7 @@ class MenuScene : public Scene {
           callback);
 
  private:
-  sf::Font& _font;
+  Fonts& _fonts;
 
   void _initTitle();
   sf::Text _titleText;

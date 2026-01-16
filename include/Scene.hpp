@@ -7,6 +7,11 @@
 #include <string>
 #include <vector>
 
+struct Fonts {
+  sf::Font accent;
+  sf::Font normal;
+};
+
 class Scene {
  public:
   virtual ~Scene() = default;

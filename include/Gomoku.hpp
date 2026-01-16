@@ -17,14 +17,13 @@
 
 class Gomoku {
  public:
-  sf::Font font;
-
   Gomoku();
 
   void run();
   void stop();
 
  private:
+  Fonts _fonts;
   std::atomic<bool> _isRunning;
   sf::RenderWindow _window;
   std::unique_ptr<MenuScene> _menuScene;
@@ -33,7 +32,7 @@ class Gomoku {
   Scene* _currentScene = nullptr;
 
   using EventList = std::vector<std::optional<sf::Event>>;
-  void _initFont(const std::string font);
+  void _initFont(const std::string uiFont, const std::string pixelFont);
   EventList _getEventList();
   void _changeScene(Scene* nextScene);
   void _initOnGameOver(const std::string& winner);
