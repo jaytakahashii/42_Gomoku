@@ -43,9 +43,9 @@ class AI {
   static constexpr int SEARCH_WIDTH = 3;
 
   // --- Component State ---
-  Color _aiPlayer;
+  Color _aiPlayer = Color::NONE;
   TranspositionTable _tt;
-  Move _killerMoves[DEPTH_HARD][2];
+  Move _killerMoves[DEPTH_HARD][2] = {};
 
   // --- Internal Logic ---
 
