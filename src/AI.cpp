@@ -273,7 +273,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
 
 std::vector<Move> AI::_generateMoves(const Board& board, int depth, size_t limit) {
   std::vector<Move> moves;
-  moves.reserve(128);
+  moves.reserve(BOARD_SIZE * BOARD_SIZE);
 
   BoardType occupied = board.getOccupiedStones();
 
@@ -281,9 +281,6 @@ std::vector<Move> AI::_generateMoves(const Board& board, int depth, size_t limit
     return _randomNeighbor(occupied);
   }
 
-  // 2. Determine Search Scope (Radius 1 around existing stones)
-  // Instead of a loop with branches, we apply bitwise operations directly.
-  // This creates a mask of all cells adjacent to any stone.
   BoardType neighborMask = occupied;
 
   // Horizontal
@@ -308,12 +305,6 @@ std::vector<Move> AI::_generateMoves(const Board& board, int depth, size_t limit
       int priority = Evaluator::evaluateMovePriority(board, i, board.getCurrentTurn());
 
       // Killer Move Logic
-      // 以前のコードでは moves[i] と比較していましたが、
-      // ここでは「現在の候補地 i」と「キラー手の位置」を比較します
-
-      // ★追加: キラー手ならボーナスを与える
-      // (現在の深さがわからないので、引数に depth を渡すように変更する必要があります)
-      // ここでは簡易的に「_generateMovesにdepthを渡す」修正が必要です。
       if (i == _killerMoves[depth][0].index)
         priority += 100000;
       else if (i == _killerMoves[depth][1].index)
@@ -331,11 +322,6 @@ std::vector<Move> AI::_generateMoves(const Board& board, int depth, size_t limit
   // Sort moves: Highest score first
   std::sort(moves.begin(), moves.end(), std::greater<Move>());
 
-  // Pruning: Only keep the top N moves to reduce search space.
-  // WARNING: 'MAX_MOVES_TO_CONSIDER' (10) might be too aggressive.
-  // If the opponent has a threat at the 11th best move, you will lose instantly.
-  // Consider increasing this to 20-30 or using a dynamic threshold
-  // (e.g., keep all moves within 500 points of the best move).
   if (moves.size() > limit) {
     moves.resize(limit);
   }
