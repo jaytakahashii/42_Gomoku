@@ -101,8 +101,16 @@ void GameScene::handleClick(int x, int y) {
       _updateCaptures();
 
       if (this->_board.checkWin()) {
-        if (this->_onGameOver)
-          _onGameOver("You");
+        if (this->_onGameOver) {
+          if (this->_isPvP) {
+            if (this->_board.getCurrentTurn() == Color::BLACK)
+              _onGameOver("Black Wins!");
+            else if (this->_board.getCurrentTurn() == Color::WHITE)
+              _onGameOver("White Wins!");
+          } else {
+            _onGameOver("You Win!");
+          }
+        }
       }
       this->_board.changeTurn();
     }
@@ -160,9 +168,8 @@ void GameScene::render(sf::RenderWindow& window) {
   window.draw(this->_countWhiteCaptures);
   window.draw(this->_countBlackCaptures);
 
-  if (this->_board.getCurrentPlayer() == Player::HUMAN) {
+  if (this->_board.getCurrentPlayer() == Player::HUMAN)
     window.draw(this->_turnNotification);
-  }
 
   if (this->_hintMove.x != -1 && this->_hintMove.y != -1)
     window.draw(_makeHintCircle());
@@ -177,9 +184,27 @@ void GameScene::render(sf::RenderWindow& window) {
 }
 
 void GameScene::update(float df) {
+  if (!this->_board.canMove()) {
+    if (this->_board.isPrePlayerCannotMove()) {
+      if (this->_onGameOver)
+        this->_onGameOver("Draw");
+    } else {
+      this->_board.setPrePlayerCannotMove(true);
+      this->_board.changeTurn();
+    }
+  }
+  this->_board.setPrePlayerCannotMove(false);
   _handleMessage(df);
 
-  _notifyPlayerTurn(df);
+  if (this->_board.getCurrentPlayer() == Player::HUMAN) {
+    if (this->_isPvP == false) {
+      _notifyPlayerTurn(df, "Your Turn");
+    } else if (this->_board.getCurrentTurn() == Color::BLACK) {
+      _notifyPlayerTurn(df, "Black's Turn");
+    } else if (this->_board.getCurrentTurn() == Color::WHITE) {
+      _notifyPlayerTurn(df, "White's Turn");
+    }
+  }
 
   _handleHint();
 
@@ -204,7 +229,7 @@ void GameScene::_applyAIMove(Move move) {
 
   if (this->_board.checkWin()) {
     if (this->_onGameOver)
-      this->_onGameOver("AI");
+      this->_onGameOver("AI Wins!");
     return;
   }
   this->_board.changeTurn();
@@ -245,8 +270,8 @@ void GameScene::setAILevel(AILevel& level) {
   this->_aiLevel = level;
 }
 
-void GameScene::setTurnOrder(TurnOrder& turnOrder) {
-  this->_board.setupPlayers(turnOrder);
+void GameScene::setTurnOrder(TurnOrder& turnOrder, bool isPvP) {
+  this->_board.setupPlayers(turnOrder, this->_isPvP);
 }
 
 void GameScene::setOpeningRule(OpeningRule& rule) {
@@ -282,7 +307,9 @@ void GameScene::_onUndo() {
   }
 
   if (this->_board.undo()) {
-    this->_board.undo();
+    if (this->_board.getCurrentPlayer() == Player::AI) {
+      this->_board.undo();
+    }
   }
   this->_hintMove = {-1, -1};
   _updateCaptures();
@@ -352,17 +379,17 @@ void GameScene::_handleMessage(float df) {
   }
 }
 
-void GameScene::_notifyPlayerTurn(float df) {
-  if (this->_board.getCurrentPlayer() == Player::HUMAN) {
-    this->_turnAnimTimer += df;
+void GameScene::_notifyPlayerTurn(float df, std::string str) {
+  if (this->_turnNotification.getString() != str)
+    this->_turnNotification.setString(str);
+  this->_turnAnimTimer += df;
 
-    float sinVal = std::sin(this->_turnAnimTimer * 5.0f);
-    std::uint8_t alpha = static_cast<std::uint8_t>(190 + 65 * sinVal);
+  float sinVal = std::sin(this->_turnAnimTimer * 5.0f);
+  std::uint8_t alpha = static_cast<std::uint8_t>(190 + 65 * sinVal);
 
-    sf::Color color = this->_turnNotification.getFillColor();
-    color.a = alpha;
-    this->_turnNotification.setFillColor(color);
-  }
+  sf::Color color = this->_turnNotification.getFillColor();
+  color.a = alpha;
+  this->_turnNotification.setFillColor(color);
 }
 
 void GameScene::_handleHint() {
@@ -490,4 +517,8 @@ void GameScene::_stopAllThreads() {
   }
   this->_isAIThinking = false;
   this->_isCalculatingHint = false;
+}
+
+void GameScene::setIsPvP(bool isPvP) {
+  this->_isPvP = isPvP;
 }

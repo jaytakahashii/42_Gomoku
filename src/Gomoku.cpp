@@ -10,12 +10,14 @@ Gomoku::Gomoku() : _window(sf::VideoMode({1080, 1000}), "Gomoku"), font() {
   this->_resultScene = std::make_unique<ResultScene>(font, this->_window.getSize());
   this->_currentScene = this->_menuScene.get();
 
-  this->_menuScene->setOnStartGame([this](TurnOrder& turnOrder, AILevel& level, OpeningRule& rule) {
-    this->_gameScene.get()->setAILevel(level);
-    this->_gameScene.get()->setTurnOrder(turnOrder);
-    this->_gameScene.get()->setOpeningRule(rule);
-    _changeScene(this->_gameScene.get());
-  });
+  this->_menuScene->setOnStartGame(
+      [this](TurnOrder& turnOrder, AILevel& level, OpeningRule& rule, bool isPvP) {
+        this->_gameScene.get()->setAILevel(level);
+        this->_gameScene.get()->setIsPvP(isPvP);
+        this->_gameScene.get()->setTurnOrder(turnOrder, isPvP);
+        this->_gameScene.get()->setOpeningRule(rule);
+        _changeScene(this->_gameScene.get());
+      });
   this->_gameScene->setOnGameOver([this](const std::string& winner) { _initOnGameOver(winner); });
   this->_gameScene->setOnEsc([this]() {
     _changeScene(this->_menuScene.get());

@@ -11,7 +11,8 @@ Board::Board()
       _whiteCaptures(0),
       _capturedStatus(false),
       _doubleThreeStatus(false),
-      _currentHash(0) {
+      _currentHash(0),
+      _prePlayerCannotMove(false) {
   this->_blackStones.reset();
   this->_whiteStones.reset();
 
@@ -45,20 +46,38 @@ Board::Board()
   this->_aiHistory.reserve(100);
 }
 
-void Board::setupPlayers(TurnOrder order) {
+void Board::setupPlayers(TurnOrder order, bool isPvP) {
   this->_colorToPlayer.clear();
-  if (order == TurnOrder::AIFirst) {
-    this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::AI));
-    this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::HUMAN));
-  } else if (order == TurnOrder::HumanFirst) {
+  if (isPvP) {
     this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::HUMAN));
-    this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::AI));
+    this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::HUMAN));
+  } else {
+    if (order == TurnOrder::AIFirst) {
+      this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::AI));
+      this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::HUMAN));
+    } else if (order == TurnOrder::HumanFirst) {
+      this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::HUMAN));
+      this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::AI));
+    }
   }
 }
 
 // ----------------------------------------------------------------
 // Core Gameplay Logic (Mutators)
 // ----------------------------------------------------------------
+
+bool Board::canMove() {
+  BoardType emptyStones = getEmptyStones();
+  for (int i = 0; i < MAX_CELLS; ++i) {
+    if (emptyStones.test(i)) {
+      _DoubleThree(i);
+      if (!_doubleThreeStatus) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 bool Board::makeMove(int index) {
   if (index < 0 || index >= MAX_CELLS || this->_sentinelStones.test(index))
@@ -122,6 +141,8 @@ bool Board::makeMove(int index) {
   }
 
   _handCount++;
+
+  _prePlayerCannotMove = false;
 
   return true;
 }
@@ -354,6 +375,14 @@ int Board::getBlackCaptures() const {
 
 int Board::getWhiteCaptures() const {
   return this->_whiteCaptures;
+}
+
+bool Board::isPrePlayerCannotMove() const {
+  return this->_prePlayerCannotMove;
+}
+
+void Board::setPrePlayerCannotMove(bool status) {
+  this->_prePlayerCannotMove = status;
 }
 
 // -- Special Rule Flags --
