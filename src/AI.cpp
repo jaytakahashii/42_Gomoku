@@ -21,16 +21,11 @@ Move AI::getSecondMoveForSpecialRule(const Board& board) {
 Move AI::getBestMove(const Board& board, Color color, AILevel level,
                      std::atomic<bool>& cancelFlag) {
   _aiPlayer = color;
-
-  // Calculate target depth
   int targetDepth = _getDepthFromLevel(level);
-
-  // Prepare variables for Iterative Deepening
   Move globalBestMove = {-1, 0};
-
-  // Clone the board ONCE for the search process
   Board searchBoard = board;
 
+  // Iterative Deepening
   for (int depth = 2; depth <= targetDepth; ++depth) {
     // --- 1. Move Generation & Ordering ---
     std::vector<Move> moves = _generateMoves(searchBoard, depth, MAX_CELLS);
@@ -38,7 +33,7 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level,
     if (moves.empty())
       return {-1, 0};
     if (moves.size() == 1)
-      return moves[0];  // Optimization
+      return moves[0];
 
     // Hash Move Check (Check TT for the root position)
     uint64_t rootHash = searchBoard.getHash();
@@ -101,13 +96,14 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level,
     }
 
     // --- 3. Update Global Best & Store to TT ---
-    globalBestMove = currentDepthBestMove;
+    if (!cancelFlag.load()) {
+      globalBestMove = currentDepthBestMove;
 
-    TTFlag flag = TTFlag::EXACT;
-    _tt.store(rootHash, depth, globalBestMove.score, flag, globalBestMove);
-
-    if (cancelFlag.load())
+      TTFlag flag = TTFlag::EXACT;
+      _tt.store(rootHash, depth, globalBestMove.score, flag, globalBestMove);
+    } else {
       break;
+    }
   }
 
   return globalBestMove;
