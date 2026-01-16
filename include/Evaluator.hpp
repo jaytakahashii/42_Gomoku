@@ -20,7 +20,7 @@ struct ScoreConfig {
   static constexpr int FIVE = 1'000'000;      // 5 in a row (Immediate Win)
   static constexpr int OPEN_FOUR = 100'000;   // Unstoppable win next turn (.XXXX.)
   static constexpr int CLOSED_FOUR = 10'000;  // Forced defense required (X.XXX or .XXXXo)
-  static constexpr int OPEN_THREE = 8'000;    // Major threat, creates Open Four (.XXX.)
+  static constexpr int OPEN_THREE = 10'000;   // Major threat, creates Open Four (.XXX.)
   static constexpr int CLOSED_THREE = 500;    // Minor threat, enables expansion
   static constexpr int OPEN_TWO = 100;        // Good potential
 
