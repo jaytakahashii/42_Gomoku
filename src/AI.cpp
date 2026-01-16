@@ -1,7 +1,5 @@
 #include "AI.hpp"
 
-#include <iostream>
-
 AI::AI() : _tt(20) {
 }
 
