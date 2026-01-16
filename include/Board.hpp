@@ -74,6 +74,12 @@ class Board {
   // ----------------------------------------------------------------
 
   /**
+   * Checks if the current player can make a move.
+   * @return true if moves are possible, false if no valid moves remain.
+   */
+  bool canMove();
+
+  /**
    * Attempts to place a stone at (x, y).
    * Handles rule validation, capture processing, and state updates.
    * @param index The linear index of the move.
@@ -145,6 +151,8 @@ class Board {
   Player getCurrentPlayer() const;
   int getBlackCaptures() const;
   int getWhiteCaptures() const;
+  bool isPrePlayerCannotMove() const;
+  void setPrePlayerCannotMove(bool status);
 
   // -- Special Rule Flags / State --
   void setOpeningRule(OpeningRule rule);
@@ -258,6 +266,7 @@ class Board {
   int8_t _blackCaptures;
   int8_t _whiteCaptures;
   OpeningRule _openingRule;
+  bool _prePlayerCannotMove;
 
   // Flags for the last move (for UI or logic checks)
   bool _capturedStatus;

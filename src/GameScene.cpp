@@ -102,7 +102,7 @@ void GameScene::handleClick(int x, int y) {
 
       if (this->_board.checkWin()) {
         if (this->_onGameOver)
-          _onGameOver("You");
+          _onGameOver("You Win!");
       }
       this->_board.changeTurn();
     }
@@ -177,6 +177,16 @@ void GameScene::render(sf::RenderWindow& window) {
 }
 
 void GameScene::update(float df) {
+  if (!this->_board.canMove()) {
+    if (this->_board.isPrePlayerCannotMove()) {
+      if (this->_onGameOver)
+        this->_onGameOver("Draw");
+    } else {
+      this->_board.setPrePlayerCannotMove(true);
+      this->_board.changeTurn();
+    }
+  }
+  this->_board.setPrePlayerCannotMove(false);
   _handleMessage(df);
 
   _notifyPlayerTurn(df);
@@ -204,7 +214,7 @@ void GameScene::_applyAIMove(Move move) {
 
   if (this->_board.checkWin()) {
     if (this->_onGameOver)
-      this->_onGameOver("AI");
+      this->_onGameOver("AI Win!");
     return;
   }
   this->_board.changeTurn();
