@@ -1,8 +1,5 @@
 #include "AI.hpp"
 
-AI::AI() : _tt(20) {
-}
-
 Move AI::getSecondMoveForSpecialRule(const Board& board) {
   BoardType occupied = board.getOccupiedStones();
   if (board.getOpeningRule() == OpeningRule::Pro) {

@@ -14,7 +14,7 @@
 
 class AI {
  public:
-  AI();
+  AI() = default;
   ~AI() = default;
 
   /**
