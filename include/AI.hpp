@@ -45,7 +45,6 @@ class AI {
   // --- Component State ---
   Color _aiPlayer = Color::NONE;
   TranspositionTable _tt;
-  Move _killerMoves[DEPTH_HARD][2] = {};
 
   // --- Internal Logic ---
 
@@ -68,8 +67,7 @@ class AI {
    * @param board The current board state.
    * @return A vector of possible moves with heuristic scores. (MAX: MAX_MOVES_TO_CONSIDER)
    */
-  std::vector<Move> _generateMoves(const Board& board, int depth,
-                                   size_t limit = MAX_MOVES_TO_CONSIDER);
+  std::vector<Move> _generateMoves(const Board& board, size_t limit = MAX_MOVES_TO_CONSIDER);
 
   std::vector<Move> _randomNeighbor(const BoardType& occupied);
 

@@ -28,7 +28,7 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level,
   // Iterative Deepening
   for (int depth = 2; depth <= targetDepth; ++depth) {
     // --- 1. Move Generation & Ordering ---
-    std::vector<Move> moves = _generateMoves(searchBoard, depth, MAX_CELLS);
+    std::vector<Move> moves = _generateMoves(searchBoard, MAX_CELLS);
 
     if (moves.empty())
       return {-1, 0};
@@ -134,7 +134,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
     return Evaluator::evaluate(board, _aiPlayer);
 
   // [3] Move Generation
-  std::vector<Move> moves = _generateMoves(board, depth, SEARCH_WIDTH);
+  std::vector<Move> moves = _generateMoves(board, SEARCH_WIDTH);
   if (moves.empty())
     return 0;
 
@@ -196,13 +196,8 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       alpha = std::max(alpha, maxEval);
 
       // Beta Cut-off
-      if (beta <= alpha) {
-        if (_killerMoves[depth][0].index != m.index) {
-          _killerMoves[depth][1] = _killerMoves[depth][0];
-          _killerMoves[depth][0] = m;
-        }
+      if (beta <= alpha)
         break;
-      }
       isFirstMove = false;
     }
 
@@ -253,13 +248,8 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       beta = std::min(beta, minEval);
 
       // Alpha Cut-off
-      if (beta <= alpha) {
-        if (_killerMoves[depth][0].index != m.index) {
-          _killerMoves[depth][1] = _killerMoves[depth][0];
-          _killerMoves[depth][0] = m;
-        }
+      if (beta <= alpha)
         break;
-      }
       isFirstMove = false;
     }
 
@@ -271,7 +261,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
   }
 }
 
-std::vector<Move> AI::_generateMoves(const Board& board, int depth, size_t limit) {
+std::vector<Move> AI::_generateMoves(const Board& board, size_t limit) {
   std::vector<Move> moves;
   moves.reserve(BOARD_SIZE * BOARD_SIZE);
 
@@ -304,17 +294,10 @@ std::vector<Move> AI::_generateMoves(const Board& board, int depth, size_t limit
     if (candidates.test(i)) {
       int priority = Evaluator::evaluateMovePriority(board, i, board.getCurrentTurn());
 
-      // Killer Move Logic
-      if (i == _killerMoves[depth][0].index)
-        priority += 100000;
-      else if (i == _killerMoves[depth][1].index)
-        priority += 90000;
-
       moves.push_back({i, priority});
     }
   }
 
-  // 4. Sort and Prune (Beam Search approach)
   if (moves.empty()) {
     return moves;
   }
