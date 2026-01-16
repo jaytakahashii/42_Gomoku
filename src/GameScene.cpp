@@ -1,22 +1,22 @@
 #include "GameScene.hpp"
 
-GameScene::GameScene(sf::Font& font, const sf::Vector2u& initalSize)
-    : _font(font),
-      _countWhiteCaptures(font, "White Captured: 0"),
-      _countBlackCaptures(font, "Black Captured: 0"),
-      _turnNotification(font, "Your Turn"),
-      _aiInfoText(font, "AI Time: 0.00s"),
-      _undoText(font, "Undo"),
-      _aiAssistText(font, "AI Assist") {
-  this->_countWhiteCaptures.setCharacterSize(Theme::FontSize::Text);
+GameScene::GameScene(Fonts& fonts, const sf::Vector2u& initalSize)
+    : _fonts(fonts),
+      _countWhiteCaptures(fonts.accent, "White Captured: 0"),
+      _countBlackCaptures(fonts.accent, "Black Captured: 0"),
+      _turnNotification(fonts.accent, "Your Turn"),
+      _aiInfoText(fonts.normal, "AI Time: 0.00s"),
+      _undoText(fonts.normal, "Undo"),
+      _aiAssistText(fonts.normal, "AI Assist") {
+  this->_countWhiteCaptures.setCharacterSize(Theme::FontSize::AccentText);
   this->_countWhiteCaptures.setFillColor(Theme::Color::Text);
   this->_countWhiteCaptures.setOrigin(this->_countWhiteCaptures.getGlobalBounds().getCenter());
 
-  this->_countBlackCaptures.setCharacterSize(Theme::FontSize::Text);
+  this->_countBlackCaptures.setCharacterSize(Theme::FontSize::AccentText);
   this->_countBlackCaptures.setFillColor(Theme::Color::Text);
   this->_countBlackCaptures.setOrigin(this->_countBlackCaptures.getGlobalBounds().getCenter());
 
-  this->_turnNotification.setCharacterSize(Theme::FontSize::Header);
+  this->_turnNotification.setCharacterSize(Theme::FontSize::AccentHeader);
   this->_turnNotification.setFillColor(Theme::Color::AlertText);
   this->_turnNotification.setOrigin(this->_turnNotification.getGlobalBounds().getCenter());
 
@@ -77,7 +77,7 @@ void GameScene::handleEvents(const EventList& events) {
 }
 
 void GameScene::displayTimedMessage(const std::string& str, sf::Vector2f pos) {
-  this->_activeMessages.emplace_back(this->_font, str, pos);
+  this->_activeMessages.emplace_back(this->_fonts.normal, str, pos);
 }
 
 void GameScene::handleClick(int x, int y) {

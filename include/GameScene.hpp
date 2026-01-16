@@ -21,7 +21,7 @@ const unsigned int WINDOW_HEIGHT = WINDOW_WIDTH + 50;
 
 class GameScene : public Scene {
  public:
-  GameScene(sf::Font& font, const sf::Vector2u& initialSize);
+  GameScene(Fonts& fonts, const sf::Vector2u& initialSize);
   ~GameScene();
   void handleEvents(const EventList& events);
   void update(float dt);
@@ -45,7 +45,7 @@ class GameScene : public Scene {
     FloatingMessage(const sf::Font& font, const std::string& str, sf::Vector2f pos);
   };
 
-  sf::Font& _font;
+  Fonts& _fonts;
   std::list<FloatingMessage> _activeMessages;
   const unsigned int _boardSize = BOARD_SIZE;
   const unsigned int _cellSize = CELL_SIZE;
