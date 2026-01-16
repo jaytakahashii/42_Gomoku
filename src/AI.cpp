@@ -140,7 +140,6 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
 
   // TT Move Ordering
   if (ttEntry != nullptr && ttEntry->bestMove.index != -1) {
-    // 先頭へスワップ
     for (size_t i = 0; i < moves.size(); ++i) {
       if (moves[i].index == ttEntry->bestMove.index) {
         std::swap(moves[0], moves[i]);
@@ -153,8 +152,9 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
 
   int originalAlpha = alpha;
   Move bestMoveInThisNode = {-1, 0};
-  bool isFirstMove = true;  // ★ PVS用のフラグ
+  bool isFirstMove = true;
 
+  // --- Maximizing Player (AI) ---
   if (maximizingPlayer) {
     int maxEval = std::numeric_limits<int>::min();
 
@@ -162,7 +162,6 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       if (!board.makeMoveAI(m.index))
         continue;
 
-      // 即時勝利判定
       if (board.checkWin()) {
         board.undoAI();
         int winScore = ScoreConfig::WIN + depth;
@@ -218,8 +217,8 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
     _tt.store(key, depth, maxEval, flag, bestMoveInThisNode);
     return maxEval;
 
+    // --- Minimizing Player (Opp) ---
   } else {
-    // --- Minimizing Player (相手) ---
     int minEval = std::numeric_limits<int>::max();
 
     for (const Move& m : moves) {
