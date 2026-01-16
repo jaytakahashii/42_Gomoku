@@ -4,7 +4,7 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
     : _font(font),
       _titleText(font, "Gomoku"),
       _startButtonText(font, "START GAME"),
-      _orderText(font, "Select: first or second?"),
+      _orderText(font, "Select first or second?"),
       _firstText(font, "Go first"),
       _secondText(font, "Go second"),
       _easyText(font, "Easy"),
@@ -17,7 +17,8 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
       _longProText(font, "Long Pro"),
       _tooltip(font),
       _pvpText(font, "PvP"),
-      _pvAIText(font, "PvAI") {
+      _pvAIText(font, "PvAI"),
+      _vsText(font, "Select mode.") {
   _initTitle();
   _initVSButtons();
   _initOrderButtons();
@@ -28,10 +29,16 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
 }
 
 void MenuScene::_initVSButtons() {
+  this->_vsText.setCharacterSize(Theme::FontSize::Header);
+  this->_vsText.setFillColor(sf::Color::Black);
+  this->_vsText.setStyle(sf::Text::Bold);
+  this->_vsText.setOrigin(this->_vsText.getLocalBounds().getCenter());
   this->_pvpText.setCharacterSize(Theme::FontSize::Button);
+  this->_pvpText.setStyle(sf::Text::Bold);
   this->_pvpText.setFillColor(sf::Color::Black);
   this->_pvpText.setOrigin(this->_pvpText.getLocalBounds().getCenter());
   this->_pvAIText.setCharacterSize(Theme::FontSize::Button);
+  this->_pvAIText.setStyle(sf::Text::Bold);
   this->_pvAIText.setFillColor(sf::Color::Black);
   this->_pvAIText.setOrigin(this->_pvAIText.getLocalBounds().getCenter());
   this->_pvpButton.setSize(Theme::Size::Button);
@@ -62,7 +69,7 @@ void MenuScene::_initOrderButtons() {
   this->_startButton.setFillColor(Theme::Color::ButtonIdle);
   this->_startButton.setOrigin(this->_startButton.getSize() / 2.f);
 
-  this->_orderText.setCharacterSize(Theme::FontSize::Button);
+  this->_orderText.setCharacterSize(Theme::FontSize::Header);
   this->_orderText.setFillColor(sf::Color::Black);
   this->_orderText.setStyle(sf::Text::Bold);
   this->_orderText.setOrigin(this->_orderText.getLocalBounds().getCenter());
@@ -87,7 +94,7 @@ void MenuScene::_initOrderButtons() {
 }
 
 void MenuScene::_initAILevelButtons() {
-  this->_levelText.setCharacterSize(Theme::FontSize::Button);
+  this->_levelText.setCharacterSize(Theme::FontSize::Header);
   this->_levelText.setFillColor(sf::Color::Black);
   this->_levelText.setStyle(sf::Text::Bold);
   this->_levelText.setOrigin(this->_levelText.getLocalBounds().getCenter());
@@ -121,7 +128,7 @@ void MenuScene::_initAILevelButtons() {
 }
 
 void MenuScene::_initOpeningRuleButtons() {
-  this->_openingRuleText.setCharacterSize(Theme::FontSize::Button);
+  this->_openingRuleText.setCharacterSize(Theme::FontSize::Header);
   this->_openingRuleText.setFillColor(sf::Color::Black);
   this->_openingRuleText.setStyle(sf::Text::Bold);
   this->_openingRuleText.setOrigin(this->_openingRuleText.getLocalBounds().getCenter());
@@ -272,6 +279,7 @@ void MenuScene::render(sf::RenderWindow& window) {
   window.draw(this->_pvpText);
   window.draw(this->_pvAIButton);
   window.draw(this->_pvAIText);
+  window.draw(this->_vsText);
   _checkHoverOnRules(window);
   _tooltip.draw(window);
 }
@@ -280,35 +288,51 @@ void MenuScene::onResize(const sf::Vector2u& windowSize) {
   float w = static_cast<float>(windowSize.x);
   float h = static_cast<float>(windowSize.y);
 
-  this->_titleText.setPosition({w / 2.f, h * 0.3f});
-  sf::Vector2f titlePos = this->_titleText.getPosition();
-  this->_orderText.setPosition({titlePos.x, titlePos.y + 90.f});
-  this->_startButton.setPosition({w / 2.f, h * 0.8f});
-  this->_firstButton.setPosition(
-      {this->_orderText.getPosition().x * 0.7f, this->_orderText.getPosition().y + 50.f});
-  this->_secondButton.setPosition(
-      {this->_orderText.getPosition().x * 1.3f, this->_orderText.getPosition().y + 50.f});
-  this->_startButtonText.setPosition(this->_startButton.getPosition());
+  float titleY = h * 0.2f;
+  float startY = h * 0.8f;
+
+  float sectionHeight = (startY - titleY) / 4.0f;
+
+  float row1Y = titleY + sectionHeight * 0.5f;
+  float row2Y = titleY + sectionHeight * 1.5f;
+  float row3Y = titleY + sectionHeight * 2.5f;
+  float row4Y = titleY + sectionHeight * 3.5f;
+
+  const float textOffset = -25.f;
+  const float buttonOffset = 25.f;
+
+  this->_titleText.setPosition({w / 2.f, titleY - 50});
+
+  this->_vsText.setPosition({w / 2.f, row1Y + textOffset});
+  this->_pvpButton.setPosition({w * 0.35f, row1Y + buttonOffset});
+  this->_pvAIButton.setPosition({w * 0.65f, row1Y + buttonOffset});
+  this->_pvpText.setPosition(this->_pvpButton.getPosition());
+  this->_pvAIText.setPosition(this->_pvAIButton.getPosition());
+
+  this->_orderText.setPosition({w / 2.f, row2Y + textOffset});
+  this->_firstButton.setPosition({w * 0.35f, row2Y + buttonOffset});
+  this->_secondButton.setPosition({w * 0.65f, row2Y + buttonOffset});
   this->_firstText.setPosition(this->_firstButton.getPosition());
   this->_secondText.setPosition(this->_secondButton.getPosition());
-  this->_levelText.setPosition({w / 2.f, _secondButton.getPosition().y + 80});
-  this->_easyButton.setPosition({w / 4.f, _levelText.getPosition().y + 50});
+
+  this->_levelText.setPosition({w / 2.f, row3Y + textOffset});
+  this->_easyButton.setPosition({w / 4.f, row3Y + buttonOffset});
+  this->_normalButton.setPosition({w / 2.f, row3Y + buttonOffset});
+  this->_hardButton.setPosition({w * 0.75f, row3Y + buttonOffset});
   this->_easyText.setPosition(_easyButton.getPosition());
-  this->_normalButton.setPosition({w / 2.f, _levelText.getPosition().y + 50});
   this->_normalText.setPosition(_normalButton.getPosition());
-  this->_hardButton.setPosition({(w / 4.f) * 3.f, _levelText.getPosition().y + 50});
   this->_hardText.setPosition(_hardButton.getPosition());
-  this->_openingRuleText.setPosition({w / 2.f, _normalButton.getPosition().y + 80});
-  this->_standardButton.setPosition({w / 4.f, _openingRuleText.getPosition().y + 50});
+
+  this->_openingRuleText.setPosition({w / 2.f, row4Y + textOffset});
+  this->_standardButton.setPosition({w / 4.f, row4Y + buttonOffset});
+  this->_proButton.setPosition({w / 2.f, row4Y + buttonOffset});
+  this->_longProButton.setPosition({w * 0.75f, row4Y + buttonOffset});
   this->_standardText.setPosition(_standardButton.getPosition());
-  this->_proButton.setPosition({w / 2.f, _openingRuleText.getPosition().y + 50});
   this->_proText.setPosition(_proButton.getPosition());
-  this->_longProButton.setPosition({(w / 4.f) * 3, _openingRuleText.getPosition().y + 50});
   this->_longProText.setPosition(_longProButton.getPosition());
-  this->_pvpButton.setPosition({w / 2.f, h * 0.1f});
-  this->_pvpText.setPosition(this->_pvpButton.getPosition());
-  this->_pvAIButton.setPosition({w / 4.f, h * 0.1f});
-  this->_pvAIText.setPosition(this->_pvAIButton.getPosition());
+
+  this->_startButton.setPosition({w / 2.f, startY + 50});
+  this->_startButtonText.setPosition(this->_startButton.getPosition());
 }
 
 void MenuScene::setOnStartGame(

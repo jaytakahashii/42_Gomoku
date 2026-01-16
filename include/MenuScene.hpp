@@ -52,6 +52,7 @@ class MenuScene : public Scene {
       _onStartGame;
 
   void _initVSButtons();
+  sf::Text _vsText;
   sf::RectangleShape _pvpButton;
   sf::RectangleShape _pvAIButton;
   sf::Text _pvpText;
