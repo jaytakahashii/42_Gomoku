@@ -11,12 +11,10 @@
 #include "Zobrist.hpp"
 
 // ==========================================
-// Constants & Configuration
-// ==========================================
-
-// ==========================================
 // Helper Structures
 // ==========================================
+
+using BoardType = std::bitset<MAX_CELLS>;
 
 struct Direction {
   int dx;
@@ -41,26 +39,31 @@ struct BoardState {
 
 // Information about a move, including captures
 struct AIMoveRecord {
-  int moveIndex;          // 打った手
-  uint64_t prevHash;      // 手を打つ前のハッシュ値
-  int prevBlackCaptures;  // 手を打つ前の黒の捕獲数
-  int prevWhiteCaptures;  // 手を打つ前の白の捕獲数
+  int moveIndex;
+  uint64_t prevHash;
+  int prevBlackCaptures;
+  int prevWhiteCaptures;
   Color currentTurn;
 
-  // 捕獲された石のインデックスを記録（最大でも8個程度なので固定長で十分）
   int capturedCount;
-  std::array<int, 8> capturedIndices;
+  std::array<int, 16> capturedIndices;
 };
 
 // ==========================================
 // Board Class
 // ==========================================
 
+/**
+ * @class Board
+ * @brief Represents the game board and encapsulates all game logic.
+ * Handles stone placements, captures, win conditions, and state management...
+ */
 class Board {
  public:
   // ----------------------------------------------------------------
   // Lifecycle & Setup
   // ----------------------------------------------------------------
+
   Board();
   ~Board() = default;
 
@@ -80,32 +83,40 @@ class Board {
   bool canMove();
 
   /**
-   * Attempts to place a stone at (x, y).
-   * Handles rule validation, capture processing, and state updates.
+   * @brief Attempts to place a stone at the specified index.
    * @param index The linear index of the move.
    * @return true if the move was valid and executed.
    *         false if the move was invalid (out of bounds, occupied, double three).
    */
   bool makeMove(int index);
 
+  /**
+   * @brief AI makes a move at the specified index.
+   * @param index The linear index of the move.
+   * @return true if the move was valid and executed.
+   *         false if the move was invalid.
+   */
   bool makeMoveAI(int index);
 
   /**
-   * Switches the current turn to the other player.
+   * @brief Switches the current turn to the other player.
    */
   void changeTurn();
 
   /**
-   * Saves the current board state to history for undo functionality.
+   * @brief Saves the current board state to history for undo functionality.
    */
   void saveState();
 
   /**
-   * Reverts the game to the previous state.
+   * @brief Reverts the game to the previous state.
    * @return true if undo was successful (history not empty).
    */
   bool undo();
 
+  /**
+   * @brief Reverts the last AI move, restoring captures and state.
+   */
   void undoAI();
 
   // ----------------------------------------------------------------
@@ -113,13 +124,13 @@ class Board {
   // ----------------------------------------------------------------
 
   /**
-   * Checks if the game has reached a terminal state (Win by 5 or Capture).
+   * @brief Checks if the game has reached a terminal state (Win by 5 or Capture).
    * @return true if the current player has won.
    */
   bool checkWin() const;
 
   /**
-   * Checks if a specific color has won.
+   * @brief Checks if a specific color has won.
    * @param color The color to check for a win.
    * @return true if the specified color has won.
    */
@@ -172,8 +183,7 @@ class Board {
 
   // -- AI Helpers --
   /**
-   * Returns a bitset of stones that can be captured by myColor.
-   * Useful for heuristic evaluation.
+   * @brief Returns a bitset of stones that can be captured by myColor.
    * @param myColor The color of the player checking for capturable stones.
    * @return Bitset marking capturable stones.
    */
@@ -187,36 +197,35 @@ class Board {
   // -- State Management --
 
   /**
-   * Restores the board to a given state.
+   * @brief Restores the board to a given state.
    */
   void _applyState(const BoardState& state);
 
   // -- Coordinate / Bit Utils --
+
+  /**
+   * @brief Retrieves the capture count for the specified color.
+   */
   int8_t _getCaptureCount(Color color) const;
 
   // -- Rule Implementations --
 
   /**
-   * Processes capture logic after a move at 'index'.
-   * Updates capture counts and removes stones from bit boards.
-   * Updates the _capturedStatus flag.
+   * @brief Processes captures resulting from the last move.
    * @param index The index of the newly placed stone.
    * @param record Optional AIMoveRecord to log captured stones. if nullptr, no logging is done.
    */
   void _processCapture(int index, AIMoveRecord* record);
 
   /**
-   * Checks if the move at (x, y) creates a forbidden "Double Three".
-   * A double-three is two simultaneous "open threes".
-   * Updates the _doubleThreeStatus flag.
+   * @brief Checks and updates the double three status after a move.
    * @param index The index of the newly placed stone.
    * @return true if the move creates a double three.
    */
   void _DoubleThree(int index);
 
   /**
-   * Retrieves a 11-bit representation of stones along a line centered at (x, y).
-   * The center bit (bit 5) corresponds to (x, y).
+   * @brief Retrieves a 11-bit representation of stones along a line centered at (x, y).
    * @param dir The direction to extract the line.
    * @return LineBits containing my and opponent stones along the line.
    */
@@ -224,13 +233,13 @@ class Board {
                         const BoardType& oppStones) const;
 
   /**
-   * Low-level check for a "Free Three" pattern in a specific direction.
+   * @brief Low-level check for a "Free Three" pattern in a specific direction.
    * @param line The 11-bit line representation centered at the move.
    */
   bool _checkFreeThree(LineBits line) const;
 
   /**
-   * Checks if a detected 5-in-a-row line is safe from capture.
+   * @brief Validates if a detected 5-in-a-row line is safe from capture.
    * @param startIdx The starting index of the 5-in-a-row line.
    * @param shift The bitshift offset representing the line direction.
    * @return true if the line is safe (not capturable).
@@ -239,12 +248,12 @@ class Board {
                           const BoardType& oppStones) const;
 
   /**
-   * Checks if a stone at 'index' is currently vulnerable to capture.
+   * @brief Checks if a stone at 'index' is currently vulnerable to capture.
    */
   bool _isStoneCapturable(int index, const BoardType& myStones, const BoardType& oppStones) const;
 
   /**
-   * Returns a bit board marking positions that complete a 5-in-a-row.
+   * @brief Returns a bit board marking positions that complete a 5-in-a-row.
    * @param shift_amount The bitshift offset representing a direction.
    */
   BoardType _getFiveInARowBits(const BoardType& stones, int shift_amount) const;
