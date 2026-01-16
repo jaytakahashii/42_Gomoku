@@ -52,16 +52,16 @@ int Evaluator::evaluate(const Board& board, Color aiColor) {
   // Being under threat is severe.
   // We assume each "dead" bit is a stone. count()/2 approximates pairs.
   if (myDeadStones.any()) {
-    int pairsLost = (int)myDeadStones.count() / 2;
+    int pairsLost = (int)myDeadStones.count();
     // Penalty: Lost stones value + giving points to opponent + positional loss
     // Multiplied to ensure AI prioritizes defense.
-    myScore -= pairsLost * (ScoreConfig::CAPTURE_SCORE * 2 + ScoreConfig::OPEN_THREE);
+    myScore -= pairsLost * ScoreConfig::CAPTURE_SCORE;
   }
 
   if (oppDeadStones.any()) {
-    int pairsTaken = (int)oppDeadStones.count() / 2;
+    int pairsTaken = (int)oppDeadStones.count();
     // Bonus: Gaining stones + positional advantage
-    myScore += pairsTaken * (ScoreConfig::CAPTURE_SCORE + ScoreConfig::OPEN_TWO);
+    myScore += pairsTaken * ScoreConfig::CAPTURE_SCORE;
   }
 
   // 6. Final Calculation
@@ -81,13 +81,11 @@ int Evaluator::evaluateMovePriority(const Board& board, int index, Color myColor
   int centerDist = std::abs(x - BOARD_SIZE / 2) + std::abs(y - BOARD_SIZE / 2);
   score += (10 - centerDist);
 
-  // 準備: bitsetへの参照をキャッシュして高速アクセス
   const BoardType& myStones = board.getMyStones(myColor);
   const BoardType& oppStones = board.getOppStones(myColor);
   const BoardType& sentinels = board.getSentinelStones();
 
   // 2. Line Analysis with Offsets
-  // index操作だけで済むためループ展開がさらに効果的になります
 
   // Horizontal (Offset 1)
   score += _CheckLineScore(index, 1, myStones, oppStones, sentinels);
@@ -148,7 +146,7 @@ int Evaluator::_CheckLineScore(int index, int offset, const BoardType& myStones,
     }
   }
 
-  // --- Scoring Logic (変更なし) ---
+  // --- Scoring Logic  ---
   int score = 0;
 
   // 1. My Offense
