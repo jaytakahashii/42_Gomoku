@@ -5,33 +5,47 @@
 
 #include "GameConfig.hpp"
 
-// エントリの種類（値の信頼性）
 enum class TTFlag {
-  EXACT,       // 正確な値 (Alpha < Score < Beta で探索完了)
-  LOWERBOUND,  // Beta Cut (Score >= Beta): これ以上探索しても無駄に高い
-  UPPERBOUND   // Alpha Cut (Score <= Alpha): これ以上探索しても無駄に低い
+  EXACT,       // (Alpha < Score < Beta)
+  LOWERBOUND,  // Beta Cut (Score >= Beta)
+  UPPERBOUND   // Alpha Cut (Score <= Alpha)
 };
 
 struct TTEntry {
-  uint64_t key;   // ハッシュキー (衝突確認用)
-  int score;      // 評価値
-  int depth;      // この値が見つかった時の残り深さ
-  TTFlag flag;    // 値の種類
-  Move bestMove;  // その時点での最善手 (Move Orderingで超重要)
+  uint64_t key;
+  int score;
+  int depth;
+  TTFlag flag;
+  Move bestMove;
 };
 
 class TranspositionTable {
  public:
-  // サイズは2の累乗であること (例: 2^20 = 約100万エントリ, 32MB程度)
+  /**
+   * @brief Construct a new Transposition Table object
+   */
   TranspositionTable(size_t sizeExp = 20);
 
-  // テーブルの初期化
+  /**
+   * @brief Clear the Transposition Table
+   */
   void clear();
 
-  // 値の取得
+  /**
+   * @brief Retrieve an entry from the Transposition Table
+   * @param key The key to look up
+   * @return Pointer to the TTEntry if found, otherwise nullptr
+   */
   TTEntry* get(uint64_t key);
 
-  // 値の保存
+  /**
+   * @brief Store an entry in the Transposition Table
+   * @param key The key to store
+   * @param depth The search depth
+   * @param score The score to store
+   * @param flag The TTFlag indicating the type of score
+   * @param bestMove The best move associated with this entry
+   */
   void store(uint64_t key, int depth, int score, TTFlag flag, Move bestMove);
 
  private:
