@@ -39,7 +39,7 @@ class AI {
   static constexpr int DEPTH_NORMAL = 5;
   static constexpr int DEPTH_HARD = 10;
 
-  static constexpr int MAX_MOVES_TO_CONSIDER = 14;
+  static constexpr int MAX_MOVES_TO_CONSIDER = 13;
   static constexpr int SEARCH_WIDTH = 3;
 
   // --- Component State ---
