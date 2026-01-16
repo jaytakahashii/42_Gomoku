@@ -30,8 +30,9 @@ class GameScene : public Scene {
 
   void setOnGameOver(std::function<void(const std::string& winner)> callback);
   void setAILevel(AILevel& level);
-  void setTurnOrder(TurnOrder& turnOrder);
+  void setTurnOrder(TurnOrder& turnOrder, bool isPvP);
   void setOpeningRule(OpeningRule& rule);
+  void setIsPvP(bool isPvP);
   void setOnEsc(std::function<void()> callback);
 
   void reset();
@@ -61,7 +62,7 @@ class GameScene : public Scene {
   sf::Text _countBlackCaptures;
   sf::Text _turnNotification;
   float _turnAnimTimer = 0.0f;
-  void _notifyPlayerTurn(float df);
+  void _notifyPlayerTurn(float df, std::string str);
 
   float _aiMoveTimer = 0.0f;
   std::future<Move> _aiFuture;
@@ -90,6 +91,8 @@ class GameScene : public Scene {
   std::function<void()> _onEsc;
 
   OpeningRule _openingRule;
+
+  bool _isPvP;
 
   void _stopAllThreads();
 };

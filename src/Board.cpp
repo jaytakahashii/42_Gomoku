@@ -45,14 +45,19 @@ Board::Board()
   this->_aiHistory.reserve(100);
 }
 
-void Board::setupPlayers(TurnOrder order) {
+void Board::setupPlayers(TurnOrder order, bool isPvP) {
   this->_colorToPlayer.clear();
-  if (order == TurnOrder::AIFirst) {
-    this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::AI));
-    this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::HUMAN));
-  } else if (order == TurnOrder::HumanFirst) {
+  if (isPvP) {
     this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::HUMAN));
-    this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::AI));
+    this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::HUMAN));
+  } else {
+    if (order == TurnOrder::AIFirst) {
+      this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::AI));
+      this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::HUMAN));
+    } else if (order == TurnOrder::HumanFirst) {
+      this->_colorToPlayer.insert(std::make_pair(Color::BLACK, Player::HUMAN));
+      this->_colorToPlayer.insert(std::make_pair(Color::WHITE, Player::AI));
+    }
   }
 }
 

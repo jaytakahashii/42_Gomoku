@@ -67,7 +67,7 @@ class Board {
   /**
    * Assigns human/AI players to colors.
    */
-  void setupPlayers(TurnOrder order);
+  void setupPlayers(TurnOrder order, bool isPvP);
 
   // ----------------------------------------------------------------
   // Core Gameplay Logic (Mutators)

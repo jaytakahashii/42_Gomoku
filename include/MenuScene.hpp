@@ -17,15 +17,27 @@ class MenuScene : public Scene {
   void onResize(const sf::Vector2u& windowSize);
 
   void setOnStartGame(
-      std::function<void(TurnOrder& turnOrder, AILevel& level, OpeningRule& rule)> callback);
+      std::function<void(TurnOrder& turnOrder, AILevel& level, OpeningRule& rule, bool isPvP)>
+          callback);
 
  private:
   sf::Font& _font;
+
+  void _initTitle();
   sf::Text _titleText;
+
+  void _initStartButton();
   sf::RectangleShape _startButton;
+  sf::Text _startButtonText;
+
+  void _initOrderButtons();
   sf::Text _orderText;
   sf::RectangleShape _firstButton;
   sf::RectangleShape _secondButton;
+  sf::Text _firstText;
+  sf::Text _secondText;
+
+  void _initAILevelButtons();
   sf::RectangleShape _easyButton;
   sf::RectangleShape _normalButton;
   sf::RectangleShape _hardButton;
@@ -33,16 +45,22 @@ class MenuScene : public Scene {
   sf::Text _normalText;
   sf::Text _easyText;
   sf::Text _hardText;
-  sf::Text _firstText;
-  sf::Text _secondText;
-  sf::Text _startButtonText;
+
   TurnOrder _turnOrder = TurnOrder::HumanFirst;
   AILevel _aiLevel = AILevel::Normal;
-  std::function<void(TurnOrder& turnOrder, AILevel& level, OpeningRule& rule)> _onStartGame;
+  std::function<void(TurnOrder& turnOrder, AILevel& level, OpeningRule& rule, bool isPvP)>
+      _onStartGame;
+
+  void _initVSButtons();
+  sf::RectangleShape _pvpButton;
+  sf::RectangleShape _pvAIButton;
+  sf::Text _pvpText;
+  sf::Text _pvAIText;
+  bool _isPvP = true;
 
   OpeningRule _openingRule = OpeningRule::Standard;
+  void _initOpeningRuleButtons();
   sf::Text _openingRuleText;
-
   sf::RectangleShape _standardButton;
   sf::Text _standardText;
   sf::RectangleShape _proButton;
@@ -50,6 +68,7 @@ class MenuScene : public Scene {
   sf::RectangleShape _longProButton;
   sf::Text _longProText;
   Tooltip _tooltip;
+
   void _checkHoverOnRules(sf::RenderWindow& window);
 
   void _updateButtonStatus(sf::RectangleShape& button, bool isActive);
