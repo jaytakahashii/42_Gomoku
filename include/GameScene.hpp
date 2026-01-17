@@ -88,6 +88,8 @@ class GameScene : public Scene {
   sf::CircleShape _makeHintCircle() const;
   std::shared_ptr<std::atomic<bool>> _cancelFlag;
 
+  sf::Text _handCount;
+
   std::function<void()> _onEsc;
 
   OpeningRule _openingRule;
