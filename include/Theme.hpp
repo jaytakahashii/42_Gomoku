@@ -20,6 +20,9 @@ const unsigned int Header = 40;
 const unsigned int Text = 35;
 const unsigned int Button = 25;
 const unsigned int Tooltip = 20;
+const unsigned int AccentTitle = 64;
+const unsigned int AccentHeader = 32;
+const unsigned int AccentText = 24;
 }  // namespace FontSize
 
 namespace Size {

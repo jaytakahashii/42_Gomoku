@@ -1,24 +1,24 @@
 #include "MenuScene.hpp"
 
-MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
-    : _font(font),
-      _titleText(font, "Gomoku"),
-      _startButtonText(font, "START GAME"),
-      _orderText(font, "Select first or second?"),
-      _firstText(font, "Go first"),
-      _secondText(font, "Go second"),
-      _easyText(font, "Easy"),
-      _normalText(font, "Normal"),
-      _hardText(font, "Hard"),
-      _levelText(font, "Select the AI level."),
-      _openingRuleText(font, "Select starting condition."),
-      _standardText(font, "Standard"),
-      _proText(font, "Pro"),
-      _longProText(font, "Long Pro"),
-      _tooltip(font),
-      _pvpText(font, "PvP"),
-      _pvAIText(font, "PvAI"),
-      _vsText(font, "Select mode.") {
+MenuScene::MenuScene(Fonts& fonts, const sf::Vector2u& initalSize)
+    : _fonts(fonts),
+      _titleText(fonts.accent, "Gomoku"),
+      _startButtonText(fonts.normal, "START GAME"),
+      _orderText(fonts.accent, "Select first or second."),
+      _firstText(fonts.normal, "Go first"),
+      _secondText(fonts.normal, "Go second"),
+      _easyText(fonts.normal, "Easy"),
+      _normalText(fonts.normal, "Normal"),
+      _hardText(fonts.normal, "Hard"),
+      _levelText(fonts.accent, "Select the AI level."),
+      _openingRuleText(fonts.accent, "Select starting condition."),
+      _standardText(fonts.normal, "Standard"),
+      _proText(fonts.normal, "Pro"),
+      _longProText(fonts.normal, "Long Pro"),
+      _tooltip(fonts.normal),
+      _pvpText(fonts.normal, "PvP"),
+      _pvAIText(fonts.normal, "PvAI"),
+      _vsText(fonts.accent, "Select mode.") {
   _initTitle();
   _initVSButtons();
   _initOrderButtons();
@@ -29,7 +29,7 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
 }
 
 void MenuScene::_initVSButtons() {
-  this->_vsText.setCharacterSize(Theme::FontSize::Header);
+  this->_vsText.setCharacterSize(Theme::FontSize::AccentHeader);
   this->_vsText.setFillColor(sf::Color::Black);
   this->_vsText.setStyle(sf::Text::Bold);
   this->_vsText.setOrigin(this->_vsText.getLocalBounds().getCenter());
@@ -50,7 +50,7 @@ void MenuScene::_initVSButtons() {
 }
 
 void MenuScene::_initTitle() {
-  this->_titleText.setCharacterSize(Theme::FontSize::Title);
+  this->_titleText.setCharacterSize(Theme::FontSize::AccentTitle);
   this->_titleText.setFillColor(Theme::Color::Text);
   this->_titleText.setStyle(sf::Text::Bold);
   sf::FloatRect titleBounds = this->_titleText.getLocalBounds();
@@ -69,7 +69,7 @@ void MenuScene::_initOrderButtons() {
   this->_startButton.setFillColor(Theme::Color::ButtonIdle);
   this->_startButton.setOrigin(this->_startButton.getSize() / 2.f);
 
-  this->_orderText.setCharacterSize(Theme::FontSize::Header);
+  this->_orderText.setCharacterSize(Theme::FontSize::AccentHeader);
   this->_orderText.setFillColor(sf::Color::Black);
   this->_orderText.setStyle(sf::Text::Bold);
   this->_orderText.setOrigin(this->_orderText.getLocalBounds().getCenter());
@@ -94,7 +94,7 @@ void MenuScene::_initOrderButtons() {
 }
 
 void MenuScene::_initAILevelButtons() {
-  this->_levelText.setCharacterSize(Theme::FontSize::Header);
+  this->_levelText.setCharacterSize(Theme::FontSize::AccentHeader);
   this->_levelText.setFillColor(sf::Color::Black);
   this->_levelText.setStyle(sf::Text::Bold);
   this->_levelText.setOrigin(this->_levelText.getLocalBounds().getCenter());
@@ -128,7 +128,7 @@ void MenuScene::_initAILevelButtons() {
 }
 
 void MenuScene::_initOpeningRuleButtons() {
-  this->_openingRuleText.setCharacterSize(Theme::FontSize::Header);
+  this->_openingRuleText.setCharacterSize(Theme::FontSize::AccentHeader);
   this->_openingRuleText.setFillColor(sf::Color::Black);
   this->_openingRuleText.setStyle(sf::Text::Bold);
   this->_openingRuleText.setOrigin(this->_openingRuleText.getLocalBounds().getCenter());
