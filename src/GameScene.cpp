@@ -7,7 +7,8 @@ GameScene::GameScene(Fonts& fonts, const sf::Vector2u& initalSize)
       _turnNotification(fonts.accent, "Your Turn"),
       _aiInfoText(fonts.normal, "AI Time: 0.00s"),
       _undoText(fonts.normal, "Undo"),
-      _aiAssistText(fonts.normal, "AI Assist") {
+      _aiAssistText(fonts.normal, "AI Assist"),
+      _handCount(fonts.accent, "Hand Count: 0") {
   this->_countWhiteCaptures.setCharacterSize(Theme::FontSize::AccentText);
   this->_countWhiteCaptures.setFillColor(Theme::Color::Text);
   this->_countWhiteCaptures.setOrigin(this->_countWhiteCaptures.getGlobalBounds().getCenter());
@@ -40,6 +41,9 @@ GameScene::GameScene(Fonts& fonts, const sf::Vector2u& initalSize)
   this->_aiAssistButton.setOrigin(this->_aiAssistButton.getSize() / 2.f);
 
   this->_cancelFlag = std::make_shared<std::atomic<bool>>(false);
+
+  this->_handCount.setCharacterSize(Theme::FontSize::AccentText);
+  this->_handCount.setFillColor(sf::Color::Black);
 
   onResize(initalSize);
 }
@@ -181,6 +185,8 @@ void GameScene::render(sf::RenderWindow& window) {
 
   window.draw(this->_aiAssistButton);
   window.draw(this->_aiAssistText);
+
+  window.draw(this->_handCount);
 }
 
 void GameScene::update(float df) {
@@ -205,6 +211,9 @@ void GameScene::update(float df) {
       _notifyPlayerTurn(df, "White's Turn");
     }
   }
+
+  int handCount = this->_board.getHandCount();
+  this->_handCount.setString("Hand Count: " + std::to_string(handCount));
 
   _handleHint();
 
@@ -260,6 +269,8 @@ void GameScene::onResize(const sf::Vector2u& windowSize) {
 
   this->_aiAssistButton.setPosition({w * 2 / 4, h - 50.f});
   this->_aiAssistText.setPosition(this->_aiAssistButton.getPosition());
+
+  this->_handCount.setPosition({w / 25.f, h / 25.f});
 }
 
 void GameScene::setOnGameOver(std::function<void(const std::string& winner)> callback) {
