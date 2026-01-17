@@ -4,6 +4,7 @@ Gomoku::Gomoku() : _window(sf::VideoMode({1080, 1000}), "Gomoku"), _fonts() {
   _initFont("font/PixeloidSans.ttf", "font/PressStart2P-Regular.ttf");
   this->_isRunning = true;
   this->_window.setMinimumSize(sf::Vector2u(1080, 1000));
+  this->_window.setMaximumSize(sf::Vector2u(1080, 1000));
 
   this->_menuScene = std::make_unique<MenuScene>(_fonts, this->_window.getSize());
   this->_gameScene = std::make_unique<GameScene>(_fonts, this->_window.getSize());
