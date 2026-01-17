@@ -4,7 +4,7 @@
 
 class ResultScene : public Scene {
  public:
-  ResultScene(sf::Font& font, const sf::Vector2u& initialSize);
+  ResultScene(Fonts& fonts, const sf::Vector2u& initialSize);
   void handleEvents(const EventList& events);
   void update(float dt);
   void render(sf::RenderWindow& window);
@@ -15,7 +15,7 @@ class ResultScene : public Scene {
   void setOnBack(std::function<void()> func);
 
  private:
-  sf::Font& _font;
+  Fonts& _fonts;
   sf::Text _titleText;
   sf::Texture _backgroundTexture;
   std::unique_ptr<sf::Sprite> _backgroundSprite;

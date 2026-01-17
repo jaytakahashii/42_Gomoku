@@ -1,32 +1,75 @@
 #include "MenuScene.hpp"
 
-MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
-    : _font(font),
-      _titleText(font, "Gomoku"),
-      _startButtonText(font, "START GAME"),
-      _orderText(font, "Select: first or second?"),
-      _firstText(font, "Go first"),
-      _secondText(font, "Go second"),
-      _easyText(font, "Easy"),
-      _normalText(font, "Normal"),
-      _hardText(font, "Hard"),
-      _levelText(font, "Select the AI level."),
-      _openingRuleText(font, "Select starting condition."),
-      _standardText(font, "Standard"),
-      _proText(font, "Pro"),
-      _longProText(font, "Long Pro"),
-      _tooltip(font) {
-  this->_titleText.setCharacterSize(Theme::FontSize::Title);
+MenuScene::MenuScene(Fonts& fonts, const sf::Vector2u& initalSize)
+    : _fonts(fonts),
+      _titleText(fonts.accent, "Gomoku"),
+      _startButtonText(fonts.normal, "START GAME"),
+      _orderText(fonts.accent, "Select first or second."),
+      _firstText(fonts.normal, "Go first"),
+      _secondText(fonts.normal, "Go second"),
+      _easyText(fonts.normal, "Easy"),
+      _normalText(fonts.normal, "Normal"),
+      _hardText(fonts.normal, "Hard"),
+      _levelText(fonts.accent, "Select the AI level."),
+      _openingRuleText(fonts.accent, "Select starting condition."),
+      _standardText(fonts.normal, "Standard"),
+      _proText(fonts.normal, "Pro"),
+      _longProText(fonts.normal, "Long Pro"),
+      _tooltip(fonts.normal),
+      _pvpText(fonts.normal, "PvP"),
+      _pvAIText(fonts.normal, "PvAI"),
+      _vsText(fonts.accent, "Select mode.") {
+  _initTitle();
+  _initVSButtons();
+  _initOrderButtons();
+  _initAILevelButtons();
+  _initOpeningRuleButtons();
+  _initStartButton();
+  onResize(initalSize);
+}
+
+void MenuScene::_initVSButtons() {
+  this->_vsText.setCharacterSize(Theme::FontSize::AccentHeader);
+  this->_vsText.setFillColor(sf::Color::Black);
+  this->_vsText.setStyle(sf::Text::Bold);
+  this->_vsText.setOrigin(this->_vsText.getLocalBounds().getCenter());
+  this->_pvpText.setCharacterSize(Theme::FontSize::Button);
+  this->_pvpText.setStyle(sf::Text::Bold);
+  this->_pvpText.setFillColor(sf::Color::Black);
+  this->_pvpText.setOrigin(this->_pvpText.getLocalBounds().getCenter());
+  this->_pvAIText.setCharacterSize(Theme::FontSize::Button);
+  this->_pvAIText.setStyle(sf::Text::Bold);
+  this->_pvAIText.setFillColor(sf::Color::Black);
+  this->_pvAIText.setOrigin(this->_pvAIText.getLocalBounds().getCenter());
+  this->_pvpButton.setSize(Theme::Size::Button);
+  this->_pvpButton.setFillColor(Theme::Color::ButtonActive);
+  this->_pvpButton.setOrigin(this->_pvpButton.getSize() / 2.f);
+  this->_pvAIButton.setSize(Theme::Size::Button);
+  this->_pvAIButton.setFillColor(Theme::Color::ButtonIdle);
+  this->_pvAIButton.setOrigin(this->_pvAIButton.getSize() / 2.f);
+}
+
+void MenuScene::_initTitle() {
+  this->_titleText.setCharacterSize(Theme::FontSize::AccentTitle);
   this->_titleText.setFillColor(Theme::Color::Text);
   this->_titleText.setStyle(sf::Text::Bold);
   sf::FloatRect titleBounds = this->_titleText.getLocalBounds();
   this->_titleText.setOrigin(titleBounds.getCenter());
+}
 
+void MenuScene::_initStartButton() {
+  this->_startButtonText.setCharacterSize(30);
+  this->_startButtonText.setFillColor(sf::Color::White);
+  sf::FloatRect btnTextBounds = this->_startButtonText.getLocalBounds();
+  this->_startButtonText.setOrigin(btnTextBounds.getCenter());
+}
+
+void MenuScene::_initOrderButtons() {
   this->_startButton.setSize(Theme::Size::Button);
   this->_startButton.setFillColor(Theme::Color::ButtonIdle);
   this->_startButton.setOrigin(this->_startButton.getSize() / 2.f);
 
-  this->_orderText.setCharacterSize(Theme::FontSize::Button);
+  this->_orderText.setCharacterSize(Theme::FontSize::AccentHeader);
   this->_orderText.setFillColor(sf::Color::Black);
   this->_orderText.setStyle(sf::Text::Bold);
   this->_orderText.setOrigin(this->_orderText.getLocalBounds().getCenter());
@@ -48,8 +91,10 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_secondButton.setSize(Theme::Size::Button);
   this->_secondButton.setFillColor(Theme::Color::ButtonIdle);
   this->_secondButton.setOrigin(this->_secondButton.getSize() / 2.f);
+}
 
-  this->_levelText.setCharacterSize(Theme::FontSize::Button);
+void MenuScene::_initAILevelButtons() {
+  this->_levelText.setCharacterSize(Theme::FontSize::AccentHeader);
   this->_levelText.setFillColor(sf::Color::Black);
   this->_levelText.setStyle(sf::Text::Bold);
   this->_levelText.setOrigin(this->_levelText.getLocalBounds().getCenter());
@@ -80,16 +125,13 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_hardText.setFillColor(sf::Color::Black);
   this->_hardText.setStyle(sf::Text::Bold);
   this->_hardText.setOrigin(this->_hardText.getLocalBounds().getCenter());
+}
 
-  this->_openingRuleText.setCharacterSize(Theme::FontSize::Button);
+void MenuScene::_initOpeningRuleButtons() {
+  this->_openingRuleText.setCharacterSize(Theme::FontSize::AccentHeader);
   this->_openingRuleText.setFillColor(sf::Color::Black);
   this->_openingRuleText.setStyle(sf::Text::Bold);
   this->_openingRuleText.setOrigin(this->_openingRuleText.getLocalBounds().getCenter());
-
-  this->_startButtonText.setCharacterSize(30);
-  this->_startButtonText.setFillColor(sf::Color::White);
-  sf::FloatRect btnTextBounds = this->_startButtonText.getLocalBounds();
-  this->_startButtonText.setOrigin(btnTextBounds.getCenter());
 
   this->_standardButton.setSize(Theme::Size::Button);
   this->_standardButton.setFillColor(Theme::Color::ButtonIdle);
@@ -117,8 +159,6 @@ MenuScene::MenuScene(sf::Font& font, const sf::Vector2u& initalSize)
   this->_longProText.setFillColor(sf::Color::Black);
   this->_longProText.setStyle(sf::Text::Bold);
   this->_longProText.setOrigin(this->_longProText.getLocalBounds().getCenter());
-
-  onResize(initalSize);
 }
 
 void MenuScene::handleEvents(const EventList& events) {
@@ -129,21 +169,23 @@ void MenuScene::handleEvents(const EventList& events) {
                               static_cast<float>(mousePtr->position.y));
         if (this->_startButton.getGlobalBounds().contains(mousePos)) {
           if (this->_onStartGame)
-            this->_onStartGame(this->_turnOrder, this->_aiLevel, this->_openingRule);
+            this->_onStartGame(this->_turnOrder, this->_aiLevel, this->_openingRule, this->_isPvP);
         }
 
-        if (this->_firstButton.getGlobalBounds().contains(mousePos)) {
-          this->_turnOrder = TurnOrder::HumanFirst;
-        } else if (this->_secondButton.getGlobalBounds().contains(mousePos)) {
-          this->_turnOrder = TurnOrder::AIFirst;
-        }
+        if (this->_isPvP == false) {
+          if (this->_firstButton.getGlobalBounds().contains(mousePos)) {
+            this->_turnOrder = TurnOrder::HumanFirst;
+          } else if (this->_secondButton.getGlobalBounds().contains(mousePos)) {
+            this->_turnOrder = TurnOrder::AIFirst;
+          }
 
-        if (this->_easyButton.getGlobalBounds().contains(mousePos)) {
-          this->_aiLevel = AILevel::Easy;
-        } else if (this->_normalButton.getGlobalBounds().contains(mousePos)) {
-          this->_aiLevel = AILevel::Normal;
-        } else if (this->_hardButton.getGlobalBounds().contains(mousePos)) {
-          this->_aiLevel = AILevel::Hard;
+          if (this->_easyButton.getGlobalBounds().contains(mousePos)) {
+            this->_aiLevel = AILevel::Easy;
+          } else if (this->_normalButton.getGlobalBounds().contains(mousePos)) {
+            this->_aiLevel = AILevel::Normal;
+          } else if (this->_hardButton.getGlobalBounds().contains(mousePos)) {
+            this->_aiLevel = AILevel::Hard;
+          }
         }
 
         if (this->_standardButton.getGlobalBounds().contains(mousePos)) {
@@ -153,22 +195,33 @@ void MenuScene::handleEvents(const EventList& events) {
         } else if (this->_longProButton.getGlobalBounds().contains(mousePos)) {
           this->_openingRule = OpeningRule::LongPro;
         }
+
+        if (this->_pvpButton.getGlobalBounds().contains(mousePos)) {
+          this->_isPvP = true;
+        } else if (this->_pvAIButton.getGlobalBounds().contains(mousePos)) {
+          this->_isPvP = false;
+        }
       }
     }
   }
 }
 
 void MenuScene::update(float dt) {
-  _updateButtonStatus(this->_firstButton, this->_turnOrder == TurnOrder::HumanFirst);
-  _updateButtonStatus(this->_secondButton, this->_turnOrder == TurnOrder::AIFirst);
+  _updateButtonStatus(this->_firstButton,
+                      this->_turnOrder == TurnOrder::HumanFirst && this->_isPvP == false);
+  _updateButtonStatus(this->_secondButton,
+                      this->_turnOrder == TurnOrder::AIFirst && this->_isPvP == false);
 
-  _updateButtonStatus(this->_easyButton, _aiLevel == AILevel::Easy);
-  _updateButtonStatus(this->_normalButton, _aiLevel == AILevel::Normal);
-  _updateButtonStatus(this->_hardButton, _aiLevel == AILevel::Hard);
+  _updateButtonStatus(this->_easyButton, _aiLevel == AILevel::Easy && this->_isPvP == false);
+  _updateButtonStatus(this->_normalButton, _aiLevel == AILevel::Normal && this->_isPvP == false);
+  _updateButtonStatus(this->_hardButton, _aiLevel == AILevel::Hard && this->_isPvP == false);
 
   _updateButtonStatus(this->_standardButton, this->_openingRule == OpeningRule::Standard);
   _updateButtonStatus(this->_proButton, this->_openingRule == OpeningRule::Pro);
   _updateButtonStatus(this->_longProButton, this->_openingRule == OpeningRule::LongPro);
+
+  _updateButtonStatus(this->_pvpButton, this->_isPvP == true);
+  _updateButtonStatus(this->_pvAIButton, this->_isPvP == false);
 }
 
 void MenuScene::_checkHoverOnRules(sf::RenderWindow& window) {
@@ -222,6 +275,11 @@ void MenuScene::render(sf::RenderWindow& window) {
   window.draw(this->_proText);
   window.draw(this->_longProButton);
   window.draw(this->_longProText);
+  window.draw(this->_pvpButton);
+  window.draw(this->_pvpText);
+  window.draw(this->_pvAIButton);
+  window.draw(this->_pvAIText);
+  window.draw(this->_vsText);
   _checkHoverOnRules(window);
   _tooltip.draw(window);
 }
@@ -230,34 +288,55 @@ void MenuScene::onResize(const sf::Vector2u& windowSize) {
   float w = static_cast<float>(windowSize.x);
   float h = static_cast<float>(windowSize.y);
 
-  this->_titleText.setPosition({w / 2.f, h * 0.3f});
-  sf::Vector2f titlePos = this->_titleText.getPosition();
-  this->_orderText.setPosition({titlePos.x, titlePos.y + 90.f});
-  this->_startButton.setPosition({w / 2.f, h * 0.8f});
-  this->_firstButton.setPosition(
-      {this->_orderText.getPosition().x * 0.7f, this->_orderText.getPosition().y + 50.f});
-  this->_secondButton.setPosition(
-      {this->_orderText.getPosition().x * 1.3f, this->_orderText.getPosition().y + 50.f});
-  this->_startButtonText.setPosition(this->_startButton.getPosition());
+  float titleY = h * 0.2f;
+  float startY = h * 0.8f;
+
+  float sectionHeight = (startY - titleY) / 4.0f;
+
+  float row1Y = titleY + sectionHeight * 0.5f;
+  float row2Y = titleY + sectionHeight * 1.5f;
+  float row3Y = titleY + sectionHeight * 2.5f;
+  float row4Y = titleY + sectionHeight * 3.5f;
+
+  const float textOffset = -25.f;
+  const float buttonOffset = 25.f;
+
+  this->_titleText.setPosition({w / 2.f, titleY - 50});
+
+  this->_vsText.setPosition({w / 2.f, row1Y + textOffset});
+  this->_pvpButton.setPosition({w * 0.35f, row1Y + buttonOffset});
+  this->_pvAIButton.setPosition({w * 0.65f, row1Y + buttonOffset});
+  this->_pvpText.setPosition(this->_pvpButton.getPosition());
+  this->_pvAIText.setPosition(this->_pvAIButton.getPosition());
+
+  this->_orderText.setPosition({w / 2.f, row2Y + textOffset});
+  this->_firstButton.setPosition({w * 0.35f, row2Y + buttonOffset});
+  this->_secondButton.setPosition({w * 0.65f, row2Y + buttonOffset});
   this->_firstText.setPosition(this->_firstButton.getPosition());
   this->_secondText.setPosition(this->_secondButton.getPosition());
-  this->_levelText.setPosition({w / 2.f, _secondButton.getPosition().y + 80});
-  this->_easyButton.setPosition({w / 4.f, _levelText.getPosition().y + 50});
+
+  this->_levelText.setPosition({w / 2.f, row3Y + textOffset});
+  this->_easyButton.setPosition({w / 4.f, row3Y + buttonOffset});
+  this->_normalButton.setPosition({w / 2.f, row3Y + buttonOffset});
+  this->_hardButton.setPosition({w * 0.75f, row3Y + buttonOffset});
   this->_easyText.setPosition(_easyButton.getPosition());
-  this->_normalButton.setPosition({w / 2.f, _levelText.getPosition().y + 50});
   this->_normalText.setPosition(_normalButton.getPosition());
-  this->_hardButton.setPosition({(w / 4.f) * 3.f, _levelText.getPosition().y + 50});
   this->_hardText.setPosition(_hardButton.getPosition());
-  this->_openingRuleText.setPosition({w / 2.f, _normalButton.getPosition().y + 80});
-  this->_standardButton.setPosition({w / 4.f, _openingRuleText.getPosition().y + 50});
+
+  this->_openingRuleText.setPosition({w / 2.f, row4Y + textOffset});
+  this->_standardButton.setPosition({w / 4.f, row4Y + buttonOffset});
+  this->_proButton.setPosition({w / 2.f, row4Y + buttonOffset});
+  this->_longProButton.setPosition({w * 0.75f, row4Y + buttonOffset});
   this->_standardText.setPosition(_standardButton.getPosition());
-  this->_proButton.setPosition({w / 2.f, _openingRuleText.getPosition().y + 50});
   this->_proText.setPosition(_proButton.getPosition());
-  this->_longProButton.setPosition({(w / 4.f) * 3, _openingRuleText.getPosition().y + 50});
   this->_longProText.setPosition(_longProButton.getPosition());
+
+  this->_startButton.setPosition({w / 2.f, startY + 50});
+  this->_startButtonText.setPosition(this->_startButton.getPosition());
 }
 
 void MenuScene::setOnStartGame(
-    std::function<void(TurnOrder& turnOrder, AILevel& level, OpeningRule& rule)> callback) {
+    std::function<void(TurnOrder& turnOrder, AILevel& level, OpeningRule& rule, bool isPvP)>
+        callback) {
   this->_onStartGame = callback;
 }

@@ -1,21 +1,23 @@
 #include "Gomoku.hpp"
 
-Gomoku::Gomoku() : _window(sf::VideoMode({1080, 1000}), "Gomoku"), font() {
-  _initFont("arial.ttf");
+Gomoku::Gomoku() : _window(sf::VideoMode({1080, 1000}), "Gomoku"), _fonts() {
+  _initFont("font/PixeloidSans.ttf", "font/PressStart2P-Regular.ttf");
   this->_isRunning = true;
   this->_window.setMinimumSize(sf::Vector2u(1080, 1000));
 
-  this->_menuScene = std::make_unique<MenuScene>(font, this->_window.getSize());
-  this->_gameScene = std::make_unique<GameScene>(font, this->_window.getSize());
-  this->_resultScene = std::make_unique<ResultScene>(font, this->_window.getSize());
+  this->_menuScene = std::make_unique<MenuScene>(_fonts, this->_window.getSize());
+  this->_gameScene = std::make_unique<GameScene>(_fonts, this->_window.getSize());
+  this->_resultScene = std::make_unique<ResultScene>(_fonts, this->_window.getSize());
   this->_currentScene = this->_menuScene.get();
 
-  this->_menuScene->setOnStartGame([this](TurnOrder& turnOrder, AILevel& level, OpeningRule& rule) {
-    this->_gameScene.get()->setAILevel(level);
-    this->_gameScene.get()->setTurnOrder(turnOrder);
-    this->_gameScene.get()->setOpeningRule(rule);
-    _changeScene(this->_gameScene.get());
-  });
+  this->_menuScene->setOnStartGame(
+      [this](TurnOrder& turnOrder, AILevel& level, OpeningRule& rule, bool isPvP) {
+        this->_gameScene.get()->setAILevel(level);
+        this->_gameScene.get()->setIsPvP(isPvP);
+        this->_gameScene.get()->setTurnOrder(turnOrder, isPvP);
+        this->_gameScene.get()->setOpeningRule(rule);
+        _changeScene(this->_gameScene.get());
+      });
   this->_gameScene->setOnGameOver([this](const std::string& winner) { _initOnGameOver(winner); });
   this->_gameScene->setOnEsc([this]() {
     _changeScene(this->_menuScene.get());
@@ -52,8 +54,8 @@ void Gomoku::stop() {
   this->_isRunning = false;
 }
 
-void Gomoku::_initFont(const std::string font) {
-  if (!this->font.openFromFile(font)) {
+void Gomoku::_initFont(const std::string uiFont, const std::string pixelFont) {
+  if (!this->_fonts.normal.openFromFile(uiFont) || !this->_fonts.accent.openFromFile(pixelFont)) {
     std::cerr << "Failed to load font!" << std::endl;
     return;
   }

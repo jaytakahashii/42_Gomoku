@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <iostream>
 #include <limits>
 #include <vector>
 
@@ -11,13 +12,9 @@
 #include "GameConfig.hpp"
 #include "TranspositionTable.hpp"
 
-// ==========================================
-// AI Class
-// ==========================================
-
 class AI {
  public:
-  AI();
+  AI() = default;
   ~AI() = default;
 
   /**
@@ -42,13 +39,12 @@ class AI {
   static constexpr int DEPTH_NORMAL = 5;
   static constexpr int DEPTH_HARD = 10;
 
-  static constexpr int MAX_MOVES_TO_CONSIDER = 14;
+  static constexpr int MAX_MOVES_TO_CONSIDER = 13;
   static constexpr int SEARCH_WIDTH = 3;
 
   // --- Component State ---
-  Color _aiPlayer;
+  Color _aiPlayer = Color::NONE;
   TranspositionTable _tt;
-  Move _killerMoves[DEPTH_HARD][2];
 
   // --- Internal Logic ---
 
@@ -71,8 +67,7 @@ class AI {
    * @param board The current board state.
    * @return A vector of possible moves with heuristic scores. (MAX: MAX_MOVES_TO_CONSIDER)
    */
-  std::vector<Move> _generateMoves(const Board& board, int depth,
-                                   size_t limit = MAX_MOVES_TO_CONSIDER);
+  std::vector<Move> _generateMoves(const Board& board, size_t limit = MAX_MOVES_TO_CONSIDER);
 
   std::vector<Move> _randomNeighbor(const BoardType& occupied);
 

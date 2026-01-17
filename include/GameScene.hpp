@@ -21,7 +21,7 @@ const unsigned int WINDOW_HEIGHT = WINDOW_WIDTH + 50;
 
 class GameScene : public Scene {
  public:
-  GameScene(sf::Font& font, const sf::Vector2u& initialSize);
+  GameScene(Fonts& fonts, const sf::Vector2u& initialSize);
   ~GameScene();
   void handleEvents(const EventList& events);
   void update(float dt);
@@ -30,8 +30,9 @@ class GameScene : public Scene {
 
   void setOnGameOver(std::function<void(const std::string& winner)> callback);
   void setAILevel(AILevel& level);
-  void setTurnOrder(TurnOrder& turnOrder);
+  void setTurnOrder(TurnOrder& turnOrder, bool isPvP);
   void setOpeningRule(OpeningRule& rule);
+  void setIsPvP(bool isPvP);
   void setOnEsc(std::function<void()> callback);
 
   void reset();
@@ -44,7 +45,7 @@ class GameScene : public Scene {
     FloatingMessage(const sf::Font& font, const std::string& str, sf::Vector2f pos);
   };
 
-  sf::Font& _font;
+  Fonts& _fonts;
   std::list<FloatingMessage> _activeMessages;
   const unsigned int _boardSize = BOARD_SIZE;
   const unsigned int _cellSize = CELL_SIZE;
@@ -61,7 +62,7 @@ class GameScene : public Scene {
   sf::Text _countBlackCaptures;
   sf::Text _turnNotification;
   float _turnAnimTimer = 0.0f;
-  void _notifyPlayerTurn(float df);
+  void _notifyPlayerTurn(float df, std::string str);
 
   float _aiMoveTimer = 0.0f;
   std::future<Move> _aiFuture;
@@ -90,6 +91,8 @@ class GameScene : public Scene {
   std::function<void()> _onEsc;
 
   OpeningRule _openingRule;
+
+  bool _isPvP;
 
   void _stopAllThreads();
 };

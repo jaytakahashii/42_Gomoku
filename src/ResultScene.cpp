@@ -1,17 +1,17 @@
 #include <ResultScene.hpp>
 
-ResultScene::ResultScene(sf::Font& font, const sf::Vector2u& initalSize)
-    : _font(font),
-      _titleText(font, "Result"),
-      _winnerText(font, ""),
-      _backButtonText(font, "Back to Menu") {
-  this->_titleText.setCharacterSize(Theme::FontSize::Title);
+ResultScene::ResultScene(Fonts& fonts, const sf::Vector2u& initalSize)
+    : _fonts(fonts),
+      _titleText(fonts.accent, "Result"),
+      _winnerText(fonts.accent, ""),
+      _backButtonText(fonts.normal, "Back to Menu") {
+  this->_titleText.setCharacterSize(Theme::FontSize::AccentTitle);
   this->_titleText.setFillColor(sf::Color::White);
   this->_titleText.setStyle(sf::Text::Bold);
   sf::FloatRect titleBounds = this->_titleText.getLocalBounds();
   this->_titleText.setOrigin(titleBounds.getCenter());
 
-  this->_winnerText.setCharacterSize(Theme::FontSize::Header);
+  this->_winnerText.setCharacterSize(Theme::FontSize::AccentHeader);
   this->_winnerText.setFillColor(sf::Color::White);
   this->_winnerText.setStyle(sf::Text::Bold);
   this->_winnerText.setOrigin(this->_winnerText.getLocalBounds().getCenter());
@@ -63,8 +63,8 @@ void ResultScene::onResize(const sf::Vector2u& windowSize) {
   float w = static_cast<float>(windowSize.x);
   float h = static_cast<float>(windowSize.y);
 
-  this->_titleText.setPosition({w / 2.f, h * 0.3f});
-  this->_winnerText.setPosition({w / 2.f, h * 0.4f});
+  this->_titleText.setPosition({w / 2.f, h * 0.2f});
+  this->_winnerText.setPosition({w / 2.f, h * 0.5f});
   if (this->_backgroundSprite) {
     this->_backgroundSprite->setOrigin({0.f, 0.f});
     this->_backgroundSprite->setPosition({0.f, 0.f});
@@ -97,7 +97,7 @@ void ResultScene::setBackground(const sf::Window& window) {
 }
 
 void ResultScene::setWinner(const std::string& winner) {
-  this->_winnerText.setString(winner + " wins!");
+  this->_winnerText.setString(winner);
   this->_winnerText.setOrigin(this->_winnerText.getLocalBounds().getCenter());
 }
 

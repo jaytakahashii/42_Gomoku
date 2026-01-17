@@ -1,10 +1,5 @@
 #include "AI.hpp"
 
-#include <iostream>
-
-AI::AI() : _tt(20) {
-}
-
 Move AI::getSecondMoveForSpecialRule(const Board& board) {
   BoardType occupied = board.getOccupiedStones();
   if (board.getOpeningRule() == OpeningRule::Pro) {
@@ -26,24 +21,19 @@ Move AI::getSecondMoveForSpecialRule(const Board& board) {
 Move AI::getBestMove(const Board& board, Color color, AILevel level,
                      std::atomic<bool>& cancelFlag) {
   _aiPlayer = color;
-
-  // Calculate target depth
   int targetDepth = _getDepthFromLevel(level);
-
-  // Prepare variables for Iterative Deepening
   Move globalBestMove = {-1, 0};
-
-  // Clone the board ONCE for the search process
   Board searchBoard = board;
 
+  // Iterative Deepening
   for (int depth = 2; depth <= targetDepth; ++depth) {
     // --- 1. Move Generation & Ordering ---
-    std::vector<Move> moves = _generateMoves(searchBoard, depth, MAX_CELLS);
+    std::vector<Move> moves = _generateMoves(searchBoard, MAX_CELLS);
 
     if (moves.empty())
       return {-1, 0};
     if (moves.size() == 1)
-      return moves[0];  // Optimization
+      return moves[0];
 
     // Hash Move Check (Check TT for the root position)
     uint64_t rootHash = searchBoard.getHash();
@@ -106,13 +96,14 @@ Move AI::getBestMove(const Board& board, Color color, AILevel level,
     }
 
     // --- 3. Update Global Best & Store to TT ---
-    globalBestMove = currentDepthBestMove;
+    if (!cancelFlag.load()) {
+      globalBestMove = currentDepthBestMove;
 
-    TTFlag flag = TTFlag::EXACT;
-    _tt.store(rootHash, depth, globalBestMove.score, flag, globalBestMove);
-
-    if (cancelFlag.load())
+      TTFlag flag = TTFlag::EXACT;
+      _tt.store(rootHash, depth, globalBestMove.score, flag, globalBestMove);
+    } else {
       break;
+    }
   }
 
   return globalBestMove;
@@ -143,13 +134,12 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
     return Evaluator::evaluate(board, _aiPlayer);
 
   // [3] Move Generation
-  std::vector<Move> moves = _generateMoves(board, depth, SEARCH_WIDTH);
+  std::vector<Move> moves = _generateMoves(board, SEARCH_WIDTH);
   if (moves.empty())
     return 0;
 
   // TT Move Ordering
   if (ttEntry != nullptr && ttEntry->bestMove.index != -1) {
-    // 先頭へスワップ
     for (size_t i = 0; i < moves.size(); ++i) {
       if (moves[i].index == ttEntry->bestMove.index) {
         std::swap(moves[0], moves[i]);
@@ -162,8 +152,9 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
 
   int originalAlpha = alpha;
   Move bestMoveInThisNode = {-1, 0};
-  bool isFirstMove = true;  // ★ PVS用のフラグ
+  bool isFirstMove = true;
 
+  // --- Maximizing Player (AI) ---
   if (maximizingPlayer) {
     int maxEval = std::numeric_limits<int>::min();
 
@@ -171,7 +162,6 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       if (!board.makeMoveAI(m.index))
         continue;
 
-      // 即時勝利判定
       if (board.checkWin()) {
         board.undoAI();
         int winScore = ScoreConfig::WIN + depth;
@@ -182,15 +172,12 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
 
       int eval;
       if (isFirstMove) {
-        // 1. 最初の手（最善手候補）は全力で探索 (Full Window)
+        // 1. Full Window
         eval = _minimax(board, depth - 1, alpha, beta, false, cancelFlag);
       } else {
-        // 2. 2手目以降は Null Window Search (alpha, alpha+1)
-        // 「今のalphaを超えないこと」を確認するだけの高速探索
+        // 2. Null Window Search (alpha, alpha+1)
         eval = _minimax(board, depth - 1, alpha, alpha + 1, false, cancelFlag);
 
-        // もし alpha を超えていたら (Fail-High)、評価が間違っていた可能性があるので
-        // 本来の窓 (alpha, beta) で再探索する
         if (eval > alpha && eval < beta) {
           eval = _minimax(board, depth - 1, alpha, beta, false, cancelFlag);
         }
@@ -209,18 +196,12 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       alpha = std::max(alpha, maxEval);
 
       // Beta Cut-off
-      if (beta <= alpha) {
-        // ★ Killer Heuristic (Maximizerにとって、相手のこの分岐を断ち切る強い手)
-        if (_killerMoves[depth][0].index != m.index) {
-          _killerMoves[depth][1] = _killerMoves[depth][0];
-          _killerMoves[depth][0] = m;
-        }
+      if (beta <= alpha)
         break;
-      }
-      isFirstMove = false;  // 2周目からはfalse
+      isFirstMove = false;
     }
 
-    // 結果保存
+    // Store Result
     TTFlag flag = (maxEval <= originalAlpha)
                       ? TTFlag::UPPERBOUND
                       : (maxEval >= beta ? TTFlag::LOWERBOUND : TTFlag::EXACT);
@@ -228,7 +209,7 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
     return maxEval;
 
   } else {
-    // --- Minimizing Player (相手) ---
+    // --- Minimizing Player (Opp) ---
     int minEval = std::numeric_limits<int>::max();
 
     for (const Move& m : moves) {
@@ -245,14 +226,10 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
 
       int eval;
       if (isFirstMove) {
-        // 1. 最初の手は全力探索
         eval = _minimax(board, depth - 1, alpha, beta, true, cancelFlag);
       } else {
-        // 2. 2手目以降は Null Window Search (beta-1, beta)
-        // 「今のbetaを下回らないこと」を確認する
         eval = _minimax(board, depth - 1, beta - 1, beta, true, cancelFlag);
 
-        // もし beta を下回っていたら (Fail-Low: 相手にとって良い手)、再探索
         if (eval < beta && eval > alpha) {
           eval = _minimax(board, depth - 1, alpha, beta, true, cancelFlag);
         }
@@ -271,18 +248,11 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
       beta = std::min(beta, minEval);
 
       // Alpha Cut-off
-      if (beta <= alpha) {
-        // ★ Killer Heuristic (Minimizer分岐でのCut。必要ならここでも更新可)
-        // 一般的にはMinimizer側でも有効な防御手などを登録する価値があります
-        if (_killerMoves[depth][0].index != m.index) {
-          _killerMoves[depth][1] = _killerMoves[depth][0];
-          _killerMoves[depth][0] = m;
-        }
+      if (beta <= alpha)
         break;
-      }
       isFirstMove = false;
     }
-    // 結果保存
+
     TTFlag flag = (minEval <= originalAlpha)
                       ? TTFlag::UPPERBOUND
                       : (minEval >= beta ? TTFlag::LOWERBOUND : TTFlag::EXACT);
@@ -291,9 +261,9 @@ int AI::_minimax(Board& board, int depth, int alpha, int beta, bool maximizingPl
   }
 }
 
-std::vector<Move> AI::_generateMoves(const Board& board, int depth, size_t limit) {
+std::vector<Move> AI::_generateMoves(const Board& board, size_t limit) {
   std::vector<Move> moves;
-  moves.reserve(128);
+  moves.reserve(BOARD_SIZE * BOARD_SIZE);
 
   BoardType occupied = board.getOccupiedStones();
 
@@ -301,9 +271,6 @@ std::vector<Move> AI::_generateMoves(const Board& board, int depth, size_t limit
     return _randomNeighbor(occupied);
   }
 
-  // 2. Determine Search Scope (Radius 1 around existing stones)
-  // Instead of a loop with branches, we apply bitwise operations directly.
-  // This creates a mask of all cells adjacent to any stone.
   BoardType neighborMask = occupied;
 
   // Horizontal
@@ -327,23 +294,10 @@ std::vector<Move> AI::_generateMoves(const Board& board, int depth, size_t limit
     if (candidates.test(i)) {
       int priority = Evaluator::evaluateMovePriority(board, i, board.getCurrentTurn());
 
-      // Killer Move Logic
-      // 以前のコードでは moves[i] と比較していましたが、
-      // ここでは「現在の候補地 i」と「キラー手の位置」を比較します
-
-      // ★追加: キラー手ならボーナスを与える
-      // (現在の深さがわからないので、引数に depth を渡すように変更する必要があります)
-      // ここでは簡易的に「_generateMovesにdepthを渡す」修正が必要です。
-      if (i == _killerMoves[depth][0].index)
-        priority += 100000;
-      else if (i == _killerMoves[depth][1].index)
-        priority += 90000;
-
       moves.push_back({i, priority});
     }
   }
 
-  // 4. Sort and Prune (Beam Search approach)
   if (moves.empty()) {
     return moves;
   }
@@ -351,11 +305,6 @@ std::vector<Move> AI::_generateMoves(const Board& board, int depth, size_t limit
   // Sort moves: Highest score first
   std::sort(moves.begin(), moves.end(), std::greater<Move>());
 
-  // Pruning: Only keep the top N moves to reduce search space.
-  // WARNING: 'MAX_MOVES_TO_CONSIDER' (10) might be too aggressive.
-  // If the opponent has a threat at the 11th best move, you will lose instantly.
-  // Consider increasing this to 20-30 or using a dynamic threshold
-  // (e.g., keep all moves within 500 points of the best move).
   if (moves.size() > limit) {
     moves.resize(limit);
   }

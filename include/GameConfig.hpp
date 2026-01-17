@@ -3,7 +3,6 @@
 #include <array>
 #include <bitset>
 
-// 基本定数
 constexpr int BOARD_SIZE = 19;
 constexpr int BOARD_WIDTH = 32;  // 19 + sentinel padding
 constexpr int MAX_CELLS = BOARD_WIDTH * BOARD_SIZE;
@@ -15,12 +14,9 @@ constexpr int PRO_CLOSEST_BOTTOM_INDEX = CENTER_INDEX + (BOARD_WIDTH * 3);  // 3
 constexpr int LONG_PRO_CLOSEST_TOP_INDEX = CENTER_INDEX - (BOARD_WIDTH * 4);     // 169
 constexpr int LONG_PRO_CLOSEST_BOTTOM_INDEX = CENTER_INDEX + (BOARD_WIDTH * 4);  // 369
 
-// ビット演算用
 constexpr int WIDTH_SHIFT = 5;
 constexpr int WIDTH_MASK = 31;  // 0x1F
 
-// 重要: ここで1回だけ定義する（Single Source of Truth）
-// AI, Board, Evaluator すべてがこれを使う
 constexpr std::array<int, 4> DIR_OFFSETS = {
     1,                // Horizontal
     BOARD_WIDTH,      // Vertical
@@ -31,6 +27,7 @@ constexpr std::array<int, 4> DIR_OFFSETS = {
 // ==========================================
 // Move Structure
 // ==========================================
+
 struct Move {
   int index;
   int score;
@@ -42,5 +39,3 @@ struct Move {
     return index == other.index;
   }
 };
-
-using BoardType = std::bitset<MAX_CELLS>;
