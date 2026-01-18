@@ -13,37 +13,37 @@ Board::Board()
       _doubleThreeStatus(false),
       _currentHash(0),
       _prePlayerCannotMove(false) {
+  _initializeBitsets();
+  this->_colorToPlayer.clear();
+  this->_history.clear();
+  this->_aiHistory.clear();
+  this->_aiHistory.reserve(100);
+}
+
+void Board::_initializeBitsets() {
   this->_blackStones.reset();
   this->_whiteStones.reset();
 
   this->_sentinelStones.reset();
   for (int y = 0; y < BOARD_SIZE; ++y) {
     for (int x = BOARD_SIZE; x < BOARD_WIDTH; ++x) {
-      int index = y * BOARD_WIDTH + x;
-      _sentinelStones.set(index);
+      _sentinelStones.set(getIndex(x, y));
     }
   }
 
   this->_forbiddenHandsOfPro.reset();
   for (int y = (BOARD_SIZE / 2) - 2; y <= (BOARD_SIZE / 2) + 2; ++y) {
     for (int x = (BOARD_SIZE / 2) - 2; x <= (BOARD_SIZE / 2) + 2; ++x) {
-      int index = y * BOARD_WIDTH + x;
-      _forbiddenHandsOfPro.set(index);
+      _forbiddenHandsOfPro.set(getIndex(x, y));
     }
   }
 
   this->_forbiddenHandsOfLongPro.reset();
   for (int y = (BOARD_SIZE / 2) - 3; y <= (BOARD_SIZE / 2) + 3; ++y) {
     for (int x = (BOARD_SIZE / 2) - 3; x <= (BOARD_SIZE / 2) + 3; ++x) {
-      int index = y * BOARD_WIDTH + x;
-      _forbiddenHandsOfLongPro.set(index);
+      _forbiddenHandsOfLongPro.set(getIndex(x, y));
     }
   }
-
-  this->_colorToPlayer.clear();
-  this->_history.clear();
-  this->_aiHistory.clear();
-  this->_aiHistory.reserve(100);
 }
 
 void Board::setupPlayers(TurnOrder order, bool isPvP) {

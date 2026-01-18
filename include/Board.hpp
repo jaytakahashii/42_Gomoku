@@ -74,7 +74,7 @@ class Board {
   ~Board() = default;
 
   /**
-   * Assigns human/AI players to colors.
+   * @brief Assigns human/AI players to colors.
    */
   void setupPlayers(TurnOrder order, bool isPvP);
 
@@ -83,7 +83,7 @@ class Board {
   // ----------------------------------------------------------------
 
   /**
-   * Checks if the current player can make a move.
+   * @brief Checks if the current player can make a move.
    * @return true if moves are possible, false if no valid moves remain.
    */
   bool canMove();
@@ -199,6 +199,13 @@ class Board {
   // ----------------------------------------------------------------
   // Internal Helper Methods
   // ----------------------------------------------------------------
+
+  // -- Initialization --
+
+  /**
+   * @brief Initializes member bitsets.
+   */
+  void _initializeBitsets();
 
   // -- State Management --
 
