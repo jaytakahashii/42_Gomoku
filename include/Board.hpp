@@ -239,7 +239,10 @@ class Board {
 
   /**
    * @brief Retrieves a 11-bit representation of stones along a line centered at (x, y).
-   * @param dir The direction to extract the line.
+   * @param centerIndex The linear index of the center position.
+   * @param offset The directional offset for the line.
+   * @param myStones Bitset of the current player's stones.
+   * @param oppStones Bitset of the opponent's stones.
    * @return LineBits containing my and opponent stones along the line.
    */
   LineBits _getLineBits(int centerIndex, int offset, const BoardType& myStones,

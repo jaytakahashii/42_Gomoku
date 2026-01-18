@@ -541,7 +541,7 @@ LineBits Board::_getLineBits(int centerIndex, int offset, const BoardType& mySto
 
     // Treat out-of-bounds as "enemy stone (wall)"
     if (targetIndex < 0 || targetIndex >= MAX_CELLS || _sentinelStones.test(targetIndex)) {
-      line.opp |= (1 << (i + 5));  // 壁は敵石扱い
+      line.opp |= (1 << (i + 5));
       continue;
     }
     if (myStones.test(targetIndex)) {
