@@ -301,20 +301,8 @@ const BoardType& Board::getSentinelStones() const {
 
 // -- Computed Bitsets --
 
-// 有効な盤面範囲（壁以外）を表すマスクを定義
-// static const にして一度だけ計算させる
-const BoardType Board::_validMask = []() {
-  BoardType mask;
-  for (int y = 0; y < BOARD_SIZE; ++y) {
-    for (int x = 0; x < BOARD_SIZE; ++x) {
-      mask.set(y * BOARD_WIDTH + x);
-    }
-  }
-  return mask;
-}();
-
 BoardType Board::getEmptyStones() const {
-  return ~(_blackStones | _whiteStones) & _validMask;
+  return ~(_blackStones | _whiteStones) & ~_sentinelStones;
 }
 
 BoardType Board::getOccupiedStones() const {
