@@ -197,7 +197,6 @@ void Board::undoAI() {
     oppBoard->set(capIndex);
   }
 
-  // 5. カウンターとハッシュを復元
   this->_blackCaptures = record.prevBlackCaptures;
   this->_whiteCaptures = record.prevWhiteCaptures;
   this->_currentHash = record.prevHash;
