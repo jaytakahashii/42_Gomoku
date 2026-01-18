@@ -20,32 +20,6 @@ Board::Board()
   this->_aiHistory.reserve(100);
 }
 
-void Board::_initializeBitsets() {
-  this->_blackStones.reset();
-  this->_whiteStones.reset();
-
-  this->_sentinelStones.reset();
-  for (int y = 0; y < BOARD_SIZE; ++y) {
-    for (int x = BOARD_SIZE; x < BOARD_WIDTH; ++x) {
-      _sentinelStones.set(getIndex(x, y));
-    }
-  }
-
-  this->_forbiddenHandsOfPro.reset();
-  for (int y = (BOARD_SIZE / 2) - 2; y <= (BOARD_SIZE / 2) + 2; ++y) {
-    for (int x = (BOARD_SIZE / 2) - 2; x <= (BOARD_SIZE / 2) + 2; ++x) {
-      _forbiddenHandsOfPro.set(getIndex(x, y));
-    }
-  }
-
-  this->_forbiddenHandsOfLongPro.reset();
-  for (int y = (BOARD_SIZE / 2) - 3; y <= (BOARD_SIZE / 2) + 3; ++y) {
-    for (int x = (BOARD_SIZE / 2) - 3; x <= (BOARD_SIZE / 2) + 3; ++x) {
-      _forbiddenHandsOfLongPro.set(getIndex(x, y));
-    }
-  }
-}
-
 void Board::setupPlayers(TurnOrder order, bool isPvP) {
   this->_colorToPlayer.clear();
   if (isPvP) {
@@ -453,6 +427,34 @@ std::pair<int, int> Board::getCoordinates(int index) const {
 // ----------------------------------------------------------------
 // Internal Helper Methods
 // ----------------------------------------------------------------
+
+// -- Initialization --
+
+void Board::_initializeBitsets() {
+  this->_blackStones.reset();
+  this->_whiteStones.reset();
+
+  this->_sentinelStones.reset();
+  for (int y = 0; y < BOARD_SIZE; ++y) {
+    for (int x = BOARD_SIZE; x < BOARD_WIDTH; ++x) {
+      _sentinelStones.set(getIndex(x, y));
+    }
+  }
+
+  this->_forbiddenHandsOfPro.reset();
+  for (int y = (BOARD_SIZE / 2) - 2; y <= (BOARD_SIZE / 2) + 2; ++y) {
+    for (int x = (BOARD_SIZE / 2) - 2; x <= (BOARD_SIZE / 2) + 2; ++x) {
+      _forbiddenHandsOfPro.set(getIndex(x, y));
+    }
+  }
+
+  this->_forbiddenHandsOfLongPro.reset();
+  for (int y = (BOARD_SIZE / 2) - 3; y <= (BOARD_SIZE / 2) + 3; ++y) {
+    for (int x = (BOARD_SIZE / 2) - 3; x <= (BOARD_SIZE / 2) + 3; ++x) {
+      _forbiddenHandsOfLongPro.set(getIndex(x, y));
+    }
+  }
+}
 
 // -- State Management --
 
