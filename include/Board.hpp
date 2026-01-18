@@ -16,17 +16,20 @@
 
 using BoardType = std::bitset<MAX_CELLS>;
 
-struct Direction {
-  int dx;
-  int dy;
-};
-
+/**
+ * @struct LineBits
+ * @brief Represents a line of 11 stones for both players.
+ * Used for pattern detection (e.g., free threes).
+ */
 struct LineBits {
   uint16_t my;
   uint16_t opp;
 };
 
-// Snapshot of the board state for history/undo
+/**
+ * @struct BoardState
+ * @brief Captures the complete state of the board for undo functionality.
+ */
 struct BoardState {
   BoardType blackStones;
   BoardType whiteStones;
@@ -37,7 +40,10 @@ struct BoardState {
   int handCount;
 };
 
-// Information about a move, including captures
+/**
+ * @struct AIMoveRecord
+ * @brief Records details of an AI move for undoing purposes.
+ */
 struct AIMoveRecord {
   int moveIndex;
   uint64_t prevHash;
