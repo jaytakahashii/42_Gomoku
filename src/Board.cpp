@@ -115,7 +115,6 @@ bool Board::makeMove(int index) {
   }
 
   _handCount++;
-
   _prePlayerCannotMove = false;
 
   return true;
