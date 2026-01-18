@@ -1,6 +1,6 @@
 NAME = Gomoku
 CXX  = c++
-#CXXFLAGS = -Wall -Wextra -Werror -std=c++17
+# CXXFLAGS = -Wall -Wextra -Werror -std=c++17
 CXXFLAGS = -std=c++17
 
 ROOT := $(shell pwd)
