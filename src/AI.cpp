@@ -317,7 +317,6 @@ std::vector<Move> AI::_randomNeighbor(const BoardType& occupied) {
   moves.reserve(1);
 
   // 1. Find the occupied stone
-  // count() == 1 の前提で呼び出されるため、最初のビットが見つかればOKです
   int baseIndex = -1;
   for (int i = 0; i < MAX_CELLS; ++i) {
     if (occupied.test(i)) {
@@ -331,8 +330,6 @@ std::vector<Move> AI::_randomNeighbor(const BoardType& occupied) {
   }
 
   // 2. Define offsets for 8 directions
-  // BOARD_WIDTH = 32
-  // 上(-32), 下(+32), 左(-1), 右(+1), および斜め
   static const int offsets[8] = {
       -BOARD_WIDTH - 1,
       -BOARD_WIDTH,
@@ -348,40 +345,31 @@ std::vector<Move> AI::_randomNeighbor(const BoardType& occupied) {
   int baseX = baseIndex & 31;  // equivalent to: baseIndex % 32
 
   // 3. Randomize search start direction
-  // 元のコードは固定順序でしたが、AIの挙動としてランダムな方向から探す方が自然です
   int startDir = rand() % 8;
 
   for (int k = 0; k < 8; ++k) {
-    // ランダムな位置から8方向を巡回
     int dirIdx = (startDir + k) % 8;
     int offset = offsets[dirIdx];
 
     int nIndex = baseIndex + offset;
 
-    // [A] 配列の範囲チェック
     if (nIndex < 0 || nIndex >= MAX_CELLS)
       continue;
 
-    // [B] 横方向のラップアラウンド（折り返し）チェック
-    // 1次元配列上で単に -1 すると、行が変わって右端に行ってしまうのを防ぐ
     int nX = nIndex & 31;  // nIndex % 32
     if (std::abs(baseX - nX) > 1)
       continue;
 
-    // [C] 盤面の有効範囲チェック
-    // パディング領域(x >= 19)への着手を禁止
     if (nX >= BOARD_SIZE)
       continue;
 
-    // [D] 空きマスかどうかチェック
     if (!occupied.test(nIndex)) {
-      // 見つかったら即座に返す
       moves.push_back({nIndex, 0});
       return moves;
     }
   }
 
-  return moves;  // 周囲がすべて埋まっている場合
+  return moves;
 }
 
 int AI::_getDepthFromLevel(AILevel level) {
