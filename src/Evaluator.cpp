@@ -49,23 +49,17 @@ int Evaluator::evaluate(const Board& board, Color aiColor) {
     oppScore += ScoreConfig::OPEN_FOUR;
 
   // 5. Threat Evaluation (Pending Captures)
-  // Being under threat is severe.
-  // We assume each "dead" bit is a stone. count()/2 approximates pairs.
   if (myDeadStones.any()) {
     int pairsLost = (int)myDeadStones.count();
-    // Penalty: Lost stones value + giving points to opponent + positional loss
-    // Multiplied to ensure AI prioritizes defense.
     myScore -= pairsLost * ScoreConfig::CAPTURE_SCORE;
   }
 
   if (oppDeadStones.any()) {
     int pairsTaken = (int)oppDeadStones.count();
-    // Bonus: Gaining stones + positional advantage
     myScore += pairsTaken * ScoreConfig::CAPTURE_SCORE;
   }
 
   // 6. Final Calculation
-  // Apply defensive multiplier using integer math: x * 1.2  == x + x/5
   long long weightedOppScore = oppScore + (oppScore / 5);
 
   return static_cast<int>(myScore - weightedOppScore);
@@ -74,7 +68,6 @@ int Evaluator::evaluate(const Board& board, Color aiColor) {
 int Evaluator::evaluateMovePriority(const Board& board, int index, Color myColor) {
   int score = 0;
 
-  // 1. Centrality Bonus (Optional but recommended)
   int x = index & WIDTH_MASK;    // index % 32
   int y = index >> WIDTH_SHIFT;  // index / 32
 
@@ -183,17 +176,11 @@ int Evaluator::_CheckLineScore(int index, int offset, const BoardType& myStones,
 int Evaluator::_evaluateColor(const BoardType& stones, const BoardType& empty) {
   int score = 0;
 
-  // Pre-calculate shifted patterns involves some redundant work if done inside the loop,
-  // but the compiler will unroll and optimize this effectively.
   for (int s : ALL_DIRS) {
-    // Shifted Bitboards
-    // sN means stones shifted left by N steps (looking N steps ahead)
     BoardType s1 = stones >> s;
     BoardType s2 = stones >> (2 * s);
     BoardType s3 = stones >> (3 * s);
     BoardType s4 = stones >> (4 * s);
-    // Note: s5 is not needed because we don't count "Breakable Fives" here.
-    // If a 5 existed and was unbreakable, checkWin() would have caught it.
 
     // Empty shifts
     BoardType e0 = empty;  // Empty at current
@@ -202,11 +189,8 @@ int Evaluator::_evaluateColor(const BoardType& stones, const BoardType& empty) {
     BoardType e3 = empty >> (3 * s);
     BoardType e4 = empty >> (4 * s);
     BoardType e5 = empty >> (5 * s);
-    // BoardType e6 = empty >> (6 * s); // Needed for .XXXX. context?
 
     // --- Priority S: Open Four (.XXXX.) ---
-    // Pattern: . X X X X .
-    // Indices: 0 1 2 3 4 5  (relative to e0)
     BoardType openFour = e0 & s1 & s2 & s3 & s4 & e5;
 
     if (openFour.any()) {
@@ -214,11 +198,9 @@ int Evaluator::_evaluateColor(const BoardType& stones, const BoardType& empty) {
     }
 
     // --- Priority A: Closed Four ---
-    // We must avoid double counting OpenFour as ClosedFour.
 
     // Type 1: .XXXX (Blocked on right or edge)
     // Pattern: . X X X X (Not followed by .)
-    // Match: e0 & s1 & s2 & s3 & s4
     BoardType closedFour1 = e0 & s1 & s2 & s3 & s4;
 
     // Remove OpenFours from this set
@@ -229,14 +211,9 @@ int Evaluator::_evaluateColor(const BoardType& stones, const BoardType& empty) {
 
     // Type 2: XXXX. (Blocked on left or edge)
     // Pattern: X X X X .
-    // This pattern starts at the STONE, not the empty space.
-    // Match: stones & s1 & s2 & s3 & e4
     BoardType closedFour2 = stones & s1 & s2 & s3 & e4;
 
     // Remove OpenFours from this set
-    // If OpenFour exists at index i (.XXXX.), then ClosedFour2 exists at index i+s (XXXX.)
-    // We need to mask out the bits in closedFour2 that correspond to shifted openFour bits.
-    // Mask = openFour << s
     if (openFour.any()) {
       closedFour2 &= ~(openFour << s);
     }
@@ -260,13 +237,6 @@ int Evaluator::_evaluateColor(const BoardType& stones, const BoardType& empty) {
     // Match: e0 & s1 & s2 & s3 & e4
     BoardType openThree = e0 & s1 & s2 & s3 & e4;
 
-    // Note: OpenThree (.XXX.) often overlaps with OpenFour (.XXXX.)?
-    // No, .XXXX. has 4 stones. .XXX. has 3. Length differs.
-    // However, we should check if .XXX. is actually part of .XXXX. (which we already counted)
-    // But s4 & e5 in OpenFour vs e4 in OpenThree distinguishes them.
-    // If it's .XXXX., then at e4 there is a stone, so OpenThree (.XXX.) fails.
-    // So they are mutually exclusive. Safe.
-
     // Split Open Threes
     // .X.XX.
     BoardType brokenThree1 = e0 & s1 & e2 & s3 & s4 & e5;
@@ -277,9 +247,6 @@ int Evaluator::_evaluateColor(const BoardType& stones, const BoardType& empty) {
     if (otCount > 0) {
       score += otCount * ScoreConfig::OPEN_THREE;
     }
-
-    // Priority C: Open Two (.XX.)
-    // Can be added if needed, but keeping it light for now.
   }
   return score;
 }
