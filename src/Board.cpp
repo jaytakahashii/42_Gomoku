@@ -13,33 +13,7 @@ Board::Board()
       _doubleThreeStatus(false),
       _currentHash(0),
       _prePlayerCannotMove(false) {
-  this->_blackStones.reset();
-  this->_whiteStones.reset();
-
-  this->_sentinelStones.reset();
-  for (int y = 0; y < BOARD_SIZE; ++y) {
-    for (int x = BOARD_SIZE; x < BOARD_WIDTH; ++x) {
-      int index = y * BOARD_WIDTH + x;
-      _sentinelStones.set(index);
-    }
-  }
-
-  this->_forbiddenHandsOfPro.reset();
-  for (int y = (BOARD_SIZE / 2) - 2; y <= (BOARD_SIZE / 2) + 2; ++y) {
-    for (int x = (BOARD_SIZE / 2) - 2; x <= (BOARD_SIZE / 2) + 2; ++x) {
-      int index = y * BOARD_WIDTH + x;
-      _forbiddenHandsOfPro.set(index);
-    }
-  }
-
-  this->_forbiddenHandsOfLongPro.reset();
-  for (int y = (BOARD_SIZE / 2) - 3; y <= (BOARD_SIZE / 2) + 3; ++y) {
-    for (int x = (BOARD_SIZE / 2) - 3; x <= (BOARD_SIZE / 2) + 3; ++x) {
-      int index = y * BOARD_WIDTH + x;
-      _forbiddenHandsOfLongPro.set(index);
-    }
-  }
-
+  _initializeBitsets();
   this->_colorToPlayer.clear();
   this->_history.clear();
   this->_aiHistory.clear();
@@ -141,7 +115,6 @@ bool Board::makeMove(int index) {
   }
 
   _handCount++;
-
   _prePlayerCannotMove = false;
 
   return true;
@@ -224,7 +197,6 @@ void Board::undoAI() {
     oppBoard->set(capIndex);
   }
 
-  // 5. カウンターとハッシュを復元
   this->_blackCaptures = record.prevBlackCaptures;
   this->_whiteCaptures = record.prevWhiteCaptures;
   this->_currentHash = record.prevHash;
@@ -327,20 +299,8 @@ const BoardType& Board::getSentinelStones() const {
 
 // -- Computed Bitsets --
 
-// 有効な盤面範囲（壁以外）を表すマスクを定義
-// static const にして一度だけ計算させる
-const BoardType Board::_validMask = []() {
-  BoardType mask;
-  for (int y = 0; y < BOARD_SIZE; ++y) {
-    for (int x = 0; x < BOARD_SIZE; ++x) {
-      mask.set(y * BOARD_WIDTH + x);
-    }
-  }
-  return mask;
-}();
-
 BoardType Board::getEmptyStones() const {
-  return ~(_blackStones | _whiteStones) & _validMask;
+  return ~(_blackStones | _whiteStones) & ~_sentinelStones;
 }
 
 BoardType Board::getOccupiedStones() const {
@@ -454,6 +414,34 @@ std::pair<int, int> Board::getCoordinates(int index) const {
 // Internal Helper Methods
 // ----------------------------------------------------------------
 
+// -- Initialization --
+
+void Board::_initializeBitsets() {
+  this->_blackStones.reset();
+  this->_whiteStones.reset();
+
+  this->_sentinelStones.reset();
+  for (int y = 0; y < BOARD_SIZE; ++y) {
+    for (int x = BOARD_SIZE; x < BOARD_WIDTH; ++x) {
+      _sentinelStones.set(getIndex(x, y));
+    }
+  }
+
+  this->_forbiddenHandsOfPro.reset();
+  for (int y = (BOARD_SIZE / 2) - 2; y <= (BOARD_SIZE / 2) + 2; ++y) {
+    for (int x = (BOARD_SIZE / 2) - 2; x <= (BOARD_SIZE / 2) + 2; ++x) {
+      _forbiddenHandsOfPro.set(getIndex(x, y));
+    }
+  }
+
+  this->_forbiddenHandsOfLongPro.reset();
+  for (int y = (BOARD_SIZE / 2) - 3; y <= (BOARD_SIZE / 2) + 3; ++y) {
+    for (int x = (BOARD_SIZE / 2) - 3; x <= (BOARD_SIZE / 2) + 3; ++x) {
+      _forbiddenHandsOfLongPro.set(getIndex(x, y));
+    }
+  }
+}
+
 // -- State Management --
 
 void Board::_applyState(const BoardState& state) {
@@ -552,7 +540,7 @@ LineBits Board::_getLineBits(int centerIndex, int offset, const BoardType& mySto
 
     // Treat out-of-bounds as "enemy stone (wall)"
     if (targetIndex < 0 || targetIndex >= MAX_CELLS || _sentinelStones.test(targetIndex)) {
-      line.opp |= (1 << (i + 5));  // 壁は敵石扱い
+      line.opp |= (1 << (i + 5));
       continue;
     }
     if (myStones.test(targetIndex)) {
