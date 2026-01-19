@@ -16,17 +16,20 @@
 
 using BoardType = std::bitset<MAX_CELLS>;
 
-struct Direction {
-  int dx;
-  int dy;
-};
-
+/**
+ * @struct LineBits
+ * @brief Represents a line of 11 stones for both players.
+ * Used for pattern detection (e.g., free threes).
+ */
 struct LineBits {
   uint16_t my;
   uint16_t opp;
 };
 
-// Snapshot of the board state for history/undo
+/**
+ * @struct BoardState
+ * @brief Captures the complete state of the board for undo functionality.
+ */
 struct BoardState {
   BoardType blackStones;
   BoardType whiteStones;
@@ -37,7 +40,10 @@ struct BoardState {
   int handCount;
 };
 
-// Information about a move, including captures
+/**
+ * @struct AIMoveRecord
+ * @brief Records details of an AI move for undoing purposes.
+ */
 struct AIMoveRecord {
   int moveIndex;
   uint64_t prevHash;
@@ -68,7 +74,7 @@ class Board {
   ~Board() = default;
 
   /**
-   * Assigns human/AI players to colors.
+   * @brief Assigns human/AI players to colors.
    */
   void setupPlayers(TurnOrder order, bool isPvP);
 
@@ -77,7 +83,7 @@ class Board {
   // ----------------------------------------------------------------
 
   /**
-   * Checks if the current player can make a move.
+   * @brief Checks if the current player can make a move.
    * @return true if moves are possible, false if no valid moves remain.
    */
   bool canMove();
@@ -194,6 +200,13 @@ class Board {
   // Internal Helper Methods
   // ----------------------------------------------------------------
 
+  // -- Initialization --
+
+  /**
+   * @brief Initializes member bitsets.
+   */
+  void _initializeBitsets();
+
   // -- State Management --
 
   /**
@@ -226,7 +239,10 @@ class Board {
 
   /**
    * @brief Retrieves a 11-bit representation of stones along a line centered at (x, y).
-   * @param dir The direction to extract the line.
+   * @param centerIndex The linear index of the center position.
+   * @param offset The directional offset for the line.
+   * @param myStones Bitset of the current player's stones.
+   * @param oppStones Bitset of the opponent's stones.
    * @return LineBits containing my and opponent stones along the line.
    */
   LineBits _getLineBits(int centerIndex, int offset, const BoardType& myStones,

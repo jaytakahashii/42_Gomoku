@@ -1,6 +1,6 @@
 NAME = Gomoku
 CXX  = c++
-#CXXFLAGS = -Wall -Wextra -Werror -std=c++17
+# CXXFLAGS = -Wall -Wextra -Werror -std=c++17
 CXXFLAGS = -std=c++17
 
 ROOT := $(shell pwd)
@@ -84,13 +84,13 @@ $(SFML_LIB):
 	cmake --build $(SFML_BUILD_PATH) --target install -j$(shell nproc 2>/dev/null || sysctl -n hw.ncpu)
 	rm -rf $(SFML_SRC_PATH) $(SFML_BUILD_PATH)
 
-$(NAME): $(OBJS)
+$(NAME): $(SFML_LIB) $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $@ $(LDFLAGS) $(RPATH)
 
 $(OBJ_DIR):
 	@mkdir -p $(OBJ_DIR)
 
-$(OBJ_DIR)%.o: $(SRC_DIR)%.cpp | $(OBJ_DIR)
+$(OBJ_DIR)%.o: $(SRC_DIR)%.cpp $(SFML_LIB) | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) $(IFLAGS) -c $< -o $@
 
 clean:
@@ -100,7 +100,9 @@ fclean: clean
 	rm -f $(NAME)
 	rm -rf $(SFML_SRC_PATH) $(SFML_BUILD_PATH) $(SFML_LOCAL_PATH)
 
-re: fclean all
+re:
+	@$(MAKE) fclean
+	@$(MAKE) all
 
 run: all
 	./$(NAME)
