@@ -87,7 +87,7 @@ The game is played on a **19x19** board. The goal is to align **5 stones** of th
 
 ### ⚖️ Opening Rules (Bonus)
 
-[cite_start]Standard Gomoku is proven to be unfair, with a significant advantage for the first player (Black)[cite: 21]. To mitigate this, we implemented opening restrictions:
+Standard Gomoku is proven to be unfair, with a significant advantage for the first player (Black). To mitigate this, we implemented opening restrictions:
 
 - **Standard**: No restrictions.
 - **PRO Rule**:
