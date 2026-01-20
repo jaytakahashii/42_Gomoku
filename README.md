@@ -64,3 +64,37 @@ The evaluator prioritizes "Unbreakable" wins and defensive stability:
 - **Safety Filtering**: The AI identifies "Dead Stones" (stones that will be captured next turn) and excludes them from pattern formation. It does not chase "fake" wins.
 - **Defensive Bias**: The opponent's potential score is weighted heavily (x1.2). This makes the AI "paranoid" and prioritizes blocking threats over creating equal threats.
 - **Static Analysis**: Evaluates patterns like `Open Four`, `Closed Four`, and `Split Three` using bitmasks.
+
+## 🎮 Game Rules
+
+The game is played on a **19x19** board. The goal is to align **5 stones** of the same color. However, to make the game fairer and more strategic, this implementation follows specific rules mandated by the 42 subject, along with additional Opening Rules.
+
+### ⚔️ Core Mechanics (Mandatory)
+
+- **Capture**:
+  You can remove a pair of the opponent's stones from the board by flanking them with your own stones (`X OO X` $\rightarrow$ `X __ X`).
+  <br />
+  <img src="./assets/capture_demo.gif" alt="Gomoku AI Demo" width="600">
+  <br />
+
+- **Victory by Capture**: If a player captures **10 stones** (5 pairs), they win the game immediately.
+
+- **"Unbreakable" Win**:
+  Aligning 5 stones is a win _only if_ the opponent cannot break the line by capturing a pair on the next turn. If the line can be broken, the game continues.
+
+- **Double-Three Forbidden**:
+  It is forbidden to play a move that simultaneously introduces two "Free-Three" alignments (open-ended sequences of three stones). This prevents the first player from easily forcing a win.
+
+### ⚖️ Opening Rules (Bonus)
+
+[cite_start]Standard Gomoku is proven to be unfair, with a significant advantage for the first player (Black)[cite: 21]. To mitigate this, we implemented opening restrictions:
+
+- **Standard**: No restrictions.
+- **PRO Rule**:
+  1.  The first move must be in the center of the board.
+  2.  The third move (Black's second stone) must be placed **outside the central 3x3 zone**.
+- **LONG PRO Rule**:
+  1.  The first move must be in the center of the board.
+  2.  The third move (Black's second stone) must be placed **outside the central 4x4 zone**.
+
+These rules force the first player to expand the game early on, reducing the immediate offensive pressure and balancing the winning probability.
