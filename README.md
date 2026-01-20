@@ -98,3 +98,52 @@ The game is played on a **19x19** board. The goal is to align **5 stones** of th
   2.  The third move (Black's second stone) must be placed **outside the central 4x4 zone**.
 
 These rules force the first player to expand the game early on, reducing the immediate offensive pressure and balancing the winning probability.
+
+## 🛠️ Installation & Usage
+
+This project supports **macOS** and **Linux**.
+The build system is designed to be **self-contained**: it automatically downloads and compiles the required graphics library (SFML 3.0.0) locally. You do not need to install SFML globally on your system.
+
+### Prerequisites
+
+Ensure you have the following build tools installed:
+
+- **C++ Compiler** (clang++ or g++) supporting C++17
+- **Make**
+- **CMake** (Required to build SFML)
+- **Git**
+
+> **🐧 Linux Users**: You may need X11/OpenGL development headers to build SFML.
+>
+> ```bash
+> sudo apt-get install cmake libx11-dev libxrandr-dev libxcursor-dev libxi-dev libudev-dev libgl1-mesa-dev
+> ```
+
+### Build & Run
+
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/jaytakahashii/42_Gomoku.git](https://github.com/jaytakahashii/42_Gomoku.git)
+   cd 42_Gomoku
+   ```
+2. **Compile**: Simply run make. The first build may take a few moments as it fetches and compiles SFML.
+
+   ```bash
+   make
+   ```
+
+3. **Run the Game:**
+   ```bash
+   ./Gomoku
+   # Or Simply: make run
+   ```
+
+### Clean Up
+
+To remove object files and the local SFML build to save space:
+
+```bash
+make fclean
+```
+
+---
