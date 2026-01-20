@@ -123,7 +123,7 @@ Ensure you have the following build tools installed:
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/jaytakahashii/42_Gomoku.git](https://github.com/jaytakahashii/42_Gomoku.git)
+   git clone git@github.com:jaytakahashii/42_Gomoku.git
    cd 42_Gomoku
    ```
 2. **Compile**: Simply run make. The first build may take a few moments as it fetches and compiles SFML.
@@ -137,6 +137,28 @@ Ensure you have the following build tools installed:
    ./Gomoku
    # Or Simply: make run
    ```
+
+### 🕹️ Controls
+
+Upon launching the game, you will be greeted by the **Main Menu**. Use your mouse to navigate:
+<br />
+<img src="./assets/startPage.png" alt="Gomoku AI Demo" width="600">
+<br />
+
+- **PvP** : Play locally against a friend.
+
+- **PvsAI**: Challenge the AI engine. You can select the opening rules (Standard, Pro, Long Pro) before starting.
+  - **Opening Rules**: Standard, Pro, or Long Pro.
+  - **AI Level (Search Depth)**:
+    - **Easy**: Depth 2
+    - **Normal**: Depth 5
+    - **Hard**: Depth 10
+
+#### In-Game:
+
+- **Left Click**: Place a stone.
+
+- **ESC**: Return to the menu or exit.
 
 ### Clean Up
 
