@@ -7,7 +7,7 @@
 ![Algorithm](https://img.shields.io/badge/Algorithm-Minimax-FF4500?style=flat-square&labelColor=24292e)
 ![Optimization](https://img.shields.io/badge/Optimization-BitBoard-important?style=flat-square&labelColor=24292e)
 
-![Score](https://img.shields.io/badge/Score-125%2F100-32a852?style=flat-square&labelColor=24292e)
+![Score](https://img.shields.io/badge/Score-113%2F100-32a852?style=flat-square&labelColor=24292e)
 
 <br />
 <img src="./assets/Gomoku_demo.gif" alt="Gomoku AI Demo" width="600">
